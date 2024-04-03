@@ -1,6 +1,5 @@
 # error_set
 
-## Idea
 Rust implementation of zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 to concisely define error types and convert between.
 
