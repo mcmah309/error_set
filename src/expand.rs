@@ -67,6 +67,7 @@ pub fn expand(error_set: ErrorSet) -> TokenStream {
 fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     add_enum(error_enum_node, token_stream);
     impl_error(error_enum_node, token_stream);
+    impl_display(error_enum_node, token_stream);
     impl_froms(error_enum_node, token_stream);
 }
 
@@ -98,6 +99,28 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     token_stream.append_all(quote::quote! {
         #[allow(unused_qualifications)]
         impl std::error::Error for #enum_name {}
+    });
+}
+
+fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+    let ErrorEnumGraphNode {
+        error_enum,
+        out_nodes: _,
+    } = error_enum_node;
+
+    let enum_name = &error_enum.error_name;
+    let variants = &error_enum.error_variants;
+    token_stream.append_all(quote::quote! {
+        impl core::fmt::Display for #enum_name {
+            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                let variant_name = match *self {
+                    #(
+                        #enum_name::#variants => "#enum_name::#variants",
+                    )*
+                };
+                write!(f, "{}", variant_name)
+            }
+        }
     });
 }
 
