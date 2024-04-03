@@ -15,6 +15,7 @@ error_set!( SetLevelError,{
         MissingNameArg,
         MissingPublishTimeArg,
         MissingDescriptionArg,
+        // todo handle wrapping other outside errors. e.g. `IoError(std::io::Error)`
     },
 })
 ```
@@ -110,5 +111,8 @@ fn main() {
     let book_error = BookParsingError::MissingDescriptionArg;
     let crate_error_from_book: SetLevelError = book_error.into();
     println!("{:?}", crate_error_from_book);
+
+    let x: Result<(), MagazineParsingError> = Err(MagazineParsingError::MissingNameArg);
+    let y: Result<(), BookParsingError> = x.map_err(Into::into);
 }
 ```
