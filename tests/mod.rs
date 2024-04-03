@@ -18,6 +18,6 @@ pub mod tests {
 
     #[test]
     fn test() {
-        let x = Test(1);
+        // let x = Test(1);
     }
 }

@@ -11,5 +11,3 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let error_set = syn::parse_macro_input!(tokens as ErrorSet);
     expand(error_set).into()
 }
-
-

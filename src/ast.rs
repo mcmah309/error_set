@@ -6,8 +6,8 @@ use syn::{
 };
 
 pub struct ErrorSet {
-    set_name: Ident,
-    set_items: Punctuated<ErrorEnum, token::Comma>,
+    pub set_name: Ident,
+    pub set_items: Punctuated<ErrorEnum, token::Comma>,
 }
 
 impl Parse for ErrorSet {
@@ -31,8 +31,8 @@ impl Parse for ErrorSet {
 pub type ErrorVariant = Ident;
 
 pub struct ErrorEnum {
-    error_name: Ident,
-    error_variants: Punctuated<ErrorVariant, token::Comma>,
+    pub error_name: Ident,
+    pub error_variants: Punctuated<ErrorVariant, token::Comma>,
 }
 
 impl Parse for ErrorEnum {
