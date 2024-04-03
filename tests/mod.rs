@@ -27,6 +27,6 @@ pub mod tests {
         println!("{:?}", crate_error_from_book);
     
         let x: Result<(), MagazineParsingError> = Err(MagazineParsingError::MissingNameArg);
-        let y: Result<(), BookParsingError> = x.map_err(Into::into);
+        let _y: Result<(), BookParsingError> = x.map_err(Into::into);
     }
 }

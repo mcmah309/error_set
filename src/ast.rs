@@ -2,7 +2,7 @@ use syn::{
     braced,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token, Ident, Item, Result, Token,
+    token, Ident, Result,
 };
 
 pub struct ErrorSet {
@@ -16,7 +16,7 @@ impl Parse for ErrorSet {
         let set_name: Ident = input.parse()?;
         input.parse::<token::Comma>()?;
         let content;
-        let brace_token = braced!(content in input);
+        let _brace_token = braced!(content in input);
         let set_items: Punctuated<ErrorEnum, token::Comma> = content.parse_terminated(
             |input: ParseStream| input.parse::<ErrorEnum>(),
             token::Comma,
@@ -39,7 +39,7 @@ impl Parse for ErrorEnum {
     fn parse(input: ParseStream) -> Result<Self> {
         let error_name: Ident = input.parse()?;
         let content;
-        let brace_token = braced!(content in input);
+        let _brace_token = braced!(content in input);
         let error_variants = content.parse_terminated(
             |input: ParseStream| input.parse::<ErrorVariant>(),
             token::Comma,
