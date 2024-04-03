@@ -7,6 +7,7 @@ use std::{
 };
 
 use proc_macro2::TokenStream;
+use quote::TokenStreamExt;
 use syn::Ident;
 
 use crate::ast::{ErrorSet, ErrorVariant};
@@ -29,55 +30,74 @@ pub fn expand(error_set: ErrorSet) -> TokenStream {
     // Add set level
     let set_level_node = ErrorEnumGraphNode::new(ErrorEnum {
         error_name: error_set.set_name,
-        error_variants: all_variants
+        error_variants: all_variants,
     });
     error_enum_nodes.push(Rc::new(RefCell::new(set_level_node)));
     for building_node in error_enum_nodes.iter() {
         for checking_node in error_enum_nodes.iter() {
-            if (*(**checking_node).borrow()).value
-                != (*(**building_node).borrow()).value
+            if (*(**checking_node).borrow()).error_enum != (*(**building_node).borrow()).error_enum
                 && (*(**checking_node).borrow())
-                    .value
+                    .error_enum
                     .error_variants
                     .iter()
                     .all(|e| {
                         (*(**building_node).borrow())
-                            .value
+                            .error_enum
                             .error_variants
                             .contains(e)
                     })
             {
                 building_node
                     .borrow_mut()
-                    .out_edges
+                    .out_nodes
                     .push(checking_node.clone());
             }
         }
     }
 
-    let mut combined = quote::quote! {}; // Create an empty TokenStream.
+    let mut token_stream = TokenStream::new();
     for error_enum_node in error_enum_nodes.iter() {
-        combined.extend(add_code_for_node(&*(**error_enum_node).borrow()));
+        add_code_for_node(&*(**error_enum_node).borrow(), &mut token_stream);
     }
-    combined
+    token_stream
 
     //syn::parse_str(&format!("struct Test({});",error_enum_nodes.len())).unwrap()
 }
 
-fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode) -> TokenStream {
+fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+    add_enum(error_enum_node, token_stream);
+    add_froms(error_enum_node, token_stream);
+}
+
+fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
-        value: error_enum,
-        out_edges: edges,
+        error_enum,
+        out_nodes: _,
     } = error_enum_node;
 
-    let mut froms: Vec<TokenStream> = Vec::new();
-    for edge in (*edges).iter() {
-        let edge = &*(**edge).borrow();
-        let subset_enum = &edge.value;
-        let error_variants = &subset_enum.error_variants;
-        let subset_enum_name = &subset_enum.error_name;
-        let enum_name = &error_enum.error_name;
-        let stream = quote::quote! {
+    let enum_name = &error_enum.error_name;
+    let error_variants = &error_enum.error_variants;
+    token_stream.append_all(quote::quote! {
+        pub enum #enum_name {
+            #(
+                #error_variants,
+            )*
+        }
+    });
+}
+
+fn add_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+    let ErrorEnumGraphNode {
+        error_enum,
+        out_nodes,
+    } = error_enum_node;
+
+    let enum_name = &error_enum.error_name;
+    for out_node in (*out_nodes).iter() {
+        let sub_error_enum = &(&*(**out_node).borrow()).error_enum;
+        let error_variants = &sub_error_enum.error_variants;
+        let subset_enum_name = &sub_error_enum.error_name;
+        token_stream.append_all(quote::quote! {
             impl From<#subset_enum_name> for #enum_name {
                 fn from(error: #subset_enum_name) -> Self {
                     match error {
@@ -87,32 +107,26 @@ fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode) -> TokenStream {
                     }
                 }
             }
-        };
-        froms.push(stream)
+        });
     }
-    let combined_froms: TokenStream = quote::quote! {
-        #(#froms)*
-    };
-    combined_froms
 }
-
 #[derive(Debug, Clone, Eq)]
 struct ErrorEnumGraphNode {
-    pub value: ErrorEnum,
-    pub out_edges: Vec<Rc<RefCell<ErrorEnumGraphNode>>>,
+    pub error_enum: ErrorEnum,
+    pub out_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>>,
 }
 
 impl PartialEq for ErrorEnumGraphNode {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
+        self.error_enum == other.error_enum
     }
 }
 
 impl ErrorEnumGraphNode {
     pub fn new(node: ErrorEnum) -> ErrorEnumGraphNode {
         ErrorEnumGraphNode {
-            value: node,
-            out_edges: Vec::new(),
+            error_enum: node,
+            out_nodes: Vec::new(),
         }
     }
 }
@@ -128,7 +142,6 @@ impl PartialEq for ErrorEnum {
         self.error_name == other.error_name
     }
 }
-
 
 impl From<crate::ast::ErrorEnum> for ErrorEnum {
     fn from(value: crate::ast::ErrorEnum) -> Self {
