@@ -15,24 +15,38 @@ error_set!( SetLevelError,{
         MissingNameArg,
         MissingPublishTimeArg,
         MissingDescriptionArg,
-        // todo handle wrapping other outside errors. e.g. `IoError(std::io::Error)`
     },
 })
 ```
-Output:
+Usage
 ```rust
-#[derive(Debug)]
+fn main() {
+    let magazine_error = MagazineParsingError::MissingNameArg;
+    let crate_error: SetLevelError = magazine_error.into();
+    println!("{:?}", crate_error);
+
+    let book_error = BookParsingError::MissingDescriptionArg;
+    let crate_error_from_book: SetLevelError = book_error.into();
+    println!("{:?}", crate_error_from_book);
+
+    let x: Result<(), MagazineParsingError> = Err(MagazineParsingError::MissingNameArg);
+    let y: Result<(), BookParsingError> = x.map_err(Into::into);
+}
+```
+Output (abreviated, the derive macros are not expanded here to be more concise):
+```rust
+#[derive(Debug,Clone,Eq,PartialEq,Hash)]
 enum SetLevelError {
     MissingNameArg,
     MissingPublishTimeArg,
     MissingDescriptionArg,
 }
-#[derive(Debug)]
+#[derive(Debug,Clone,Eq,PartialEq,Hash)]
 enum MagazineParsingError {
     MissingNameArg,
     MissingPublishTimeArg,
 }
-#[derive(Debug)]
+#[derive(Debug,Clone,Eq,PartialEq,Hash)]
 enum BookParsingError {
     MissingNameArg,
     MissingPublishTimeArg,
@@ -99,20 +113,5 @@ impl core::fmt::Display for BookParsingError {
         };
         write!(f, "{}", variant_name)
     }
-}
-```
-Usage
-```rust
-fn main() {
-    let magazine_error = MagazineParsingError::MissingNameArg;
-    let crate_error: SetLevelError = magazine_error.into();
-    println!("{:?}", crate_error);
-
-    let book_error = BookParsingError::MissingDescriptionArg;
-    let crate_error_from_book: SetLevelError = book_error.into();
-    println!("{:?}", crate_error_from_book);
-
-    let x: Result<(), MagazineParsingError> = Err(MagazineParsingError::MissingNameArg);
-    let y: Result<(), BookParsingError> = x.map_err(Into::into);
 }
 ```
