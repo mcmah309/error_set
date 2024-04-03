@@ -66,7 +66,8 @@ pub fn expand(error_set: ErrorSet) -> TokenStream {
 
 fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     add_enum(error_enum_node, token_stream);
-    add_froms(error_enum_node, token_stream);
+    impl_error(error_enum_node, token_stream);
+    impl_froms(error_enum_node, token_stream);
 }
 
 fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
@@ -78,6 +79,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     let enum_name = &error_enum.error_name;
     let error_variants = &error_enum.error_variants;
     token_stream.append_all(quote::quote! {
+        #[derive(Debug,Clone,Eq,PartialEq,Hash)]
         pub enum #enum_name {
             #(
                 #error_variants,
@@ -86,7 +88,20 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     });
 }
 
-fn add_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+    let ErrorEnumGraphNode {
+        error_enum,
+        out_nodes: _,
+    } = error_enum_node;
+
+    let enum_name = &error_enum.error_name;
+    token_stream.append_all(quote::quote! {
+        #[allow(unused_qualifications)]
+        impl std::error::Error for #enum_name {}
+    });
+}
+
+fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
         out_nodes,
