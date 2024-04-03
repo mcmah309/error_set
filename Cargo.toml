@@ -1,7 +1,10 @@
 [package]
 name = "error_set"
+description = "An Error set"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/mcmah309/error_set"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
