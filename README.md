@@ -5,115 +5,271 @@ to concisely define error types and convert between.
 
 Instead of defining various enums for errors. Use an error set.
 ```rust
-error_set!(
-    SetLevelError {
-        MagazineParsingError {
+use error_set::error_set;
+
+    error_set! {
+        MediaError {
             MissingNameArg,
-            MissingPublishTimeArg
+            NoContents,
+            MissingDescriptionArg,
+            CouldNotConnect,
+            IoError(std::io::Error),
         },
         BookParsingError {
             MissingNameArg,
-            MissingPublishTimeArg,
+            NoContents,
             MissingDescriptionArg,
         },
-    // todo wrap other error enums
+        BookSectionParsingError {
+            MissingNameArg,
+            NoContents,
+        },
+        DownloadError {
+            CouldNotConnect,
+            OutOfMemory(std::io::Error),
+        },
+        UploadError {
+            NoConnection(std::io::Error),
+        }
     }
-);
 ```
 Usage
 ```rust
 fn main() {
-    let magazine_error = MagazineParsingError::MissingNameArg;
-    let crate_error: SetLevelError = magazine_error.into();
-    println!("{:?}", crate_error);
+        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingNameArg
+        ));
+        let media_error: MediaError = book_parsing_error.into();
+        assert!(matches!(media_error, MediaError::MissingNameArg));
 
-    let book_error = BookParsingError::MissingDescriptionArg;
-    let crate_error_from_book: SetLevelError = book_error.into();
-    println!("{:?}", crate_error_from_book);
-
-    let x: Result<(), MagazineParsingError> = Err(MagazineParsingError::MissingNameArg);
-    let y: Result<(), BookParsingError> = x.map_err(Into::into);
+        let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
+            std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
+        ));
+        let _result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
 }
 ```
-Output (abreviated, the derive macros are not expanded here to be more concise):
+`cargo expand`:
 ```rust
-#[derive(Debug,Clone,Eq,PartialEq,Hash)]
-enum SetLevelError {
+use error_set::error_set;
+pub(crate) enum MediaError {
     MissingNameArg,
-    MissingPublishTimeArg,
+    NoContents,
     MissingDescriptionArg,
+    CouldNotConnect,
+    IoError(std::io::Error),
 }
-#[derive(Debug,Clone,Eq,PartialEq,Hash)]
-enum MagazineParsingError {
-    MissingNameArg,
-    MissingPublishTimeArg,
-}
-#[derive(Debug,Clone,Eq,PartialEq,Hash)]
-enum BookParsingError {
-    MissingNameArg,
-    MissingPublishTimeArg,
-    MissingDescriptionArg,
-}
-
-impl std::error::Error for SetLevelError {}
-impl std::error::Error for MagazineParsingError {}
-impl std::error::Error for BookParsingError {}
-
-impl From<MagazineParsingError> for SetLevelError {
-    fn from(error: MagazineParsingError) -> Self {
-        match error {
-            MagazineParsingError::MissingNameArg => SetLevelError::MissingNameArg,
-            MagazineParsingError::MissingPublishTimeArg => SetLevelError::MissingPublishTimeArg,
+#[allow(unused_qualifications)]
+impl std::error::Error for MediaError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            MediaError::IoError(ref source) => source.source(),
+            #[allow(unreachable_patterns)]
+            _ => None,
         }
     }
 }
-impl From<BookParsingError> for SetLevelError {
+impl core::fmt::Display for MediaError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            MediaError::MissingNameArg => "MediaError::MissingNameArg",
+            MediaError::NoContents => "MediaError::NoContents",
+            MediaError::MissingDescriptionArg => "MediaError::MissingDescriptionArg",
+            MediaError::CouldNotConnect => "MediaError::CouldNotConnect",
+            MediaError::IoError(_) => "MediaError::IoError",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl core::fmt::Debug for MediaError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            MediaError::MissingNameArg => "MediaError::MissingNameArg",
+            MediaError::NoContents => "MediaError::NoContents",
+            MediaError::MissingDescriptionArg => "MediaError::MissingDescriptionArg",
+            MediaError::CouldNotConnect => "MediaError::CouldNotConnect",
+            MediaError::IoError(_) => "MediaError::IoError",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl From<BookParsingError> for MediaError {
     fn from(error: BookParsingError) -> Self {
         match error {
-            BookParsingError::MissingNameArg => SetLevelError::MissingNameArg,
-            BookParsingError::MissingPublishTimeArg => SetLevelError::MissingPublishTimeArg,
-            BookParsingError::MissingDescriptionArg => SetLevelError::MissingDescriptionArg,
+            BookParsingError::MissingNameArg => MediaError::MissingNameArg,
+            BookParsingError::NoContents => MediaError::NoContents,
+            BookParsingError::MissingDescriptionArg => MediaError::MissingDescriptionArg,
         }
     }
 }
-
-
-impl From<MagazineParsingError> for BookParsingError {
-    fn from(error: MagazineParsingError) -> Self {
+impl From<BookSectionParsingError> for MediaError {
+    fn from(error: BookSectionParsingError) -> Self {
         match error {
-            MagazineParsingError::MissingNameArg => BookParsingError::MissingNameArg,
-            MagazineParsingError::MissingPublishTimeArg => BookParsingError::MissingPublishTimeArg,
+            BookSectionParsingError::MissingNameArg => MediaError::MissingNameArg,
+            BookSectionParsingError::NoContents => MediaError::NoContents,
         }
     }
 }
-
-impl core::fmt::Display for SetLevelError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            SetLevelError::MissingNameArg => "SetLevelError::MissingNameArg",
-            SetLevelError::MissingPublishTimeArg => "SetLevelError::MissingPublishTimeArg",
-            SetLevelError::MissingDescriptionArg => "SetLevelError::MissingDescriptionArg",
-        };
-        write!(f, "{}", variant_name)
+impl From<DownloadError> for MediaError {
+    fn from(error: DownloadError) -> Self {
+        match error {
+            DownloadError::CouldNotConnect => MediaError::CouldNotConnect,
+            DownloadError::OutOfMemory(source) => MediaError::IoError(source),
+        }
     }
 }
-impl core::fmt::Display for MagazineParsingError {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            MagazineParsingError::MissingNameArg => "MagazineParsingError::MissingNameArg",
-            MagazineParsingError::MissingPublishTimeArg => "MagazineParsingError::MissingPublishTimeArg",
-        };
-        write!(f, "{}", variant_name)
+impl From<UploadError> for MediaError {
+    fn from(error: UploadError) -> Self {
+        match error {
+            UploadError::NoConnection(source) => MediaError::IoError(source),
+        }
     }
 }
+pub(crate) enum BookParsingError {
+    MissingNameArg,
+    NoContents,
+    MissingDescriptionArg,
+}
+#[allow(unused_qualifications)]
+impl std::error::Error for BookParsingError {}
 impl core::fmt::Display for BookParsingError {
+    #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
             BookParsingError::MissingNameArg => "BookParsingError::MissingNameArg",
-            BookParsingError::MissingPublishTimeArg => "BookParsingError::MissingPublishTimeArg",
-            BookParsingError::MissingDescriptionArg => "BookParsingError::MissingDescriptionArg",
+            BookParsingError::NoContents => "BookParsingError::NoContents",
+            BookParsingError::MissingDescriptionArg => {
+                "BookParsingError::MissingDescriptionArg"
+            }
         };
-        write!(f, "{}", variant_name)
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl core::fmt::Debug for BookParsingError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            BookParsingError::MissingNameArg => "BookParsingError::MissingNameArg",
+            BookParsingError::NoContents => "BookParsingError::NoContents",
+            BookParsingError::MissingDescriptionArg => {
+                "BookParsingError::MissingDescriptionArg"
+            }
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl From<BookSectionParsingError> for BookParsingError {
+    fn from(error: BookSectionParsingError) -> Self {
+        match error {
+            BookSectionParsingError::MissingNameArg => BookParsingError::MissingNameArg,
+            BookSectionParsingError::NoContents => BookParsingError::NoContents,
+        }
+    }
+}
+pub(crate) enum BookSectionParsingError {
+    MissingNameArg,
+    NoContents,
+}
+#[allow(unused_qualifications)]
+impl std::error::Error for BookSectionParsingError {}
+impl core::fmt::Display for BookSectionParsingError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            BookSectionParsingError::MissingNameArg => {
+                "BookSectionParsingError::MissingNameArg"
+            }
+            BookSectionParsingError::NoContents => "BookSectionParsingError::NoContents",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl core::fmt::Debug for BookSectionParsingError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            BookSectionParsingError::MissingNameArg => {
+                "BookSectionParsingError::MissingNameArg"
+            }
+            BookSectionParsingError::NoContents => "BookSectionParsingError::NoContents",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+pub(crate) enum DownloadError {
+    CouldNotConnect,
+    OutOfMemory(std::io::Error),
+}
+#[allow(unused_qualifications)]
+impl std::error::Error for DownloadError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            DownloadError::OutOfMemory(ref source) => source.source(),
+            #[allow(unreachable_patterns)]
+            _ => None,
+        }
+    }
+}
+impl core::fmt::Display for DownloadError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            DownloadError::CouldNotConnect => "DownloadError::CouldNotConnect",
+            DownloadError::OutOfMemory(_) => "DownloadError::OutOfMemory",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl core::fmt::Debug for DownloadError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            DownloadError::CouldNotConnect => "DownloadError::CouldNotConnect",
+            DownloadError::OutOfMemory(_) => "DownloadError::OutOfMemory",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl From<UploadError> for DownloadError {
+    fn from(error: UploadError) -> Self {
+        match error {
+            UploadError::NoConnection(source) => DownloadError::OutOfMemory(source),
+        }
+    }
+}
+pub(crate) enum UploadError {
+    NoConnection(std::io::Error),
+}
+#[allow(unused_qualifications)]
+impl std::error::Error for UploadError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            UploadError::NoConnection(ref source) => source.source(),
+            #[allow(unreachable_patterns)]
+            _ => None,
+        }
+    }
+}
+impl core::fmt::Display for UploadError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            UploadError::NoConnection(_) => "UploadError::NoConnection",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
+    }
+}
+impl core::fmt::Debug for UploadError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            UploadError::NoConnection(_) => "UploadError::NoConnection",
+        };
+        f.write_fmt(format_args!("{0}", variant_name))
     }
 }
 ```

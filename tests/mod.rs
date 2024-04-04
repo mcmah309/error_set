@@ -1,14 +1,3 @@
-// use error_set::error_set;
-
-// error_set! {
-//     X {
-//         IoError(std::io::Error),
-//     },
-//     Y {
-//         IoError2(std::io::Error),
-//     },
-// }
-
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
@@ -138,6 +127,54 @@ pub mod error_sources_of_different_names {
         let y: Y = x.into();
         assert!(matches!(y, Y::IoError2(_)));
         let _set: SetLevelError = y.into();
+    }
+}
+
+#[cfg(test)]
+pub mod readme_example {
+    use error_set::error_set;
+
+    error_set! {
+        MediaError {
+            MissingNameArg,
+            NoContents,
+            MissingDescriptionArg,
+            CouldNotConnect,
+            IoError(std::io::Error),
+        },
+        BookParsingError {
+            MissingNameArg,
+            NoContents,
+            MissingDescriptionArg,
+        },
+        BookSectionParsingError {
+            MissingNameArg,
+            NoContents,
+        },
+        DownloadError {
+            CouldNotConnect,
+            OutOfMemory(std::io::Error),
+        },
+        UploadError {
+            NoConnection(std::io::Error),
+        }
+    }
+
+    #[test]
+    fn test() {
+        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingNameArg
+        ));
+        let media_error: MediaError = book_parsing_error.into();
+        assert!(matches!(media_error, MediaError::MissingNameArg));
+
+        let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
+            std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
+        ));
+        let _result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
     }
 }
 
