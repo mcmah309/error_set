@@ -41,8 +41,6 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
         add_code_for_node(&*(**error_enum_node).borrow(), &mut token_stream);
     }
     token_stream
-
-    //syn::parse_str(&format!("struct Test({});",error_enum_nodes.len())).unwrap()
 }
 
 fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
