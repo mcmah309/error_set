@@ -4,9 +4,10 @@ use syn::{
     braced, parenthesized, parse::{discouraged::Speculative, Parse, ParseStream}, punctuated::Punctuated, token, Ident, Result
 };
 
-pub struct AstErrorSet {
-    pub set_name: Ident,
-    pub set_items: Punctuated<AstErrorSetItem, token::Comma>,
+#[derive(Clone)]
+pub(crate) struct AstErrorSet {
+    pub(crate) set_name: Ident,
+    pub(crate) set_items: Punctuated<AstErrorSetItem, token::Comma>,
 }
 
 impl Parse for AstErrorSet {
@@ -25,9 +26,10 @@ impl Parse for AstErrorSet {
     }
 }
 
-pub type AstErrorVariant = Ident;
+pub(crate) type AstErrorVariant = Ident;
 
-pub enum AstErrorSetItem {
+#[derive(Clone)]
+pub(crate) enum AstErrorSetItem {
     SourceErrorVariant(AstSourceErrorVariant),
     ErrorEnum(AstErrorEnum),
     Variant(AstErrorVariant),
@@ -56,9 +58,9 @@ impl Parse for AstErrorSetItem {
 }
 
 #[derive(Clone)]
-pub struct AstSourceErrorVariant {
-    pub name: Ident,
-    pub source: syn::TypePath,
+pub(crate) struct AstSourceErrorVariant {
+    pub(crate) name: Ident,
+    pub(crate) source: syn::TypePath,
 }
 
 impl Parse for AstSourceErrorVariant{
@@ -76,7 +78,7 @@ impl Parse for AstSourceErrorVariant{
 }
 
 #[derive(Clone)]
-pub enum AstErrorEnumVariant {
+pub(crate) enum AstErrorEnumVariant {
     SourceErrorVariant(AstSourceErrorVariant),
     Variant(AstErrorVariant),
 }
@@ -115,7 +117,7 @@ impl PartialEq for AstErrorEnumVariant {
     }
 }
 
-pub fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -> bool {
+pub(crate) fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -> bool {
     let segments1 = &path1.path.segments;
     let segments2 = &path2.path.segments;
     if segments1.len() != segments2.len() {
@@ -127,9 +129,10 @@ pub fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -> bool 
         .all(|(seg1, seg2)| seg1.ident == seg2.ident);
 }
 
-pub struct AstErrorEnum {
-    pub error_name: Ident,
-    pub error_variants: Punctuated<AstErrorEnumVariant, token::Comma>,
+#[derive(Clone)]
+pub(crate) struct AstErrorEnum {
+    pub(crate) error_name: Ident,
+    pub(crate) error_variants: Punctuated<AstErrorEnumVariant, token::Comma>,
 }
 
 impl Parse for AstErrorEnum {
@@ -147,10 +150,3 @@ impl Parse for AstErrorEnum {
         });
     }
 }
-
-// #[derive(Debug,Clone)]
-// struct X;
-
-// impl Error for X {
-
-// }

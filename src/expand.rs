@@ -5,53 +5,15 @@ use quote::TokenStreamExt;
 use syn::{Ident, TypePath};
 
 use crate::ast::{
-    is_type_path_equal, AstErrorEnumVariant, AstErrorSet, AstErrorSetItem, AstErrorVariant,
+    is_type_path_equal, AstErrorEnum, AstErrorEnumVariant, AstErrorSet, AstErrorSetItem,
+    AstErrorVariant,
 };
 
-pub fn expand(error_set: AstErrorSet) -> TokenStream {
-    let AstErrorSet {
-        set_name: error_set_name,
-        set_items: error_set_items,
-    } = error_set;
-    // if a set has no items, it is a variant, not a set item
-    let mut all_variants = Vec::new();
-    let mut error_enums_with_variants = Vec::new();
-    for error_set_item in error_set_items.into_iter() {
-        match error_set_item {
-            AstErrorSetItem::SourceErrorVariant(variant) => {
-                let variant = AstErrorEnumVariant::SourceErrorVariant(variant);
-                if !all_variants.contains(&variant) {
-                    all_variants.push(variant)
-                }
-            }
-            AstErrorSetItem::ErrorEnum(error_enum) => {
-                assert!(!error_enum.error_variants.is_empty(), "All error enums should have variants, otherwise they should be clasified as a variant");
-                for error_variant in error_enum.error_variants.iter() {
-                    if !all_variants.contains(error_variant) {
-                        all_variants.push(error_variant.clone());
-                    }
-                }
-                error_enums_with_variants.push(error_enum);
-            }
-            AstErrorSetItem::Variant(variant) => {
-                let variant = AstErrorEnumVariant::Variant(variant);
-                if !all_variants.contains(&variant) {
-                    all_variants.push(variant)
-                }
-            }
-        }
-    }
-    let mut error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums_with_variants
+pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
+    let mut error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
         .into_iter()
         .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
         .collect();
-    //todo validate there are no duplicate error enums, do in ast
-    // Add set level
-    let set_level_node = ErrorEnumGraphNode::new(ErrorEnum {
-        error_name: error_set_name,
-        error_variants: all_variants,
-    });
-    error_enum_nodes.push(Rc::new(RefCell::new(set_level_node)));
     for building_node in error_enum_nodes.iter() {
         for checking_node in error_enum_nodes.iter() {
             if (*(**checking_node).borrow()).error_enum != (*(**building_node).borrow()).error_enum
@@ -120,7 +82,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         }
     }
     token_stream.append_all(quote::quote! {
-        pub enum #enum_name {
+        pub(crate) enum #enum_name {
             #error_variant_tokens
         }
     });
@@ -285,9 +247,9 @@ fn error_variant_as_ident(error_variant: &AstErrorEnumVariant) -> &Ident {
 //************************************************************************//
 #[derive(Clone)]
 struct ErrorEnumGraphNode {
-    pub error_enum: ErrorEnum,
+    pub(crate) error_enum: ErrorEnum,
     /// nodes where all error variants of the error enum are in this error enum's error variants.
-    pub subsets: Vec<Rc<RefCell<ErrorEnumGraphNode>>>,
+    pub(crate) subsets: Vec<Rc<RefCell<ErrorEnumGraphNode>>>,
 }
 
 impl PartialEq for ErrorEnumGraphNode {
@@ -297,7 +259,7 @@ impl PartialEq for ErrorEnumGraphNode {
 }
 
 impl ErrorEnumGraphNode {
-    pub fn new(node: ErrorEnum) -> ErrorEnumGraphNode {
+    pub(crate) fn new(node: ErrorEnum) -> ErrorEnumGraphNode {
         ErrorEnumGraphNode {
             error_enum: node,
             subsets: Vec::new(),
@@ -306,9 +268,9 @@ impl ErrorEnumGraphNode {
 }
 
 #[derive(Clone)]
-struct ErrorEnum {
-    pub error_name: Ident,
-    pub error_variants: Vec<AstErrorEnumVariant>,
+pub(crate) struct ErrorEnum {
+    pub(crate) error_name: Ident,
+    pub(crate) error_variants: Vec<AstErrorEnumVariant>,
 }
 
 impl PartialEq for ErrorEnum {
