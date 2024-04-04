@@ -1,0 +1,5 @@
+error: A variant with source 'std::io::Error' already exists in error enum 'X'
+ --> tests/trybuild/multiple_same_sources.rs:7:18
+  |
+7 |         IoError2(std::io::Error),
+  |                  ^^^^^^^^^^^^^^

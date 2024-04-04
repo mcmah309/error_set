@@ -139,3 +139,19 @@ pub mod error_sources_of_different_names {
     }
 }
 
+#[cfg(test)]
+pub mod should_not_compile_tests {
+
+    #[test]
+    fn multiple_same_sources() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/multiple_same_sources.rs");
+    }
+
+    #[test]
+    fn two_enums_same_name() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/two_enums_same_name.rs");
+    }
+}
+
