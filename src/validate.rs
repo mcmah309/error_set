@@ -8,7 +8,7 @@ use crate::{ast::AstErrorEnumVariant, expand::ErrorEnum};
 
 pub fn validate(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
     all_enums_have_unique_names(error_enums)?;
-    only_one_source_of_each_type_per_enum(error_enums)
+    only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(error_enums)
 }
 
 fn all_enums_have_unique_names(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
@@ -25,7 +25,7 @@ fn all_enums_have_unique_names(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::
     Ok(())
 }
 
-fn only_one_source_of_each_type_per_enum(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
+fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
     let mut unique_variants: HashSet<&Ident> = HashSet::new();
     let mut unique_sources: HashSet<String> = HashSet::new();
     for error_enum in error_enums {

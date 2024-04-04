@@ -6,54 +6,18 @@ use syn::{
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {
-    pub(crate) set_name: Ident,
-    pub(crate) set_items: Punctuated<AstErrorSetItem, token::Comma>,
+    pub(crate) set_items: Punctuated<AstErrorEnum, token::Comma>,
 }
 
 impl Parse for AstErrorSet {
     fn parse(input: ParseStream) -> Result<Self> {
-        let set_name: Ident = input.parse()?;
-        let content;
-        let _brace_token = braced!(content in input);
-        let set_items: Punctuated<AstErrorSetItem, token::Comma> = content.parse_terminated(
-            |input: ParseStream| input.parse::<AstErrorSetItem>(),
+        let set_items: Punctuated<AstErrorEnum, token::Comma> = input.parse_terminated(
+            |input: ParseStream| input.parse::<AstErrorEnum>(),
             token::Comma,
         )?;
         Ok(AstErrorSet {
-            set_name,
             set_items,
         })
-    }
-}
-
-pub(crate) type AstErrorVariant = Ident;
-
-#[derive(Clone)]
-pub(crate) enum AstErrorSetItem {
-    SourceErrorVariant(AstSourceErrorVariant),
-    ErrorEnum(AstErrorEnum),
-    Variant(AstErrorVariant),
-}
-
-impl Parse for AstErrorSetItem {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let mut fork = input.fork();
-        if let Ok(path) = fork.parse::<AstSourceErrorVariant>() {
-            input.advance_to(&fork);
-            return Ok(AstErrorSetItem::SourceErrorVariant(path));
-        }
-        fork = input.fork();
-        if let Ok(error_enum) = fork.parse::<AstErrorEnum>() {
-            input.advance_to(&fork);
-            return Ok(AstErrorSetItem::ErrorEnum(error_enum));
-        }
-        match input.parse::<AstErrorVariant>() {
-            Ok(error_variant) => Ok(AstErrorSetItem::Variant(error_variant)),
-            Err(err) => Err(syn::parse::Error::new(
-                err.span(),
-                "Expected the error set item to be a error enum, source error, or error variant.",
-            )),
-        }
     }
 }
 
@@ -76,6 +40,8 @@ impl Parse for AstSourceErrorVariant{
         })
     }
 }
+
+type AstErrorVariant = Ident;
 
 #[derive(Clone)]
 pub(crate) enum AstErrorEnumVariant {

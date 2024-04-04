@@ -1,19 +1,33 @@
+// use error_set::error_set;
+
+// error_set! {
+//     X {
+//         IoError(std::io::Error),
+//     },
+//     Y {
+//         IoError2(std::io::Error),
+//     },
+// }
+
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
 
-    error_set!(
+    error_set! {
         SetLevelError {
-            MagazineParsingError {
-                MissingNameArg,
-            },
-            BookParsingError {
-                MissingNameArg,
-                MissingPublishTimeArg,
-                MissingDescriptionArg,
-            },
-        }
-    );
+            MissingNameArg,
+            MissingPublishTimeArg,
+            MissingDescriptionArg,
+        },
+        MagazineParsingError {
+            MissingNameArg,
+        },
+        BookParsingError {
+            MissingNameArg,
+            MissingPublishTimeArg,
+            MissingDescriptionArg,
+        },
+    }
 
     #[test]
     fn into_works_correctly() {
@@ -34,15 +48,16 @@ pub mod regular {
 pub mod empty_set {
     use error_set::error_set;
 
-    error_set!(
+    error_set! {
         SetLevelError {
             EmptySet1,
-            BookParsingError {
-                MissingDescriptionArg,
-            },
             EmptySet2,
-        }
-    );
+            MissingDescriptionArg,
+        },
+        BookParsingError {
+            MissingDescriptionArg,
+        },
+    }
 
     #[test]
     fn test() {
@@ -57,10 +72,12 @@ pub mod empty_set {
 pub mod only_empty_set {
     use error_set::error_set;
 
-    error_set!(SetLevelError {
-        EmptySet1,
-        EmptySet2,
-    });
+    error_set! {
+        SetLevelError {
+            EmptySet1,
+            EmptySet2,
+        }
+    }
 
     #[test]
     fn test() {
@@ -73,46 +90,51 @@ pub mod only_empty_set {
 pub mod error_sources_of_same_name {
     use error_set::error_set;
 
-    error_set!(
+    error_set! {
         SetLevelError {
-            X {
             IoError(std::io::Error),
-            },
-            Y {
+        },
+        X {
             IoError(std::io::Error),
-            },
+        },
+        Y {
             IoError(std::io::Error),
-        }
-    );
+        },
+    }
 
     #[test]
     fn test() {
-        let x = X::IoError(std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"));
+        let x = X::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory",
+        ));
         let y: Y = x.into();
         let _set: SetLevelError = y.into();
     }
 }
 
-
 #[cfg(test)]
 pub mod error_sources_of_different_names {
     use error_set::error_set;
 
-    error_set!(
+    error_set! {
         SetLevelError {
-            X {
             IoError(std::io::Error),
-            },
-            Y {
+        },
+        X {
+            IoError(std::io::Error),
+        },
+        Y {
             IoError2(std::io::Error),
-            },
-            IoError(std::io::Error),
-        }
-    );
+        },
+    }
 
     #[test]
     fn test() {
-        let x = X::IoError(std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"));
+        let x = X::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory",
+        ));
         let y: Y = x.into();
         assert!(matches!(y, Y::IoError2(_)));
         let _set: SetLevelError = y.into();
@@ -134,4 +156,3 @@ pub mod should_not_compile_tests {
         t.compile_fail("tests/trybuild/two_enums_same_name.rs");
     }
 }
-

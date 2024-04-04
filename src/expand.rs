@@ -110,6 +110,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                 fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
                     match *self {
                         #source_match_branches
+                        #[allow(unreachable_patterns)]
                         _ => None,
                     }
                 }
@@ -263,14 +264,5 @@ pub(crate) struct ErrorEnum {
 impl PartialEq for ErrorEnum {
     fn eq(&self, other: &Self) -> bool {
         self.error_name == other.error_name
-    }
-}
-
-impl From<crate::ast::AstErrorEnum> for ErrorEnum {
-    fn from(value: crate::ast::AstErrorEnum) -> Self {
-        ErrorEnum {
-            error_name: value.error_name,
-            error_variants: value.error_variants.into_iter().collect(),
-        }
     }
 }

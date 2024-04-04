@@ -1,14 +1,12 @@
 use error_set::error_set;
 
-error_set!(
-    SetLevelError {
-        X {
+error_set! {
+    X {
         IoError2,
-        },
-        X {
+    },
+    X {
         IoError,
-        },
-    }
-);
+    },
+}
 
 pub fn main() {}
