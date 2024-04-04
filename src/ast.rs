@@ -1,8 +1,7 @@
+use std::error::Error;
+
 use syn::{
-    braced,
-    parse::{discouraged::Speculative, Parse, ParseStream},
-    punctuated::Punctuated,
-    token, Ident, Result,
+    braced, parenthesized, parse::{discouraged::Speculative, Parse, ParseStream}, punctuated::Punctuated, token, Ident, Result
 };
 
 pub struct AstErrorSet {
@@ -26,30 +25,27 @@ impl Parse for AstErrorSet {
     }
 }
 
-pub type ErrorVariant = Ident;
+pub type AstErrorVariant = Ident;
 
 pub enum AstErrorSetItem {
-    SourceErrorVariant(syn::TypePath),
+    SourceErrorVariant(AstSourceErrorVariant),
     ErrorEnum(AstErrorEnum),
-    Variant(ErrorVariant),
+    Variant(AstErrorVariant),
 }
 
 impl Parse for AstErrorSetItem {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut fork = input.fork();
-        if let Ok(path) = fork.parse::<syn::TypePath>() {
-            //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
-            if path.path.segments.len() > 1 {
-                input.advance_to(&fork);
-                return Ok(AstErrorSetItem::SourceErrorVariant(path));
-            }
+        if let Ok(path) = fork.parse::<AstSourceErrorVariant>() {
+            input.advance_to(&fork);
+            return Ok(AstErrorSetItem::SourceErrorVariant(path));
         }
         fork = input.fork();
         if let Ok(error_enum) = fork.parse::<AstErrorEnum>() {
             input.advance_to(&fork);
             return Ok(AstErrorSetItem::ErrorEnum(error_enum));
         }
-        match input.parse::<ErrorVariant>() {
+        match input.parse::<AstErrorVariant>() {
             Ok(error_variant) => Ok(AstErrorSetItem::Variant(error_variant)),
             Err(err) => Err(syn::parse::Error::new(
                 err.span(),
@@ -60,19 +56,39 @@ impl Parse for AstErrorSetItem {
 }
 
 #[derive(Clone)]
+pub struct AstSourceErrorVariant {
+    pub name: Ident,
+    pub source: syn::TypePath,
+}
+
+impl Parse for AstSourceErrorVariant{
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name =  input.parse::<Ident>()?;
+        let content;
+        parenthesized!(content in input);
+        let source = content.parse()?;
+        //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
+        Ok(AstSourceErrorVariant {
+            name,
+            source
+        })
+    }
+}
+
+#[derive(Clone)]
 pub enum AstErrorEnumVariant {
-    SourceErrorVariant(syn::TypePath),
-    Variant(ErrorVariant),
+    SourceErrorVariant(AstSourceErrorVariant),
+    Variant(AstErrorVariant),
 }
 
 impl Parse for AstErrorEnumVariant {
     fn parse(input: ParseStream) -> Result<Self> {
         let fork = input.fork();
-        if let Ok(path) = fork.parse::<syn::TypePath>() {
+        if let Ok(path) = fork.parse::<AstSourceErrorVariant>() {
             input.advance_to(&fork);
             return Ok(AstErrorEnumVariant::SourceErrorVariant(path));
         }
-        match input.parse::<ErrorVariant>() {
+        match input.parse::<AstErrorVariant>() {
             Ok(error_variant) => Ok(AstErrorEnumVariant::Variant(error_variant)),
             Err(err) => Err(syn::parse::Error::new(
                 err.span(),
@@ -86,11 +102,11 @@ impl PartialEq for AstErrorEnumVariant {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
-                AstErrorEnumVariant::SourceErrorVariant(path1),
-                AstErrorEnumVariant::SourceErrorVariant(path2),
+                AstErrorEnumVariant::SourceErrorVariant(var1),
+                AstErrorEnumVariant::SourceErrorVariant(var2),
             ) => {
-                let segments1 = &path1.path.segments;
-                let segments2 = &path2.path.segments;
+                let segments1 = &var1.source.path.segments;
+                let segments2 = &var2.source.path.segments;
                 if segments1.len() != segments2.len() {
                     return false;
                 }
@@ -127,3 +143,10 @@ impl Parse for AstErrorEnum {
         });
     }
 }
+
+// #[derive(Debug,Clone)]
+// struct X;
+
+// impl Error for X {
+
+// }

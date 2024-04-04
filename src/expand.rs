@@ -2,9 +2,9 @@ use std::{cell::RefCell, rc::Rc};
 
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
-use syn::Ident;
+use syn::{Ident, TypePath};
 
-use crate::ast::{AstErrorEnumVariant, AstErrorSet, AstErrorSetItem, ErrorVariant};
+use crate::ast::{AstErrorEnumVariant, AstErrorSet, AstErrorSetItem, AstErrorVariant};
 
 pub fn expand(error_set: AstErrorSet) -> TokenStream {
     let AstErrorSet {
@@ -80,8 +80,7 @@ pub fn expand(error_set: AstErrorSet) -> TokenStream {
 fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     add_enum(error_enum_node, token_stream);
     impl_error(error_enum_node, token_stream);
-    impl_display(error_enum_node, token_stream);
-    impl_debug(error_enum_node, token_stream);
+    impl_display_and_debug(error_enum_node, token_stream);
     impl_froms(error_enum_node, token_stream);
 }
 
@@ -97,14 +96,27 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         !error_variants.is_empty(),
         "Error variants should not be empty"
     );
-    let error_variants_as_ident = error_variants_as_ident(error_variants);
+    let mut error_variant_tokens = TokenStream::new();
+    for error_variant in error_variants {
+        match error_variant {
+            AstErrorEnumVariant::SourceErrorVariant(variant) => {
+                let name = &variant.name;
+                let source = &variant.source;
+                error_variant_tokens.append_all(quote::quote! {
+                #name(#source),
+                });
+            }
+            AstErrorEnumVariant::Variant(variant) => {
+                error_variant_tokens.append_all(quote::quote! {
+                #variant,
+                })
+            }
+        }
+    }
     token_stream.append_all(quote::quote! {
         //#[derive(Clone,Eq,PartialEq,Hash)]
-        #[derive(Clone)]
         pub enum #enum_name {
-            #(
-                #error_variants_as_ident,
-            )*
+            #error_variant_tokens
         }
     });
 }
@@ -122,7 +134,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     });
 }
 
-fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+fn impl_display_and_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
         out_nodes: _,
@@ -130,41 +142,43 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
 
     let enum_name = &error_enum.error_name;
     let error_variants = &error_enum.error_variants;
-    assert!(!error_variants.is_empty(), "Error variants should not be empty");
-    let error_variants_as_ident = error_variants_as_ident(error_variants);
+    assert!(
+        !error_variants.is_empty(),
+        "Error variants should not be empty"
+    );
+    let mut error_variant_tokens = TokenStream::new();
+    for error_variant in error_variants {
+        match error_variant {
+            AstErrorEnumVariant::SourceErrorVariant(variant) => {
+                let name = &variant.name;
+                error_variant_tokens.append_all(quote::quote! {
+                    #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                });
+            }
+            AstErrorEnumVariant::Variant(variant) => {
+                error_variant_tokens.append_all(quote::quote! {
+                    #enum_name::#variant =>  concat!(stringify!(#enum_name), "::", stringify!(#variant)),
+                })
+            }
+        }
+    }
     token_stream.append_all(quote::quote! {
         impl core::fmt::Display for #enum_name {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 let variant_name = match *self {
-                    #(
-                        #enum_name::#error_variants_as_ident =>  concat!(stringify!(#enum_name), "::", stringify!(#error_variants_as_ident)),
-                    )*
+                    #error_variant_tokens
                 };
                 write!(f, "{}", variant_name)
             }
         }
     });
-}
-
-fn impl_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
-    let ErrorEnumGraphNode {
-        error_enum,
-        out_nodes: _,
-    } = error_enum_node;
-
-    let enum_name = &error_enum.error_name;
-    let error_variants = &error_enum.error_variants;
-    assert!(!error_variants.is_empty(), "Error variants should not be empty");
-    let error_variants_as_ident = error_variants_as_ident(error_variants);
     token_stream.append_all(quote::quote! {
         impl core::fmt::Debug for #enum_name {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 let variant_name = match *self {
-                    #(
-                        #enum_name::#error_variants_as_ident =>  concat!(stringify!(#enum_name), "::", stringify!(#error_variants_as_ident)),
-                    )*
+                    #error_variant_tokens
                 };
                 write!(f, "{}", variant_name)
             }
@@ -204,13 +218,18 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
 
 //************************************************************************//
 
-fn error_variants_as_ident(error_variants: &Vec<AstErrorEnumVariant> ) -> Vec<&Ident>{
-    return error_variants.iter().map(|variant| match variant {
-        AstErrorEnumVariant::SourceErrorVariant(variant) => {
-            &variant.path.segments.iter().last().unwrap().ident
-        }
+fn error_variants_as_ident(error_variants: &Vec<AstErrorEnumVariant>) -> Vec<&Ident> {
+    return error_variants
+        .iter()
+        .map(error_variant_as_ident)
+        .collect::<Vec<_>>();
+}
+
+fn error_variant_as_ident(error_variant: &AstErrorEnumVariant) -> &Ident {
+    match error_variant {
+        AstErrorEnumVariant::SourceErrorVariant(variant) => &variant.name,
         AstErrorEnumVariant::Variant(variant) => variant,
-    }).collect::<Vec<_>>();
+    }
 }
 
 //************************************************************************//
