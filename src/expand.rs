@@ -19,12 +19,13 @@ pub fn expand(error_set: AstErrorSet) -> TokenStream {
     for error_set_item in error_set_items.into_iter() {
         match error_set_item {
             AstErrorSetItem::SourceErrorVariant(variant) => {
-                all_variants.push(AstErrorEnumVariant::SourceErrorVariant(variant))
+                let variant = AstErrorEnumVariant::SourceErrorVariant(variant);
+                if !all_variants.contains(&variant) {
+                    all_variants.push(variant)
+                }
             }
             AstErrorSetItem::ErrorEnum(error_enum) => {
-                if error_enum.error_variants.is_empty() {
-                    continue;
-                }
+                assert!(!error_enum.error_variants.is_empty(), "All error enums should have variants, otherwise they should be clasified as a variant");
                 for error_variant in error_enum.error_variants.iter() {
                     if !all_variants.contains(error_variant) {
                         all_variants.push(error_variant.clone());
@@ -33,7 +34,10 @@ pub fn expand(error_set: AstErrorSet) -> TokenStream {
                 error_enums_with_variants.push(error_enum);
             }
             AstErrorSetItem::Variant(variant) => {
-                all_variants.push(AstErrorEnumVariant::Variant(variant))
+                let variant = AstErrorEnumVariant::Variant(variant);
+                if !all_variants.contains(&variant) {
+                    all_variants.push(variant)
+                }
             }
         }
     }
@@ -116,7 +120,6 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         }
     }
     token_stream.append_all(quote::quote! {
-        //#[derive(Clone,Eq,PartialEq,Hash)]
         pub enum #enum_name {
             #error_variant_tokens
         }
