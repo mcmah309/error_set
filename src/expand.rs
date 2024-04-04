@@ -128,10 +128,35 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     } = error_enum_node;
 
     let enum_name = &error_enum.error_name;
-    token_stream.append_all(quote::quote! {
-        #[allow(unused_qualifications)]
-        impl std::error::Error for #enum_name {}
-    });
+    let mut source_match_branches = TokenStream::new();
+    let mut has_source_match_branches = false;
+    for variant in &error_enum.error_variants {
+        if let AstErrorEnumVariant::SourceErrorVariant(variant) = variant {
+            has_source_match_branches = true;
+            let name = &variant.name;
+            source_match_branches.append_all(quote::quote! {
+                #enum_name::#name(ref source) => source.source(),
+            });
+        }
+    }
+    if has_source_match_branches {
+        token_stream.append_all(quote::quote! {
+            #[allow(unused_qualifications)]
+            impl std::error::Error for #enum_name {
+                fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+                    match *self {
+                        #source_match_branches
+                        _ => None,
+                    }
+                }
+            }
+        });
+    } else {
+        token_stream.append_all(quote::quote! {
+            #[allow(unused_qualifications)]
+            impl std::error::Error for #enum_name {}
+        });
+    }
 }
 
 fn impl_display_and_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
@@ -172,8 +197,7 @@ fn impl_display_and_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &m
                 write!(f, "{}", variant_name)
             }
         }
-    });
-    token_stream.append_all(quote::quote! {
+
         impl core::fmt::Debug for #enum_name {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
