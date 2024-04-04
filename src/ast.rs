@@ -105,15 +105,7 @@ impl PartialEq for AstErrorEnumVariant {
                 AstErrorEnumVariant::SourceErrorVariant(var1),
                 AstErrorEnumVariant::SourceErrorVariant(var2),
             ) => {
-                let segments1 = &var1.source.path.segments;
-                let segments2 = &var2.source.path.segments;
-                if segments1.len() != segments2.len() {
-                    return false;
-                }
-                return segments1
-                    .iter()
-                    .zip(segments2.iter())
-                    .all(|(seg1, seg2)| seg1.ident == seg2.ident);
+                return is_type_path_equal(&var1.source, &var2.source);
             }
             (AstErrorEnumVariant::Variant(variant1), AstErrorEnumVariant::Variant(variant2)) => {
                 variant1 == variant2
@@ -121,6 +113,18 @@ impl PartialEq for AstErrorEnumVariant {
             _ => false,
         }
     }
+}
+
+pub fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -> bool {
+    let segments1 = &path1.path.segments;
+    let segments2 = &path2.path.segments;
+    if segments1.len() != segments2.len() {
+        return false;
+    }
+    return segments1
+        .iter()
+        .zip(segments2.iter())
+        .all(|(seg1, seg2)| seg1.ident == seg2.ident);
 }
 
 pub struct AstErrorEnum {
