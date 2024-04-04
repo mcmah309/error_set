@@ -2,15 +2,14 @@ use std::{cell::RefCell, rc::Rc};
 
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
-use syn::{Ident, TypePath};
+use syn::Ident;
 
 use crate::ast::{
-    is_type_path_equal, AstErrorEnum, AstErrorEnumVariant, AstErrorSet, AstErrorSetItem,
-    AstErrorVariant,
+    is_type_path_equal, AstErrorEnumVariant,
 };
 
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
-    let mut error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
+    let error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
         .into_iter()
         .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
         .collect();
@@ -178,7 +177,7 @@ fn impl_display_and_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &m
 fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
-        subsets: subsets,
+        subsets,
     } = error_enum_node;
 
     let error_enum_name = &error_enum.error_name;
@@ -232,16 +231,6 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         });
     }
 }
-
-//************************************************************************//
-
-fn error_variant_as_ident(error_variant: &AstErrorEnumVariant) -> &Ident {
-    match error_variant {
-        AstErrorEnumVariant::SourceErrorVariant(variant) => &variant.name,
-        AstErrorEnumVariant::Variant(variant) => variant,
-    }
-}
-
 //************************************************************************//
 #[derive(Clone)]
 struct ErrorEnumGraphNode {

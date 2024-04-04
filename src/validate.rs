@@ -1,8 +1,8 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use syn::Ident;
 
-use crate::{ast::{AstErrorEnumVariant, AstErrorSet, AstErrorSetItem, AstSourceErrorVariant}, expand::ErrorEnum};
+use crate::{ast::AstErrorEnumVariant, expand::ErrorEnum};
 
 
 
