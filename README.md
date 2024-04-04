@@ -1,9 +1,11 @@
 # error_set
 
-Rust implementation of zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
-to concisely define error types and convert between.
+A concise way to define errors and ergomically coerce a subset to a superset with with just `.into()`.
 
-Instead of defining various enums for errors. Use an error set.
+`error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
+and works functionally the same.
+
+Instead of defining various enums/structs for errors. Use an error set.
 ```rust
 use error_set::error_set;
 
@@ -48,7 +50,8 @@ fn main() {
         let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
             std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
         ));
-        let _result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
+        let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
+        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
 }
 ```
 `cargo expand`:

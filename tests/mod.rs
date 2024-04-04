@@ -174,7 +174,8 @@ pub mod readme_example {
         let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
             std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
         ));
-        let _result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
+        let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
+        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
 }
 
