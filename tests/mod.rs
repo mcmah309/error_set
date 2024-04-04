@@ -4,17 +4,19 @@
 pub mod tests {
     use error_set::error_set;
 
-    error_set!( SetLevelError,{
-        MagazineParsingError {
-            MissingNameArg,
-            MissingPublishTimeArg
-        },
-        BookParsingError {
-            MissingNameArg,
-            MissingPublishTimeArg,
-            MissingDescriptionArg,
-        },
-    });
+    error_set!(
+        SetLevelError {
+            MagazineParsingError {
+                MissingNameArg,
+                MissingPublishTimeArg
+            },
+            BookParsingError {
+                MissingNameArg,
+                MissingPublishTimeArg,
+                MissingDescriptionArg,
+            },
+        }
+    );
 
     #[test]
     fn test() {

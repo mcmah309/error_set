@@ -23,7 +23,7 @@ pub fn expand(error_set: ErrorSet) -> TokenStream {
         .into_iter()
         .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
         .collect();
-    //todo validate there are no duplicate error enums
+    //todo validate there are no duplicate error enums, do in ast
     // Add set level
     let set_level_node = ErrorEnumGraphNode::new(ErrorEnum {
         error_name: error_set.set_name,

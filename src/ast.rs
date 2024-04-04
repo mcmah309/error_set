@@ -12,9 +12,7 @@ pub struct ErrorSet {
 
 impl Parse for ErrorSet {
     fn parse(input: ParseStream) -> Result<Self> {
-        print!("hello");
         let set_name: Ident = input.parse()?;
-        input.parse::<token::Comma>()?;
         let content;
         let _brace_token = braced!(content in input);
         let set_items: Punctuated<ErrorEnum, token::Comma> = content.parse_terminated(

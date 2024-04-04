@@ -5,18 +5,20 @@ to concisely define error types and convert between.
 
 Instead of defining various enums for errors. Use an error set.
 ```rust
-error_set!(SetLevelError, 
-{
-    MagazineParsingError {
-        MissingNameArg,
-        MissingPublishTimeArg
-    },
-    BookParsingError {
-        MissingNameArg,
-        MissingPublishTimeArg,
-        MissingDescriptionArg,
-    },
-})
+error_set!(
+    SetLevelError {
+        MagazineParsingError {
+            MissingNameArg,
+            MissingPublishTimeArg
+        },
+        BookParsingError {
+            MissingNameArg,
+            MissingPublishTimeArg,
+            MissingDescriptionArg,
+        },
+    // todo wrap other error enums
+    }
+);
 ```
 Usage
 ```rust
