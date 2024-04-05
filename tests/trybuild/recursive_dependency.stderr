@@ -1,0 +1,11 @@
+error: Recursive dependency: MediaError->BookParsingError->BookSectionParsingError->BookParsingError
+ --> tests/trybuild/recursive_dependency.rs:7:5
+  |
+7 |     BookParsingError = {
+  |     ^^^^^^^^^^^^^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/trybuild/recursive_dependency.rs:21:2
+   |
+21 | }
+   |  ^ consider adding a `main` function to `$DIR/tests/trybuild/recursive_dependency.rs`

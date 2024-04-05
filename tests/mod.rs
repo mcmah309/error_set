@@ -188,49 +188,7 @@ pub mod readme_example_aggregation {
     error_set! {
         MediaError = {
             IoError(std::io::Error)
-            } || BookParsingError || BookSectionParsingError || DownloadError || UploadError;
-        BookParsingError = {
-            MissingDescriptionArg
-        } || BookSectionParsingError;
-        BookSectionParsingError = {
-            MissingNameArg,
-            NoContents,
-        };
-        DownloadError = {
-            CouldNotConnect,
-            OutOfMemory(std::io::Error),
-        };
-        UploadError = {
-            NoConnection(std::io::Error),
-        };
-    }
-
-    #[test]
-    fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
-        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(
-            book_parsing_error,
-            BookParsingError::MissingNameArg
-        ));
-        let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingNameArg));
-
-        let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
-            std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
-        ));
-        let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
-        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
-    }
-}
-#[cfg(test)]
-pub mod readme_example_aggrega2tion {
-    use error_set::error_set;
-
-    error_set! {
-        MediaError = {
-            IoError(std::io::Error)
-            } || BookParsingError || BookSectionParsingError || DownloadError || UploadError;
+            } || BookParsingError || DownloadError || UploadError;
         BookParsingError = {
             MissingDescriptionArg
         } || BookSectionParsingError;
@@ -278,5 +236,11 @@ pub mod should_not_compile_tests {
     fn two_enums_same_name() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/two_enums_same_name.rs");
+    }
+
+    #[test]
+    fn recursive_dependency() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/recursive_dependency.rs");
     }
 }
