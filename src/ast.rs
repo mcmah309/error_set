@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use quote::ToTokens;
 use syn::{
     braced, parenthesized,
@@ -93,7 +95,7 @@ impl Parse for AstInlineError {
 
 pub(crate) type AstErrorVariant = Ident;
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub(crate) enum AstErrorEnumVariant {
     SourceErrorVariant(AstSourceErrorVariant),
     Variant(AstErrorVariant),
@@ -123,7 +125,8 @@ impl PartialEq for AstErrorEnumVariant {
                 AstErrorEnumVariant::SourceErrorVariant(var1),
                 AstErrorEnumVariant::SourceErrorVariant(var2),
             ) => {
-                return var1.name == var2.name && is_type_path_equal(&var1.source, &var2.source);
+                // Does not include name, becuase we only care about the type, since each set can only have one of a type
+                return is_type_path_equal(&var1.source, &var2.source);
             }
             (AstErrorEnumVariant::Variant(variant1), AstErrorEnumVariant::Variant(variant2)) => {
                 variant1 == variant2
@@ -174,5 +177,12 @@ impl Parse for AstSourceErrorVariant {
         let source = content.parse()?;
         //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
         Ok(AstSourceErrorVariant { name, source })
+    }
+}
+
+impl std::fmt::Debug for AstSourceErrorVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let source = &self.source.path.segments.iter().map(|e| e.ident.to_string()).collect::<Vec<_>>().join("::");
+        f.debug_struct("AstSourceErrorVariant").field("name", &self.name).field("source", source).finish()
     }
 }

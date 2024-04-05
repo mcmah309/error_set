@@ -255,7 +255,7 @@ impl ErrorEnumGraphNode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub(crate) struct ErrorEnum {
     pub(crate) error_name: Ident,
     pub(crate) error_variants: Vec<AstErrorEnumVariant>,

@@ -51,19 +51,20 @@ fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> 
                         .extend(inline_part.error_variants.into_iter());
                 }
                 ast::AstInlineOrRefError::Ref(ref_part) => {
-                    error_enum_builder.ref_parts.push(ref_part);
+                    error_enum_builder.add_ref_part(ref_part);
                 }
             }
         }
         error_enum_builders.push(error_enum_builder);
     }
     let error_enums = resolve(error_enum_builders.into_iter().map(RefCell::new).collect())?;
+
     Ok(error_enums)
 }
 
-fn resolve(mut error_enum_builders: Vec<RefCell<ErrorEnumBuilder>>) -> syn::Result<Vec<ErrorEnum>> {
+fn resolve(error_enum_builders: Vec<RefCell<ErrorEnumBuilder>>) -> syn::Result<Vec<ErrorEnum>> {
     for index in 0..error_enum_builders.len() {
-        if !error_enum_builders[index].get_mut().ref_parts.is_empty() {
+        if !error_enum_builders[index].borrow().ref_parts.is_empty() {
             resolve_helper(index, &error_enum_builders, &mut Vec::new())?;
         }
     }
@@ -80,8 +81,8 @@ fn resolve_helper<'a>(
     error_enum_builders: &'a [RefCell<ErrorEnumBuilder>],
     visited: &mut Vec<Ident>,
 ) -> syn::Result<Vec<AstErrorEnumVariant>> {
-    //let mut this_additional_error_variants: HashSet<AstErrorEnumVariant> = HashSet::new();
     let this_error_enum_builder = &error_enum_builders[index];
+    //println!("visited `{}`", visited.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" - "));
     if visited.contains(&this_error_enum_builder.borrow().error_name) {
         visited.push(this_error_enum_builder.borrow().error_name.clone());
         return Err(syn::parse::Error::new_spanned(
@@ -96,56 +97,57 @@ fn resolve_helper<'a>(
             ),
         ));
     }
-    let ref_parts = this_error_enum_builder.borrow().ref_parts.clone(); //todo remove?
-    for ref_part in ref_parts {
-        let ref_error_enum_index = error_enum_builders
-            .iter()
-            .position(|e| e.borrow().error_name == ref_part);
-        let ref_error_enum_index = match ref_error_enum_index {
-            Some(e) => e,
-            None => {
-                return Err(syn::parse::Error::new_spanned(
+    let ref_parts_to_resolve = this_error_enum_builder
+        .borrow()
+        .ref_parts_to_resolve
+        .clone();
+    if !ref_parts_to_resolve.is_empty() {
+        for ref_part in ref_parts_to_resolve {
+            let ref_error_enum_index = error_enum_builders
+                .iter()
+                .position(|e| e.borrow().error_name == ref_part);
+            let ref_error_enum_index = match ref_error_enum_index {
+                Some(e) => e,
+                None => {
+                    return Err(syn::parse::Error::new_spanned(
                     &ref_part,
                     format!("error enum '{0}' includes error enum '{1}' as a subset, but '{1}' does not exist.", this_error_enum_builder.borrow().error_name, ref_part)
                 ));
+                }
+            };
+            let ref_error_enum_builder = &error_enum_builders[ref_error_enum_index];
+            if !ref_error_enum_builder
+                .borrow()
+                .ref_parts_to_resolve
+                .is_empty()
+            {
+                visited.push(this_error_enum_builder.borrow().error_name.clone());
+                resolve_helper(ref_error_enum_index, error_enum_builders, visited)?;
+                visited.pop();
             }
-        };
-        let additional_variants;
-        let ref_error_enum_builder = &error_enum_builders[ref_error_enum_index];
-        if !ref_error_enum_builder.borrow().ref_parts.is_empty() {
-            visited.push(this_error_enum_builder.borrow().error_name.clone());
-            additional_variants = Some(resolve_helper(
-                ref_error_enum_index,
-                error_enum_builders,
-                visited,
-            )?);
-            visited.pop();
-        } else {
-            additional_variants = None;
-        }
-        // Add variants returned from resolving ref part
-        if let Some(additional_variants) = additional_variants {
-            for variant in additional_variants.into_iter() {
-                println!("is this the issue");
+            for variant in ref_error_enum_builder.borrow().error_variants.iter() {
                 let this_error_variants = &mut this_error_enum_builder.borrow_mut().error_variants;
-                println!("Not not the issue the issue");
                 if !this_error_variants.contains(&variant) {
-                    this_error_variants.push(variant);
+                    this_error_variants.push(variant.clone());
                 }
             }
         }
+        this_error_enum_builder
+            .borrow_mut()
+            .ref_parts_to_resolve
+            .clear();
     }
-    //println!("is this the issue 2");
-    this_error_enum_builder.borrow_mut().ref_parts.clear();
-    //println!("Not not the issue the issue 2");
     // Now that are refs are solved and included in this's error_variants, return them.
     Ok(this_error_enum_builder.borrow().error_variants.clone())
 }
 
+#[derive(Debug)]
 struct ErrorEnumBuilder {
     pub error_name: Ident,
     pub error_variants: Vec<AstErrorEnumVariant>,
     pub ref_parts: Vec<RefError>,
+    /// Once this is empty, all [ref_parts] have been resolved and [error_variants] is complete.
+    pub ref_parts_to_resolve: Vec<RefError>,
 }
 
 impl ErrorEnumBuilder {
@@ -154,14 +156,20 @@ impl ErrorEnumBuilder {
             error_name,
             error_variants: Vec::new(),
             ref_parts: Vec::new(),
+            ref_parts_to_resolve: Vec::new(),
         }
+    }
+
+    fn add_ref_part(&mut self, ref_part: RefError) {
+        self.ref_parts.push(ref_part.clone());
+        self.ref_parts_to_resolve.push(ref_part);
     }
 }
 
 impl From<ErrorEnumBuilder> for ErrorEnum {
     fn from(value: ErrorEnumBuilder) -> Self {
         assert!(
-            value.ref_parts.is_empty(),
+            value.ref_parts_to_resolve.is_empty(),
             "All references should be resolved when converting to an error enum."
         );
         ErrorEnum {
