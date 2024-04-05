@@ -79,7 +79,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         }
     }
     token_stream.append_all(quote::quote! {
-        pub(crate) enum #enum_name {
+        pub enum #enum_name {
             #error_variant_tokens
         }
     });

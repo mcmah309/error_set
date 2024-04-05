@@ -79,7 +79,7 @@ fn main() {
 `cargo expand`:
 ```rust
 use error_set::error_set;
-pub(crate) enum MediaError {
+pub enum MediaError {
     MissingNameArg,
     NoContents,
     MissingDescriptionArg,
@@ -154,7 +154,7 @@ impl From<UploadError> for MediaError {
         }
     }
 }
-pub(crate) enum BookParsingError {
+pub enum BookParsingError {
     MissingNameArg,
     NoContents,
     MissingDescriptionArg,
@@ -195,7 +195,7 @@ impl From<BookSectionParsingError> for BookParsingError {
         }
     }
 }
-pub(crate) enum BookSectionParsingError {
+pub enum BookSectionParsingError {
     MissingNameArg,
     NoContents,
 }
@@ -225,7 +225,7 @@ impl core::fmt::Debug for BookSectionParsingError {
         f.write_fmt(format_args!("{0}", variant_name))
     }
 }
-pub(crate) enum DownloadError {
+pub enum DownloadError {
     CouldNotConnect,
     OutOfMemory(std::io::Error),
 }
@@ -266,7 +266,7 @@ impl From<UploadError> for DownloadError {
         }
     }
 }
-pub(crate) enum UploadError {
+pub enum UploadError {
     NoConnection(std::io::Error),
 }
 #[allow(unused_qualifications)]
