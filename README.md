@@ -9,31 +9,53 @@ Instead of defining various enums/structs for errors. Use an error set.
 ```rust
 use error_set::error_set;
 
-    error_set! {
-        MediaError {
-            MissingNameArg,
-            NoContents,
-            MissingDescriptionArg,
-            CouldNotConnect,
-            IoError(std::io::Error),
-        },
-        BookParsingError {
-            MissingNameArg,
-            NoContents,
-            MissingDescriptionArg,
-        },
-        BookSectionParsingError {
-            MissingNameArg,
-            NoContents,
-        },
-        DownloadError {
-            CouldNotConnect,
-            OutOfMemory(std::io::Error),
-        },
-        UploadError {
-            NoConnection(std::io::Error),
-        }
-    }
+error_set! {
+    MediaError = {
+        IoError(std::io::Error)
+        } || BookParsingError || BookSectionParsingError || DownloadError || UploadError;
+    BookParsingError = {
+        MissingDescriptionArg
+    } || BookSectionParsingError;
+    BookSectionParsingError = {
+        MissingNameArg,
+        NoContents,
+    };
+    DownloadError = {
+        CouldNotConnect,
+        OutOfMemory(std::io::Error),
+    };
+    UploadError = {
+        NoConnection(std::io::Error),
+    };
+}
+```
+or the equivlent
+```rust
+error_set! {
+    MediaError = {
+        MissingNameArg,
+        NoContents,
+        MissingDescriptionArg,
+        CouldNotConnect,
+        IoError(std::io::Error),
+    };
+    BookParsingError = {
+        MissingNameArg,
+        NoContents,
+        MissingDescriptionArg,
+    };
+    BookSectionParsingError = {
+        MissingNameArg,
+        NoContents,
+    };
+    DownloadError = {
+        CouldNotConnect,
+        OutOfMemory(std::io::Error),
+    };
+    UploadError = {
+        NoConnection(std::io::Error),
+    };
+}
 ```
 Usage
 ```rust
