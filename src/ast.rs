@@ -6,14 +6,14 @@ use syn::{
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {
-    pub(crate) set_items: Punctuated<AstErrorEnum, token::Comma>,
+    pub(crate) set_items: Punctuated<AstErrorDeclaration, token::Colon>,
 }
 
 impl Parse for AstErrorSet {
     fn parse(input: ParseStream) -> Result<Self> {
-        let set_items: Punctuated<AstErrorEnum, token::Comma> = input.parse_terminated(
-            |input: ParseStream| input.parse::<AstErrorEnum>(),
-            token::Comma,
+        let set_items: Punctuated<AstErrorDeclaration, token::Colon> = input.parse_terminated(
+            |input: ParseStream| input.parse::<AstErrorDeclaration>(),
+            token::Colon,
         )?;
         Ok(AstErrorSet {
             set_items,
@@ -22,26 +22,74 @@ impl Parse for AstErrorSet {
 }
 
 #[derive(Clone)]
-pub(crate) struct AstSourceErrorVariant {
-    pub(crate) name: Ident,
-    pub(crate) source: syn::TypePath,
+pub(crate) struct AstErrorDeclaration {
+    pub(crate) error_name: Ident,
+    pub(crate) parts: Punctuated<AstInlineOrRefError, token::OrOr>,
 }
 
-impl Parse for AstSourceErrorVariant{
+impl Parse for AstErrorDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
-        let name =  input.parse::<Ident>()?;
+        let error_name: Ident = input.parse()?;
+        input.parse::<syn::Token![=]>()?;
         let content;
-        parenthesized!(content in input);
-        let source = content.parse()?;
-        //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
-        Ok(AstSourceErrorVariant {
-            name,
-            source
-        })
+        let _brace_token = braced!(content in input);
+        let parts = content.parse_terminated(
+            |input: ParseStream| input.parse::<AstInlineOrRefError>(),
+            token::OrOr,
+        )?;
+        return Ok(AstErrorDeclaration {
+            error_name,
+            parts,
+        });
     }
 }
 
-type AstErrorVariant = Ident;
+pub(crate) type RefError = Ident;
+
+#[derive(Clone)]
+pub(crate) enum AstInlineOrRefError {
+    Inline(AstInlineError),
+    Ref(RefError),
+}
+
+impl Parse for AstInlineOrRefError {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let fork = input.fork();
+        if let Ok(inline_error) = fork.parse::<AstInlineError>() {
+            input.advance_to(&fork);
+            return Ok(AstInlineOrRefError::Inline(inline_error));
+        }
+        match input.parse::<RefError>() {
+            Ok(ref_error) => Ok(AstInlineOrRefError::Ref(ref_error)),
+            Err(err) => Err(syn::parse::Error::new(
+                err.span(),
+                "Expected the error variants to be inline or a reference to another error enum.",
+            )),
+        }
+    }
+}
+
+
+#[derive(Clone)]
+pub(crate) struct AstInlineError {
+    pub error_variants: Punctuated<AstErrorEnumVariant, token::Comma>
+}
+
+impl Parse for AstInlineError {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        let _brace_token = braced!(content in input);
+        let error_variants = content.parse_terminated(
+            |input: ParseStream| input.parse::<AstErrorEnumVariant>(),
+            token::Comma,
+        )?;
+        return Ok(AstInlineError {
+            error_variants,
+        });
+    }
+}
+
+pub(crate) type AstErrorVariant = Ident;
 
 #[derive(Clone)]
 pub(crate) enum AstErrorEnumVariant {
@@ -96,23 +144,21 @@ pub(crate) fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -
 }
 
 #[derive(Clone)]
-pub(crate) struct AstErrorEnum {
-    pub(crate) error_name: Ident,
-    pub(crate) error_variants: Punctuated<AstErrorEnumVariant, token::Comma>,
+pub(crate) struct AstSourceErrorVariant {
+    pub(crate) name: Ident,
+    pub(crate) source: syn::TypePath,
 }
 
-impl Parse for AstErrorEnum {
+impl Parse for AstSourceErrorVariant{
     fn parse(input: ParseStream) -> Result<Self> {
-        let error_name: Ident = input.parse()?;
+        let name =  input.parse::<Ident>()?;
         let content;
-        let _brace_token = braced!(content in input);
-        let error_variants = content.parse_terminated(
-            |input: ParseStream| input.parse::<AstErrorEnumVariant>(),
-            token::Comma,
-        )?;
-        return Ok(AstErrorEnum {
-            error_name,
-            error_variants,
-        });
+        parenthesized!(content in input);
+        let source = content.parse()?;
+        //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
+        Ok(AstSourceErrorVariant {
+            name,
+            source
+        })
     }
 }

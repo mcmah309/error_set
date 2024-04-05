@@ -261,6 +261,14 @@ pub(crate) struct ErrorEnum {
     pub(crate) error_variants: Vec<AstErrorEnumVariant>,
 }
 
+impl  std::hash::Hash for ErrorEnum {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.error_name.hash(state);
+    }
+}
+
+impl Eq for ErrorEnum {}
+
 impl PartialEq for ErrorEnum {
     fn eq(&self, other: &Self) -> bool {
         self.error_name == other.error_name
