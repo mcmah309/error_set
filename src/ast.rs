@@ -1,14 +1,8 @@
-use std::fmt::Display;
-
-use quote::ToTokens;
 use syn::{
     braced, parenthesized,
-    parse::{
-        discouraged::{AnyDelimiter, Speculative},
-        Parse, ParseStream,
-    },
+    parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
-    token, Ident, Result, Token,
+    token, Ident, Result,
 };
 
 #[derive(Clone)]
@@ -95,7 +89,7 @@ impl Parse for AstInlineError {
 
 pub(crate) type AstErrorVariant = Ident;
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum AstErrorEnumVariant {
     SourceErrorVariant(AstSourceErrorVariant),
     Variant(AstErrorVariant),
@@ -182,7 +176,17 @@ impl Parse for AstSourceErrorVariant {
 
 impl std::fmt::Debug for AstSourceErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let source = &self.source.path.segments.iter().map(|e| e.ident.to_string()).collect::<Vec<_>>().join("::");
-        f.debug_struct("AstSourceErrorVariant").field("name", &self.name).field("source", source).finish()
+        let source = &self
+            .source
+            .path
+            .segments
+            .iter()
+            .map(|e| e.ident.to_string())
+            .collect::<Vec<_>>()
+            .join("::");
+        f.debug_struct("AstSourceErrorVariant")
+            .field("name", &self.name)
+            .field("source", source)
+            .finish()
     }
 }

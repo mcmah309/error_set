@@ -4,19 +4,11 @@ mod ast;
 mod expand;
 mod validate;
 
-use std::{
-    borrow::Borrow,
-    cell::{Cell, Ref, RefCell, RefMut},
-    collections::{HashMap, HashSet},
-    fmt::Error,
-    hash::Hasher,
-    rc::Rc,
-    result,
-};
+use std::cell::RefCell;
 
-use ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, AstErrorVariant, RefError};
+use ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
 use expand::{expand, ErrorEnum};
-use proc_macro2::TokenStream;
+
 use syn::Ident;
 use validate::validate;
 

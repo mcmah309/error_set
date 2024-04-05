@@ -1,4 +1,4 @@
-    use error_set::error_set;
+#![allow(clippy)]
 
 #[cfg(test)]
 pub mod regular {
