@@ -39,7 +39,12 @@ impl Parse for AstErrorDeclaration {
             if input.peek(token::Semi) {
                 break;
             }
-            let _punc = input.parse::<token::OrOr>()?;
+            match input.parse::<token::OrOr>() {
+                Ok(_) => {}
+                Err(_) => {
+                    return Err(syn::Error::new(input.span(), "Expected `;` or `||`"));
+                }
+            }
         }
         return Ok(AstErrorDeclaration { error_name, parts });
     }
