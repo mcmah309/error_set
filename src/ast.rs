@@ -1,46 +1,51 @@
-
-
+use quote::ToTokens;
 use syn::{
-    braced, parenthesized, parse::{discouraged::Speculative, Parse, ParseStream}, punctuated::Punctuated, token, Ident, Result
+    braced, parenthesized,
+    parse::{
+        discouraged::{AnyDelimiter, Speculative},
+        Parse, ParseStream,
+    },
+    punctuated::Punctuated,
+    token, Ident, Result, Token,
 };
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {
-    pub(crate) set_items: Punctuated<AstErrorDeclaration, token::Colon>,
+    pub(crate) set_items: Vec<AstErrorDeclaration>,
 }
 
 impl Parse for AstErrorSet {
     fn parse(input: ParseStream) -> Result<Self> {
-        let set_items: Punctuated<AstErrorDeclaration, token::Colon> = input.parse_terminated(
-            |input: ParseStream| input.parse::<AstErrorDeclaration>(),
-            token::Colon,
-        )?;
-        Ok(AstErrorSet {
-            set_items,
-        })
+        let mut set_items = Vec::new();
+        while !input.is_empty() {
+            let set_item = input.parse::<AstErrorDeclaration>()?;
+            set_items.push(set_item);
+            let _punc = input.parse::<token::Semi>()?;
+        }
+        Ok(AstErrorSet { set_items })
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct AstErrorDeclaration {
     pub(crate) error_name: Ident,
-    pub(crate) parts: Punctuated<AstInlineOrRefError, token::OrOr>,
+    pub(crate) parts: Vec<AstInlineOrRefError>,
 }
 
 impl Parse for AstErrorDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
         let error_name: Ident = input.parse()?;
         input.parse::<syn::Token![=]>()?;
-        let content;
-        let _brace_token = braced!(content in input);
-        let parts = content.parse_terminated(
-            |input: ParseStream| input.parse::<AstInlineOrRefError>(),
-            token::OrOr,
-        )?;
-        return Ok(AstErrorDeclaration {
-            error_name,
-            parts,
-        });
+        let mut parts = Vec::new();
+        while !input.is_empty() {
+            let part = input.parse::<AstInlineOrRefError>()?;
+            parts.push(part);
+            if input.peek(token::Semi) {
+                break;
+            }
+            let _punc = input.parse::<token::OrOr>()?;
+        }
+        return Ok(AstErrorDeclaration { error_name, parts });
     }
 }
 
@@ -69,10 +74,9 @@ impl Parse for AstInlineOrRefError {
     }
 }
 
-
 #[derive(Clone)]
 pub(crate) struct AstInlineError {
-    pub error_variants: Punctuated<AstErrorEnumVariant, token::Comma>
+    pub error_variants: Punctuated<AstErrorEnumVariant, token::Comma>,
 }
 
 impl Parse for AstInlineError {
@@ -83,9 +87,7 @@ impl Parse for AstInlineError {
             |input: ParseStream| input.parse::<AstErrorEnumVariant>(),
             token::Comma,
         )?;
-        return Ok(AstInlineError {
-            error_variants,
-        });
+        return Ok(AstInlineError { error_variants });
     }
 }
 
@@ -121,12 +123,27 @@ impl PartialEq for AstErrorEnumVariant {
                 AstErrorEnumVariant::SourceErrorVariant(var1),
                 AstErrorEnumVariant::SourceErrorVariant(var2),
             ) => {
-                return is_type_path_equal(&var1.source, &var2.source);
+                return var1.name == var2.name && is_type_path_equal(&var1.source, &var2.source);
             }
             (AstErrorEnumVariant::Variant(variant1), AstErrorEnumVariant::Variant(variant2)) => {
                 variant1 == variant2
             }
             _ => false,
+        }
+    }
+}
+
+impl Eq for AstErrorEnumVariant {}
+
+impl std::hash::Hash for AstErrorEnumVariant {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            AstErrorEnumVariant::SourceErrorVariant(source_error_variant) => {
+                source_error_variant.name.hash(state);
+            }
+            AstErrorEnumVariant::Variant(variant) => {
+                variant.hash(state);
+            }
         }
     }
 }
@@ -149,16 +166,13 @@ pub(crate) struct AstSourceErrorVariant {
     pub(crate) source: syn::TypePath,
 }
 
-impl Parse for AstSourceErrorVariant{
+impl Parse for AstSourceErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
-        let name =  input.parse::<Ident>()?;
+        let name = input.parse::<Ident>()?;
         let content;
         parenthesized!(content in input);
         let source = content.parse()?;
         //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
-        Ok(AstSourceErrorVariant {
-            name,
-            source
-        })
+        Ok(AstSourceErrorVariant { name, source })
     }
 }
