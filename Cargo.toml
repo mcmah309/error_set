@@ -12,9 +12,9 @@ repository = "https://github.com/mcmah309/error_set"
 proc-macro = true
 
 [dependencies]
-syn = { version = "2.0.58", features = ["full"] }
-proc-macro2 = "1.0.79"
-quote = "1.0.35"
+syn = { version = "^2.0.58", features = ["full"] }
+proc-macro2 = "^1.0.79"
+quote = "^1.0.26"
 
 [dev-dependencies]
-trybuild = "1.0.91"
+trybuild = "^1.0.91"
