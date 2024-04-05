@@ -12,7 +12,7 @@ use error_set::error_set;
 error_set! {
     MediaError = {
         IoError(std::io::Error)
-        } || BookParsingError || BookSectionParsingError || DownloadError || UploadError;
+        } || BookParsingError || DownloadError || UploadError;
     BookParsingError = {
         MissingDescriptionArg
     } || BookSectionParsingError;
