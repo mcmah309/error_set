@@ -2,11 +2,11 @@ error: 'X' already exists as an error enum.
   --> tests/trybuild/two_enums_same_name.rs:3:1
    |
 3  | / error_set! {
-4  | |     X {
+4  | |     X = {
 5  | |         IoError2,
-6  | |     },
+6  | |     };
 ...  |
-9  | |     },
+9  | |     };
 10 | | }
    | |_^
    |

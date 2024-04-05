@@ -1,13 +1,13 @@
 use error_set::error_set;
 
 error_set! {
-    X {
+    X = {
         IoError(std::io::Error),
         IoError2(std::io::Error),
-    },
-    Y {
+    };
+    Y = {
         IoError2(std::io::Error),
-    },
+    };
 }
 
 pub fn main() {}
