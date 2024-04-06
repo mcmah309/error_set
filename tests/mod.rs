@@ -1,5 +1,3 @@
-
-
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
@@ -173,9 +171,9 @@ pub mod readme_example {
         let media_error: MediaError = book_parsing_error.into();
         assert!(matches!(media_error, MediaError::MissingNameArg));
 
-        let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
-            std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
-        ));
+
+        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
@@ -216,9 +214,8 @@ pub mod readme_example_aggregation {
         let media_error: MediaError = book_parsing_error.into();
         assert!(matches!(media_error, MediaError::MissingNameArg));
 
-        let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
-            std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
-        ));
+        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }

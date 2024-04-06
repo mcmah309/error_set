@@ -4,9 +4,7 @@ use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::Ident;
 
-use crate::ast::{
-    is_type_path_equal, AstErrorEnumVariant,
-};
+use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
     let error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
@@ -231,7 +229,26 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             }
         });
     }
+    for source in error_enum.error_variants.iter().filter_map(|e| {
+        return match e {
+            AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
+                return Some(source_variant);
+            }
+            _ => None,
+        };
+    }) {
+        let variant_name = &source.name;
+        let source = &source.source;
+        token_stream.append_all(quote::quote! {
+            impl From<#source> for #error_enum_name {
+                fn from(error: #source) -> Self {
+                    #error_enum_name::#variant_name(error)
+                }
+            }
+        })
+    }
 }
+
 //************************************************************************//
 #[derive(Clone)]
 struct ErrorEnumGraphNode {
@@ -255,13 +272,13 @@ impl ErrorEnumGraphNode {
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct ErrorEnum {
     pub(crate) error_name: Ident,
     pub(crate) error_variants: Vec<AstErrorEnumVariant>,
 }
 
-impl  std::hash::Hash for ErrorEnum {
+impl std::hash::Hash for ErrorEnum {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.error_name.hash(state);
     }
