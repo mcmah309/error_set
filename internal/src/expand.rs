@@ -37,7 +37,6 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
     for error_enum_node in error_enum_nodes.iter() {
         add_code_for_node(&*(**error_enum_node).borrow(), &mut token_stream);
     }
-    add_coerce_traits(&mut token_stream);
     token_stream
 }
 
@@ -82,6 +81,8 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         pub enum #enum_name {
             #error_variant_tokens
         }
+
+        impl error_set::ErrorSetMarker for #enum_name {}
     });
 }
 
@@ -239,42 +240,6 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             }
         })
     }
-}
-
-//************************************************************************//
-
-fn add_coerce_traits(token_stream: &mut TokenStream) {
-    token_stream.append_all(quote::quote! {
-        pub(crate) trait CoerceResult<T, E> {
-            fn coerce(self) -> Result<T, E>;
-        }
-
-        impl<T, E1, E2> CoerceResult<T, E2> for Result<T, E1>
-        where
-            E2: From<E1> + std::error::Error,
-            E1: std::error::Error,
-        {
-            #[inline(always)]
-            fn coerce(self) -> Result<T, E2> {
-                self.map_err(Into::into)
-            }
-        }
-
-        pub(crate) trait CoerceError<E> {
-            fn coerce(self) -> E;
-        }
-
-        impl<E1, E2> CoerceError<E2> for E1
-        where
-            E2: From<E1> + std::error::Error,
-            E1: std::error::Error,
-        {
-            #[inline(always)]
-            fn coerce(self) -> E2 {
-                self.into()
-            }
-        }
-    });
 }
 
 //************************************************************************//

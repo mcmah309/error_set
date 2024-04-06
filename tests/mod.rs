@@ -222,7 +222,7 @@ pub mod readme_example_aggregation {
 }
 
 pub mod coerce_trait {
-    use error_set::error_set;
+    use error_set::{error_set, Coerce};
 
     error_set! {
         MediaError = {
