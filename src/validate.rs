@@ -4,8 +4,6 @@ use syn::Ident;
 
 use crate::{ast::AstErrorEnumVariant, expand::ErrorEnum};
 
-
-
 pub fn validate(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
     all_enums_have_unique_names(error_enums)?;
     only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(error_enums)

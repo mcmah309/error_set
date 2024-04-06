@@ -43,7 +43,7 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
 fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     add_enum(error_enum_node, token_stream);
     impl_error(error_enum_node, token_stream);
-    impl_display_and_debug(error_enum_node, token_stream);
+    impl_display(error_enum_node, token_stream);
     impl_froms(error_enum_node, token_stream);
 }
 
@@ -77,6 +77,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         }
     }
     token_stream.append_all(quote::quote! {
+        #[derive(Debug)]
         pub enum #enum_name {
             #error_variant_tokens
         }
@@ -122,7 +123,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     }
 }
 
-fn impl_display_and_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
         subsets: _,
@@ -152,16 +153,6 @@ fn impl_display_and_debug(error_enum_node: &ErrorEnumGraphNode, token_stream: &m
     }
     token_stream.append_all(quote::quote! {
         impl core::fmt::Display for #enum_name {
-            #[inline]
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                let variant_name = match *self {
-                    #error_variant_tokens
-                };
-                write!(f, "{}", variant_name)
-            }
-        }
-
-        impl core::fmt::Debug for #enum_name {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 let variant_name = match *self {

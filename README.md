@@ -81,11 +81,36 @@ fn main() {
 
 ```rust
 pub enum MediaError {
+    IoError(std::io::Error),
+    MissingDescriptionArg,
     MissingNameArg,
     NoContents,
-    MissingDescriptionArg,
     CouldNotConnect,
-    IoError(std::io::Error),
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for MediaError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        match self {
+            MediaError::IoError(__self_0) => {
+                ::core::fmt::Formatter::debug_tuple_field1_finish(
+                    f,
+                    "IoError",
+                    &__self_0,
+                )
+            }
+            MediaError::MissingDescriptionArg => {
+                ::core::fmt::Formatter::write_str(f, "MissingDescriptionArg")
+            }
+            MediaError::MissingNameArg => {
+                ::core::fmt::Formatter::write_str(f, "MissingNameArg")
+            }
+            MediaError::NoContents => ::core::fmt::Formatter::write_str(f, "NoContents"),
+            MediaError::CouldNotConnect => {
+                ::core::fmt::Formatter::write_str(f, "CouldNotConnect")
+            }
+        }
+    }
 }
 #[allow(unused_qualifications)]
 impl std::error::Error for MediaError {
@@ -101,24 +126,11 @@ impl core::fmt::Display for MediaError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
+            MediaError::IoError(_) => "MediaError::IoError",
+            MediaError::MissingDescriptionArg => "MediaError::MissingDescriptionArg",
             MediaError::MissingNameArg => "MediaError::MissingNameArg",
             MediaError::NoContents => "MediaError::NoContents",
-            MediaError::MissingDescriptionArg => "MediaError::MissingDescriptionArg",
             MediaError::CouldNotConnect => "MediaError::CouldNotConnect",
-            MediaError::IoError(_) => "MediaError::IoError",
-        };
-        f.write_fmt(format_args!("{0}", variant_name))
-    }
-}
-impl core::fmt::Debug for MediaError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            MediaError::MissingNameArg => "MediaError::MissingNameArg",
-            MediaError::NoContents => "MediaError::NoContents",
-            MediaError::MissingDescriptionArg => "MediaError::MissingDescriptionArg",
-            MediaError::CouldNotConnect => "MediaError::CouldNotConnect",
-            MediaError::IoError(_) => "MediaError::IoError",
         };
         f.write_fmt(format_args!("{0}", variant_name))
     }
@@ -126,9 +138,9 @@ impl core::fmt::Debug for MediaError {
 impl From<BookParsingError> for MediaError {
     fn from(error: BookParsingError) -> Self {
         match error {
+            BookParsingError::MissingDescriptionArg => MediaError::MissingDescriptionArg,
             BookParsingError::MissingNameArg => MediaError::MissingNameArg,
             BookParsingError::NoContents => MediaError::NoContents,
-            BookParsingError::MissingDescriptionArg => MediaError::MissingDescriptionArg,
         }
     }
 }
@@ -161,9 +173,23 @@ impl From<std::io::Error> for MediaError {
     }
 }
 pub enum BookParsingError {
+    MissingDescriptionArg,
     MissingNameArg,
     NoContents,
-    MissingDescriptionArg,
+}
+#[automatically_derived]
+impl ::core::fmt::Debug for BookParsingError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::write_str(
+            f,
+            match self {
+                BookParsingError::MissingDescriptionArg => "MissingDescriptionArg",
+                BookParsingError::MissingNameArg => "MissingNameArg",
+                BookParsingError::NoContents => "NoContents",
+            },
+        )
+    }
 }
 #[allow(unused_qualifications)]
 impl std::error::Error for BookParsingError {}
@@ -171,24 +197,11 @@ impl core::fmt::Display for BookParsingError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
-            BookParsingError::MissingNameArg => "BookParsingError::MissingNameArg",
-            BookParsingError::NoContents => "BookParsingError::NoContents",
             BookParsingError::MissingDescriptionArg => {
                 "BookParsingError::MissingDescriptionArg"
             }
-        };
-        f.write_fmt(format_args!("{0}", variant_name))
-    }
-}
-impl core::fmt::Debug for BookParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
             BookParsingError::MissingNameArg => "BookParsingError::MissingNameArg",
             BookParsingError::NoContents => "BookParsingError::NoContents",
-            BookParsingError::MissingDescriptionArg => {
-                "BookParsingError::MissingDescriptionArg"
-            }
         };
         f.write_fmt(format_args!("{0}", variant_name))
     }
@@ -205,21 +218,22 @@ pub enum BookSectionParsingError {
     MissingNameArg,
     NoContents,
 }
+#[automatically_derived]
+impl ::core::fmt::Debug for BookSectionParsingError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        ::core::fmt::Formatter::write_str(
+            f,
+            match self {
+                BookSectionParsingError::MissingNameArg => "MissingNameArg",
+                BookSectionParsingError::NoContents => "NoContents",
+            },
+        )
+    }
+}
 #[allow(unused_qualifications)]
 impl std::error::Error for BookSectionParsingError {}
 impl core::fmt::Display for BookSectionParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            BookSectionParsingError::MissingNameArg => {
-                "BookSectionParsingError::MissingNameArg"
-            }
-            BookSectionParsingError::NoContents => "BookSectionParsingError::NoContents",
-        };
-        f.write_fmt(format_args!("{0}", variant_name))
-    }
-}
-impl core::fmt::Debug for BookSectionParsingError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
@@ -235,6 +249,24 @@ pub enum DownloadError {
     CouldNotConnect,
     OutOfMemory(std::io::Error),
 }
+#[automatically_derived]
+impl ::core::fmt::Debug for DownloadError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        match self {
+            DownloadError::CouldNotConnect => {
+                ::core::fmt::Formatter::write_str(f, "CouldNotConnect")
+            }
+            DownloadError::OutOfMemory(__self_0) => {
+                ::core::fmt::Formatter::debug_tuple_field1_finish(
+                    f,
+                    "OutOfMemory",
+                    &__self_0,
+                )
+            }
+        }
+    }
+}
 #[allow(unused_qualifications)]
 impl std::error::Error for DownloadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -246,16 +278,6 @@ impl std::error::Error for DownloadError {
     }
 }
 impl core::fmt::Display for DownloadError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            DownloadError::CouldNotConnect => "DownloadError::CouldNotConnect",
-            DownloadError::OutOfMemory(_) => "DownloadError::OutOfMemory",
-        };
-        f.write_fmt(format_args!("{0}", variant_name))
-    }
-}
-impl core::fmt::Debug for DownloadError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
@@ -280,6 +302,21 @@ impl From<std::io::Error> for DownloadError {
 pub enum UploadError {
     NoConnection(std::io::Error),
 }
+#[automatically_derived]
+impl ::core::fmt::Debug for UploadError {
+    #[inline]
+    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+        match self {
+            UploadError::NoConnection(__self_0) => {
+                ::core::fmt::Formatter::debug_tuple_field1_finish(
+                    f,
+                    "NoConnection",
+                    &__self_0,
+                )
+            }
+        }
+    }
+}
 #[allow(unused_qualifications)]
 impl std::error::Error for UploadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -291,15 +328,6 @@ impl std::error::Error for UploadError {
     }
 }
 impl core::fmt::Display for UploadError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            UploadError::NoConnection(_) => "UploadError::NoConnection",
-        };
-        f.write_fmt(format_args!("{0}", variant_name))
-    }
-}
-impl core::fmt::Debug for UploadError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
