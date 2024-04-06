@@ -5,7 +5,7 @@ A concise way to define errors and ergomically coerce a subset to a superset wit
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
 
-Instead of defining various enums/structs for errors. Use an error set.
+Instead of defining various enums/structs for errors and hand rolling relations, use an error set:
 ```rust
 use error_set::error_set;
 
@@ -29,7 +29,7 @@ error_set! {
     };
 }
 ```
-or the equivlent
+which is equivlent to writing:
 ```rust
 error_set! {
     MediaError = {
@@ -69,16 +69,17 @@ fn main() {
         let media_error: MediaError = book_parsing_error.into();
         assert!(matches!(media_error, MediaError::MissingNameArg));
 
-        let result_download_error: Result<(), DownloadError> = Err(DownloadError::OutOfMemory(
-            std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory"),
-        ));
+        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
 }
 ```
-`cargo expand`:
+<details>
+
+  <summary>Cargo Expand</summary>
+
 ```rust
-use error_set::error_set;
 pub enum MediaError {
     MissingNameArg,
     NoContents,
@@ -152,6 +153,11 @@ impl From<UploadError> for MediaError {
         match error {
             UploadError::NoConnection(source) => MediaError::IoError(source),
         }
+    }
+}
+impl From<std::io::Error> for MediaError {
+    fn from(error: std::io::Error) -> Self {
+        MediaError::IoError(error)
     }
 }
 pub enum BookParsingError {
@@ -266,6 +272,11 @@ impl From<UploadError> for DownloadError {
         }
     }
 }
+impl From<std::io::Error> for DownloadError {
+    fn from(error: std::io::Error) -> Self {
+        DownloadError::OutOfMemory(error)
+    }
+}
 pub enum UploadError {
     NoConnection(std::io::Error),
 }
@@ -297,4 +308,10 @@ impl core::fmt::Debug for UploadError {
         f.write_fmt(format_args!("{0}", variant_name))
     }
 }
+impl From<std::io::Error> for UploadError {
+    fn from(error: std::io::Error) -> Self {
+        UploadError::NoConnection(error)
+    }
+}
 ```
+</details>
