@@ -1,6 +1,6 @@
 # error_set
 
-A concise way to define errors and ergomically coerce a subset to a superset with with just `.into()`.
+A concise way to define errors and ergomically coerce a subset to a superset with with just `.into()`, `.coerce()`, or `?`.
 
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
@@ -57,21 +57,18 @@ error_set! {
     };
 }
 ```
-Usage
+### Example
 ```rust
 fn main() {
         let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
-        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(
-            book_parsing_error,
-            BookParsingError::MissingNameArg
-        ));
-        let media_error: MediaError = book_parsing_error.into();
+        let book_parsing_error: BookParsingError = book_section_parsing_error.coerce(); // `.coerce()` == `.into()`
+        assert!(matches!(book_parsing_error, BookParsingError::MissingNameArg));
+        let media_error: MediaError = book_parsing_error.coerce(); // `.coerce()` == `.into()`
         assert!(matches!(media_error, MediaError::MissingNameArg));
 
-        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
-        let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
+        let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
 }
 ```
@@ -339,6 +336,32 @@ impl core::fmt::Display for UploadError {
 impl From<std::io::Error> for UploadError {
     fn from(error: std::io::Error) -> Self {
         UploadError::NoConnection(error)
+    }
+}
+pub(crate) trait CoerceResult<T, E> {
+    fn coerce(self) -> Result<T, E>;
+}
+impl<T, E1, E2> CoerceResult<T, E2> for Result<T, E1>
+where
+    E2: From<E1> + std::error::Error,
+    E1: std::error::Error,
+{
+    #[inline(always)]
+    fn coerce(self) -> Result<T, E2> {
+        self.map_err(Into::into)
+    }
+}
+pub(crate) trait CoerceError<E> {
+    fn coerce(self) -> E;
+}
+impl<E1, E2> CoerceError<E2> for E1
+where
+    E2: From<E1> + std::error::Error,
+    E1: std::error::Error,
+{
+    #[inline(always)]
+    fn coerce(self) -> E2 {
+        self.into()
     }
 }
 ```

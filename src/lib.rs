@@ -27,6 +27,8 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     expand(error_enums).into()
 }
 
+//************************************************************************//
+
 fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
