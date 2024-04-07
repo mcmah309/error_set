@@ -1,4 +1,4 @@
-pub use error_set_internal::*;
+pub use error_set_impl::*;
 
 pub trait Coerce<T> {
     fn coerce(self) -> T;
