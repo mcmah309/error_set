@@ -98,8 +98,6 @@ impl Parse for AstInlineError {
     }
 }
 
-pub(crate) type AstErrorVariant = Ident;
-
 #[derive(Clone, Debug)]
 pub(crate) enum AstErrorEnumVariant {
     SourceErrorVariant(AstSourceErrorVariant),
@@ -168,20 +166,66 @@ pub(crate) fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -
         .all(|(seg1, seg2)| seg1.ident == seg2.ident);
 }
 
+
+#[derive(Clone)]
+pub(crate) struct AstErrorVariant {
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) name: Ident,   
+}
+
+impl Parse for AstErrorVariant {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let attributes = input.call(Attribute::parse_outer)?;
+        let name = input.parse::<Ident>()?;
+        Ok(AstErrorVariant {
+            attributes,
+            name,
+        })
+    }
+}
+
+impl std::hash::Hash for AstErrorVariant {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl PartialEq for AstErrorVariant {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for AstErrorVariant {}
+
+impl std::fmt::Debug for AstErrorVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AstErrorVariant")
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct AstSourceErrorVariant {
+    pub(crate) attributes: Vec<Attribute>,
     pub(crate) name: Ident,
     pub(crate) source: syn::TypePath,
 }
 
 impl Parse for AstSourceErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
+        let attributes = input.call(Attribute::parse_outer)?;
         let name = input.parse::<Ident>()?;
         let content;
         parenthesized!(content in input);
         let source = content.parse()?;
         //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
-        Ok(AstSourceErrorVariant { name, source })
+        Ok(AstSourceErrorVariant {
+            attributes,
+            name,
+            source,
+        })
     }
 }
 

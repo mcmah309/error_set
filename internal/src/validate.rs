@@ -48,10 +48,10 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(error
                     unique_sources.insert(source_variant_source);
                 }
                 AstErrorEnumVariant::Variant(variant) => {
-                    if unique_variants.contains(variant) {
+                    if unique_variants.contains(&variant.name) {
                         return Err(syn::parse::Error::new_spanned(
                             quote::quote!{variant},
-                            &format!("A variant with name '{0}' already exists in error enum '{1}'", variant, error_enum.error_name),
+                            &format!("A variant with name '{0}' already exists in error enum '{1}'", variant.name, error_enum.error_name),
                         ));
                     }
                 },

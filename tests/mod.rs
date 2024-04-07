@@ -262,6 +262,61 @@ pub mod coerce_trait {
     }
 }
 
+pub mod documentation {
+    use error_set::{error_set, Coerce};
+
+    error_set! {
+        /// This is a MediaError doc
+        MediaError = {
+            /// This is a variant IoError doc
+            IoError(std::io::Error)
+            } || BookParsingError || DownloadError || UploadError;
+        /// This is a BookParsingError doc
+        BookParsingError = {
+            /// This is a variant MissingDescriptionArg doc
+            MissingDescriptionArg
+        } || BookSectionParsingError;
+        /// This is a BookSectionParsingError doc
+        /// on two lines.
+        #[derive(Clone)]
+        BookSectionParsingError = {
+            /// This is a variant MissingNameArg doc
+            MissingNameArg,
+            /// This is a variant NoContents doc
+            /// on two lines.
+            NoContents,
+        };
+        /// This is a DownloadError doc
+        DownloadError = {
+            /// This is a variant CouldNotConnect doc
+            CouldNotConnect,
+            /// This is a variant OutOfMemory doc
+            OutOfMemory(std::io::Error),
+        };
+        /// This is a UploadError doc
+        UploadError = {
+            NoConnection(std::io::Error),
+        };
+    }
+
+    #[test]
+    fn test() {
+        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_parsing_error: BookParsingError = book_section_parsing_error.coerce();
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingNameArg
+        ));
+        let media_error: MediaError = book_parsing_error.coerce();
+        assert!(matches!(media_error, MediaError::MissingNameArg));
+
+        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
+        let result_media_error: Result<(), MediaError> = result_download_error.coerce();
+        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+    }
+}
+
 #[cfg(test)]
 pub mod should_not_compile_tests {
 

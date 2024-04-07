@@ -65,13 +65,18 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
             AstErrorEnumVariant::SourceErrorVariant(variant) => {
                 let name = &variant.name;
                 let source = &variant.source;
+                let attributes = &variant.attributes;
                 error_variant_tokens.append_all(quote::quote! {
-                #name(#source),
+                    #(#attributes)*
+                    #name(#source),
                 });
             }
             AstErrorEnumVariant::Variant(variant) => {
+                let name = &variant.name;
+                let attributes = &variant.attributes;
                 error_variant_tokens.append_all(quote::quote! {
-                #variant,
+                    #(#attributes)*
+                    #name,
                 })
             }
         }
@@ -149,8 +154,9 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 });
             }
             AstErrorEnumVariant::Variant(variant) => {
+                let name = &variant.name;
                 error_variant_tokens.append_all(quote::quote! {
-                    #enum_name::#variant =>  concat!(stringify!(#enum_name), "::", stringify!(#variant)),
+                    #enum_name::#name =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
                 })
             }
         }
@@ -202,14 +208,16 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                             _ => None,
                         }}).next()
                     .expect("Logical error when creating the error enum graph. If one enum is a subset of another, any sources in the subset must exist in the super set.");
-                    let error_variant_name = &error_variant_with_source_matching_sub_error_variant.name;
+                    let error_variant_name =
+                        &error_variant_with_source_matching_sub_error_variant.name;
                     error_branch_tokens.append_all(quote::quote! {
                         #sub_error_enum_name::#sub_error_variant_name(source) =>  #error_enum_name::#error_variant_name(source),
                     });
                 }
                 AstErrorEnumVariant::Variant(sub_error_variant) => {
+                    let sub_error_variant_name = &sub_error_variant.name;
                     error_branch_tokens.append_all(quote::quote! {
-                        #sub_error_enum_name::#sub_error_variant =>  #error_enum_name::#sub_error_variant,
+                        #sub_error_enum_name::#sub_error_variant_name =>  #error_enum_name::#sub_error_variant_name,
                     })
                 }
             }
