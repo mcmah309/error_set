@@ -1,9 +1,12 @@
 [package]
 name = "error_set"
-description = "An Error set"
-version = "0.2.0"
+description = "An error set macro that provides a concise way to define errors and ergonomically coerce a subset into a superset. Inspired by Zig's error set type."
+categories = ["rust-patterns"]
+keywords = ["error", "error-handling", "macro", "error-set","thiserror","anyhow"]
+version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
+documentation = "https://docs.rs/error_set"
 repository = "https://github.com/mcmah309/error_set"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

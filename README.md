@@ -6,7 +6,7 @@
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
 
 
-A concise way to define errors and ergomically coerce a subset into a superset with with just `.into()`, or `?`.
+A concise way to define errors and ergonomically coerce a subset into a superset with with just `.into()`, or `?`.
 
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
@@ -18,7 +18,7 @@ use error_set::error_set;
 error_set! {
     MediaError = {
         IoError(std::io::Error)
-        } || BookParsingError || DownloadError || ParseUploadError;
+    } || BookParsingError || DownloadError || ParseUploadError;
     BookParsingError = {
         MissingBookDescription,
         CouldNotReadBook(std::io::Error),
