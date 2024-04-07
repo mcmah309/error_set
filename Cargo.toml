@@ -2,7 +2,7 @@
 name = "error_set"
 description = "An error set macro that provides a concise way to define errors and ergonomically coerce a subset into a superset. Inspired by Zig's error set type."
 categories = ["rust-patterns"]
-keywords = ["error", "error-handling", "macro", "error-set","thiserror","anyhow"]
+keywords = ["error", "error-handling", "macro", "error-set"]
 version = "0.3.0"
 edition = "2021"
 license = "Apache-2.0"
