@@ -412,8 +412,7 @@ fn download_book(url: &str, save_path: &str) -> Result<(), DownloadError> {
     }
 }
 
-// Simulated function to upload the book content
-fn upload_book(content: &str) -> Result<(), UploadError> {
+fn upload_content(content: &str) -> Result<(), UploadError> {
     let auth = true;
     if !auth { // Simulate auth
         return Err(UploadError::AuthenticationFailed);
@@ -435,11 +434,11 @@ fn process_book(download_path: &str, download_url: &str) -> Result<String, Media
     let content = parse_book(download_path).coerce::<MediaError>()?;
     const MAX_RETRIES: u8  = 3;
     let mut current_retries = 0;
-    match upload_book(&content) {
+    match upload_content(&content) {
         Err(UploadError::TimedOut) => {
             while current_retries < MAX_RETRIES {
                 current_retries += 1;
-                if let Ok(_) = upload_book(&content) {
+                if let Ok(_) = upload_content(&content) {
                     break;
                 }
             }
