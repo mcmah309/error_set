@@ -2,7 +2,7 @@ use syn::{
     braced, parenthesized,
     parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
-    token, Ident, Result,
+    token, Attribute, Ident, Result,
 };
 
 #[derive(Clone)]
@@ -24,12 +24,14 @@ impl Parse for AstErrorSet {
 
 #[derive(Clone)]
 pub(crate) struct AstErrorDeclaration {
+    pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
     pub(crate) parts: Vec<AstInlineOrRefError>,
 }
 
 impl Parse for AstErrorDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
+        let attributes = input.call(Attribute::parse_outer)?;
         let error_name: Ident = input.parse()?;
         input.parse::<syn::Token![=]>()?;
         let mut parts = Vec::new();
@@ -46,7 +48,11 @@ impl Parse for AstErrorDeclaration {
                 }
             }
         }
-        return Ok(AstErrorDeclaration { error_name, parts });
+        return Ok(AstErrorDeclaration {
+            attributes,
+            error_name,
+            parts,
+        });
     }
 }
 

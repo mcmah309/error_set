@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
 use expand::{expand, ErrorEnum};
 
-use syn::Ident;
+use syn::{Attribute, Ident};
 use validate::validate;
 
 #[proc_macro]
@@ -33,9 +33,9 @@ fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> 
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
     for declaration in error_set.set_items.into_iter() {
-        let AstErrorDeclaration { error_name, parts } = declaration;
+        let AstErrorDeclaration { attributes: attribute, error_name, parts } = declaration;
 
-        let mut error_enum_builder = ErrorEnumBuilder::new(error_name);
+        let mut error_enum_builder = ErrorEnumBuilder::new(error_name,attribute);
 
         for part in parts.into_iter() {
             match part {
@@ -135,8 +135,9 @@ fn resolve_helper<'a>(
     Ok(this_error_enum_builder.borrow().error_variants.clone())
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 struct ErrorEnumBuilder {
+    pub attributes: Vec<Attribute>,
     pub error_name: Ident,
     pub error_variants: Vec<AstErrorEnumVariant>,
     pub ref_parts: Vec<RefError>,
@@ -145,8 +146,9 @@ struct ErrorEnumBuilder {
 }
 
 impl ErrorEnumBuilder {
-    fn new(error_name: Ident) -> Self {
+    fn new(error_name: Ident, attributes: Vec<Attribute>) -> Self {
         Self {
+            attributes,
             error_name,
             error_variants: Vec::new(),
             ref_parts: Vec::new(),
@@ -167,6 +169,7 @@ impl From<ErrorEnumBuilder> for ErrorEnum {
             "All references should be resolved when converting to an error enum."
         );
         ErrorEnum {
+            attributes: value.attributes,
             error_name: value.error_name,
             error_variants: value.error_variants,
         }

@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
-use syn::Ident;
+use syn::{Attribute, Ident};
 
 use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
@@ -76,7 +76,9 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
             }
         }
     }
+    let attributes = &error_enum.attributes;
     token_stream.append_all(quote::quote! {
+        #(#attributes)*
         #[derive(Debug)]
         pub enum #enum_name {
             #error_variant_tokens
@@ -265,8 +267,9 @@ impl ErrorEnumGraphNode {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct ErrorEnum {
+    pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
     pub(crate) error_variants: Vec<AstErrorEnumVariant>,
 }
