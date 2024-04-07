@@ -1,6 +1,12 @@
 # error_set
 
-A concise way to define errors and ergomically coerce a subset to a superset with with just `.into()`, or `?`.
+[<img alt="github" src="https://img.shields.io/badge/github-mcmah309/error_set-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/mcmah309/error_set)
+[<img alt="crates.io" src="https://img.shields.io/crates/v/error_set.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/error_set)
+[<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-error_set-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/error_set)
+[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
+
+
+A concise way to define errors and ergomically coerce a subset into a superset with with just `.into()`, or `?`.
 
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
@@ -309,7 +315,7 @@ impl From<std::io::Error> for UploadError {
 ```
 </details>
 
-which is also equivlent to writing:
+which is also equivalent to writing:
 ```rust
 error_set! {
     MediaError = {
@@ -339,7 +345,11 @@ error_set! {
 ```
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
 
-### Example
+### Examples
+<details>
+
+  <summary>Base Functionality In Action</summary>
+
 ```rust
 fn main() {
         let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
@@ -354,3 +364,98 @@ fn main() {
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
 }
 ```
+</details>
+
+<details>
+Here we can easily define all the different error states a function could exit with. Note this example is verbose as not all error states have downstream handlers that care about the error type, but imagine it so.
+  <summary>More Intricate Example</summary>
+
+```rust
+error_set::error_set! {
+    MediaError = {
+        IoError(std::io::Error)
+    } || BookParsingError || DownloadError || UploadError;
+    BookParsingError = {
+        MissingContent,
+        BookAccess(std::io::Error),
+    };
+    DownloadError = {
+        InvalidUrl,
+        CouldNotSaveBook(std::io::Error),
+    };
+    UploadError = {
+        MaximumUploadSizeReached,
+        TimedOut,
+        AuthenticationFailed,
+    };
+}
+
+fn parse_book(file_path: &str) -> Result<String, BookParsingError> {
+    let mut file = File::open(file_path).coerce::<BookParsingError>()?;
+    let mut content = String::new();
+    file.read_to_string(&mut content).coerce::<BookParsingError>()?;
+    if content.is_empty() {
+        Err(BookParsingError::MissingContent)
+    } else {
+        Ok(content)
+    }
+}
+
+fn download_book(url: &str, save_path: &str) -> Result<(), DownloadError> {
+    if url.is_empty() {
+        Err(DownloadError::InvalidUrl)
+    } else {
+        let simulated_book_content = "This is a downloaded book content.";
+        let mut file = File::create(save_path).coerce::<DownloadError>()?;
+        file.write_all(simulated_book_content.as_bytes()).coerce::<DownloadError>()?;
+        Ok(())
+    }
+}
+
+// Simulated function to upload the book content
+fn upload_book(content: &str) -> Result<(), UploadError> {
+    let auth = true;
+    if !auth { // Simulate auth
+        return Err(UploadError::AuthenticationFailed);
+    }
+    let time_out = false;
+    if !time_out { // Simulate timeout uploading
+        return Err(UploadError::TimedOut);
+    }
+    if content.len() > 1024 { // Simulate an upload size limit
+        Err(UploadError::MaximumUploadSizeReached)
+    } else {
+        println!("Book uploaded successfully.");
+        Ok(())
+    }
+}
+
+fn process_book(download_path: &str, download_url: &str) -> Result<String, MediaError> {
+    download_book(download_url, download_path).coerce::<MediaError>()?;
+    let content = parse_book(download_path).coerce::<MediaError>()?;
+    const MAX_RETRIES: u8  = 3;
+    let mut current_retries = 0;
+    match upload_book(&content) {
+        Err(UploadError::TimedOut) => {
+            while current_retries < MAX_RETRIES {
+                current_retries += 1;
+                if let Ok(_) = upload_book(&content) {
+                    break;
+                }
+            }
+        }
+        Err(e) => return Err(e.coerce()),
+        _ => (),
+    }
+    fs::remove_file(download_path).coerce::<MediaError>()?;
+    Ok(content)
+}
+
+fn main() {
+    match process_book("downloaded_book.txt", "http://example.com/book") {
+        Ok(content) => println!("Book processed successfully: {}", content),
+        Err(e) => eprintln!("An error occurred: {:?}", e),
+    }
+}
+```
+</details>
