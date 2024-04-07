@@ -136,41 +136,46 @@ pub mod readme_example {
 
     error_set! {
         MediaError = {
-            MissingNameArg,
-            NoContents,
-            MissingDescriptionArg,
-            CouldNotConnect,
             IoError(std::io::Error),
+            MissingBookDescription,
+            MissingName,
+            NoContents,
+            InvalidUrl,
+            MaximumUploadSizeReached,
+            TimedOut,
+            AuthenticationFailed,
         };
         BookParsingError = {
-            MissingNameArg,
+            MissingBookDescription,
+            CouldNotReadBook(std::io::Error),
+            MissingName,
             NoContents,
-            MissingDescriptionArg,
         };
         BookSectionParsingError = {
-            MissingNameArg,
+            MissingName,
             NoContents,
         };
         DownloadError = {
-            CouldNotConnect,
-            OutOfMemory(std::io::Error),
+            InvalidUrl,
+            CouldNotSaveBook(std::io::Error),
         };
-        UploadError = {
-            NoConnection(std::io::Error),
+        ParseUploadError = {
+            MaximumUploadSizeReached,
+            TimedOut,
+            AuthenticationFailed,
         };
     }
 
     #[test]
     fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_section_parsing_error = BookSectionParsingError::MissingName;
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
         assert!(matches!(
             book_parsing_error,
-            BookParsingError::MissingNameArg
+            BookParsingError::MissingName
         ));
         let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingNameArg));
-
+        assert!(matches!(media_error, MediaError::MissingName));
 
         let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
@@ -186,33 +191,36 @@ pub mod readme_example_aggregation {
     error_set! {
         MediaError = {
             IoError(std::io::Error)
-            } || BookParsingError || DownloadError || UploadError;
+            } || BookParsingError || DownloadError || ParseUploadError;
         BookParsingError = {
-            MissingDescriptionArg
+            MissingBookDescription,
+            CouldNotReadBook(std::io::Error),
         } || BookSectionParsingError;
         BookSectionParsingError = {
-            MissingNameArg,
+            MissingName,
             NoContents,
         };
         DownloadError = {
-            CouldNotConnect,
-            OutOfMemory(std::io::Error),
+            InvalidUrl,
+            CouldNotSaveBook(std::io::Error),
         };
-        UploadError = {
-            NoConnection(std::io::Error),
+        ParseUploadError = {
+            MaximumUploadSizeReached,
+            TimedOut,
+            AuthenticationFailed,
         };
     }
 
     #[test]
     fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_section_parsing_error = BookSectionParsingError::MissingName;
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
         assert!(matches!(
             book_parsing_error,
-            BookParsingError::MissingNameArg
+            BookParsingError::MissingName
         ));
         let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingNameArg));
+        assert!(matches!(media_error, MediaError::MissingName));
 
         let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
