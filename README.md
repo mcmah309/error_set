@@ -1,6 +1,6 @@
 # error_set
 
-A concise way to define errors and ergomically coerce a subset to a superset with with just `.into()`, `.coerce()`, or `?`.
+A concise way to define errors and ergomically coerce a subset to a superset with with just `.into()`, or `?`.
 
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
@@ -29,54 +29,17 @@ error_set! {
     };
 }
 ```
-which is equivlent to writing:
-```rust
-error_set! {
-    MediaError = {
-        MissingNameArg,
-        NoContents,
-        MissingDescriptionArg,
-        CouldNotConnect,
-        IoError(std::io::Error),
-    };
-    BookParsingError = {
-        MissingNameArg,
-        NoContents,
-        MissingDescriptionArg,
-    };
-    BookSectionParsingError = {
-        MissingNameArg,
-        NoContents,
-    };
-    DownloadError = {
-        CouldNotConnect,
-        OutOfMemory(std::io::Error),
-    };
-    UploadError = {
-        NoConnection(std::io::Error),
-    };
-}
-```
-### Example
-```rust
-fn main() {
-        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
-        let book_parsing_error: BookParsingError = book_section_parsing_error.coerce(); // `.coerce()` == `.into()`
-        assert!(matches!(book_parsing_error, BookParsingError::MissingNameArg));
-        let media_error: MediaError = book_parsing_error.coerce(); // `.coerce()` == `.into()`
-        assert!(matches!(media_error, MediaError::MissingNameArg));
-
-        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
-        let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
-        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
-}
-```
 <details>
 
   <summary>Cargo Expand</summary>
 
 ```rust
+#![feature(prelude_import)]
+#[prelude_import]
+use std::prelude::rust_2021::*;
+#[macro_use]
+extern crate std;
+use error_set::error_set;
 pub enum MediaError {
     IoError(std::io::Error),
     MissingDescriptionArg,
@@ -109,6 +72,7 @@ impl ::core::fmt::Debug for MediaError {
         }
     }
 }
+impl error_set::ErrorSetMarker for MediaError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for MediaError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -188,6 +152,7 @@ impl ::core::fmt::Debug for BookParsingError {
         )
     }
 }
+impl error_set::ErrorSetMarker for BookParsingError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for BookParsingError {}
 impl core::fmt::Display for BookParsingError {
@@ -228,6 +193,7 @@ impl ::core::fmt::Debug for BookSectionParsingError {
         )
     }
 }
+impl error_set::ErrorSetMarker for BookSectionParsingError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for BookSectionParsingError {}
 impl core::fmt::Display for BookSectionParsingError {
@@ -264,6 +230,7 @@ impl ::core::fmt::Debug for DownloadError {
         }
     }
 }
+impl error_set::ErrorSetMarker for DownloadError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for DownloadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -314,6 +281,7 @@ impl ::core::fmt::Debug for UploadError {
         }
     }
 }
+impl error_set::ErrorSetMarker for UploadError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for UploadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -338,31 +306,51 @@ impl From<std::io::Error> for UploadError {
         UploadError::NoConnection(error)
     }
 }
-pub(crate) trait CoerceResult<T, E> {
-    fn coerce(self) -> Result<T, E>;
-}
-impl<T, E1, E2> CoerceResult<T, E2> for Result<T, E1>
-where
-    E2: From<E1> + std::error::Error,
-    E1: std::error::Error,
-{
-    #[inline(always)]
-    fn coerce(self) -> Result<T, E2> {
-        self.map_err(Into::into)
-    }
-}
-pub(crate) trait CoerceError<E> {
-    fn coerce(self) -> E;
-}
-impl<E1, E2> CoerceError<E2> for E1
-where
-    E2: From<E1> + std::error::Error,
-    E1: std::error::Error,
-{
-    #[inline(always)]
-    fn coerce(self) -> E2 {
-        self.into()
-    }
-}
 ```
 </details>
+
+which is also equivlent to writing:
+```rust
+error_set! {
+    MediaError = {
+        MissingNameArg,
+        NoContents,
+        MissingDescriptionArg,
+        CouldNotConnect,
+        IoError(std::io::Error),
+    };
+    BookParsingError = {
+        MissingNameArg,
+        NoContents,
+        MissingDescriptionArg,
+    };
+    BookSectionParsingError = {
+        MissingNameArg,
+        NoContents,
+    };
+    DownloadError = {
+        CouldNotConnect,
+        OutOfMemory(std::io::Error),
+    };
+    UploadError = {
+        NoConnection(std::io::Error),
+    };
+}
+```
+Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
+
+### Example
+```rust
+fn main() {
+        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_parsing_error: BookParsingError = book_section_parsing_error.coerce(); // `.coerce()` == `.into()`
+        assert!(matches!(book_parsing_error, BookParsingError::MissingNameArg));
+        let media_error: MediaError = book_parsing_error.coerce(); // `.coerce()` == `.into()`
+        assert!(matches!(media_error, MediaError::MissingNameArg));
+
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
+        let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
+        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+}
+```
