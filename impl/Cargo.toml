@@ -1,8 +1,11 @@
 [package]
 name = "error_set_impl"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "implementation of the proc macro for the error_set crate."
+version = "0.3.0"
+license = "Apache-2.0"
+documentation = "https://docs.rs/error_set"
+repository = "https://github.com/mcmah309/error_set"
 
 [lib]
 proc-macro = true

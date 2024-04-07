@@ -9,10 +9,11 @@ license = "Apache-2.0"
 documentation = "https://docs.rs/error_set"
 repository = "https://github.com/mcmah309/error_set"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-error_set_impl = { path = "impl" }
+error_set_impl = { version = "=0.3.0", path = "impl" }
 
 [dev-dependencies]
 trybuild = "^1.0.91"
+
+[workspace]
+members = ["impl"]
