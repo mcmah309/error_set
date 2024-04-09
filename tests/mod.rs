@@ -1,5 +1,3 @@
-mod temp;
-
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
@@ -92,6 +90,7 @@ pub mod error_sources_of_same_name {
             IoError(std::io::Error),
         };
     }
+
 
     #[test]
     fn test() {
@@ -232,43 +231,102 @@ pub mod readme_example_aggregation {
 }
 
 pub mod coerce_trait {
-    use error_set::{error_set, Coerce, CoerceResult};
+    use error_set::error_set;
 
     error_set! {
-        MediaError = {
-            IoError(std::io::Error)
-            } || BookParsingError || DownloadError || UploadError;
-        BookParsingError = {
-            MissingDescriptionArg
-        } || BookSectionParsingError;
-        BookSectionParsingError = {
-            MissingNameArg,
-            NoContents,
+        SetX = {
+            X
+        } || Common;
+        #[derive(PartialEq,Eq)]
+        SetY = {
+            Y
+        } || Common;
+        Common = {
+            A,
+            B,
+            C,
+            D,
+            E,
+            F,
+            G,
+            H,
         };
-        DownloadError = {
-            CouldNotConnect,
-            OutOfMemory(std::io::Error),
+    }
+
+    fn setx_result() -> Result<(),SetX> {
+        Err(SetX::A)
+    }
+    fn setx() -> SetX {
+        SetX::A
+    }
+
+    fn setx_result_to_sety_result_coerce_return() -> Result<(),SetY> {
+        let _ok = coerce!(setx_result() => {
+            Ok(ok) => ok,
+            Err(SetX::X) => () // handle
+        } || Err(SetX) => return Err(SetY));
+        Ok(())
+    }
+    fn setx_result_to_sety_result_coerce() -> Result<(),SetY> {
+        let result: Result<(),SetY> = coerce!(setx_result() => {
+            Ok(_) => Err(SetY::D),
+            Err(SetX::X) => Err(SetY::F) // handle
+        } || Err(SetX) => Err(SetY));
+        result
+    }
+    fn setx_to_sety_coerce() -> SetY {
+        let sety = coerce!(setx() => {
+            SetX::X => SetY::C // handle
+        } || SetX => SetY);
+        sety
+    }
+    fn setx_to_sety_coerce_return() -> SetY {
+        let sety = coerce!(setx() => {
+            SetX::X => SetY::G // handle
+        } || SetX => return SetY);
+        sety
+    }
+
+    fn setx_result_to_sety_result() -> Result<(), SetY> {
+        let _ok = match setx_result() {
+            Ok(ok) => ok,
+            Err(SetX::X) => {}
+            Err(SetX::A) => {
+                return Err(SetY::A);
+            }
+            Err(SetX::B) => {
+                return Err(SetY::B);
+            }
+            Err(SetX::C) => {
+                return Err(SetY::C);
+            }
+            Err(SetX::D) => {
+                return Err(SetY::D);
+            }
+            Err(SetX::E) => {
+                return Err(SetY::E);
+            }
+            Err(SetX::F) => {
+                return Err(SetY::F);
+            }
+            Err(SetX::G) => {
+                return Err(SetY::G);
+            }
+            Err(SetX::H) => {
+                return Err(SetY::H);
+            }
         };
-        UploadError = {
-            NoConnection(std::io::Error),
-        };
+        Ok(())
     }
 
     #[test]
     fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
-        let book_parsing_error: BookParsingError = book_section_parsing_error.coerce();
-        assert!(matches!(
-            book_parsing_error,
-            BookParsingError::MissingNameArg
-        ));
-        let media_error: MediaError = book_parsing_error.coerce();
-        assert!(matches!(media_error, MediaError::MissingNameArg));
+        assert_eq!(setx_result_to_sety_result_coerce_return().unwrap_err(), SetY::A);
+        assert_eq!(setx_result_to_sety_result_coerce().unwrap_err(), SetY::A);
+        assert_eq!(setx_to_sety_coerce(), SetY::A);
+        assert_eq!(setx_to_sety_coerce_return(), SetY::A);
 
-        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
-        let result_media_error: Result<(), MediaError> = result_download_error.coerce();
-        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+        assert_eq!(setx_result_to_sety_result().unwrap_err(), SetY::A);
     }
 }
 

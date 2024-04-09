@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc};
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::{Attribute, Ident};
-use std::collections::HashMap;
 
 use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
@@ -291,27 +290,64 @@ fn add_coerce_macro(enum_intersections: Vec<EnumIntersection>, token_stream: &mu
             enum2: enum2_name,
             intersection,
         } = enum_interscetion;
+        let mut match_arms_return_err = TokenStream::new();
+        let mut match_arms_err = TokenStream::new();
+        let mut match_arms_return = TokenStream::new();
         let mut match_arms = TokenStream::new();
         for variant in intersection {
             match variant {
                 AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
                     let variant = source_variant.name;
-                    //let source = source_variant.source;
-                    match_arms.append_all(quote::quote! {
+                    match_arms_return_err.append_all(quote::quote! {
                         Err(#enum1_name::#variant(source)) => { return Err(#enum2_name::#variant(source)); },
                     });
-                
+                    match_arms_err.append_all(quote::quote! {
+                        Err(#enum1_name::#variant(source)) => { Err(#enum2_name::#variant(source)) },
+                    });
+                    match_arms_return.append_all(quote::quote! {
+                        #enum1_name::#variant(source) => { return #enum2_name::#variant(source); },
+                    });
+                    match_arms.append_all(quote::quote! {
+                        #enum1_name::#variant(source) => { #enum2_name::#variant(source) },
+                    });
                 },
                 AstErrorEnumVariant::Variant(variant) => {
                     let variant = variant.name;
-                    match_arms.append_all(quote::quote! {
+                    match_arms_return_err.append_all(quote::quote! {
                         Err(#enum1_name::#variant) => { return Err(#enum2_name::#variant); },
-                    });   
+                    });
+                    match_arms_err.append_all(quote::quote! {
+                        Err(#enum1_name::#variant) => { Err(#enum2_name::#variant) },
+                    });
+                    match_arms_return.append_all(quote::quote! {
+                        #enum1_name::#variant => { return #enum2_name::#variant; },
+                    });
+                    match_arms.append_all(quote::quote! {
+                        #enum1_name::#variant => { #enum2_name::#variant },
+                    }); 
                 },
             }
         }
         macro_pattern_token_stream.append_all(quote::quote! {
-                ($expr:expr => { $($patterns:pat => $results:expr),+ ; Err(#enum1_name) => return Err(#enum2_name) }) => {
+                ($expr:expr => { $($patterns:pat => $results:expr),+ } || Err(#enum1_name) => return Err(#enum2_name)) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms_return_err
+                    }
+                };
+                ($expr:expr => { $($patterns:pat => $results:expr),+ } || Err(#enum1_name) => Err(#enum2_name)) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms_err
+                    }
+                };
+                ($expr:expr => { $($patterns:pat => $results:expr),+ } || #enum1_name => return #enum2_name) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms_return
+                    }
+                };
+                ($expr:expr => { $($patterns:pat => $results:expr),+ } || #enum1_name => #enum2_name) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms
@@ -319,29 +355,40 @@ fn add_coerce_macro(enum_intersections: Vec<EnumIntersection>, token_stream: &mu
                 };
         });
     }
+    // when no default coercion
     macro_pattern_token_stream.append_all(quote::quote! {
-        ($expr:expr => { $($patterns:pat => $results:expr),+ ;}) => {
+        ($expr:expr => { $($patterns:pat => $results:expr),+ }) => {
             match $expr {
                 $($patterns => $results,)+
             }
         };
     });
+    // 
     macro_pattern_token_stream.append_all(quote::quote! {
         ($($other:tt)*) => {
-            compile_error!(r#"No patterns matched. You pattern is either incorrect or there are no intersection between the sets. `coerce` is expected to follow the pattern:
-            coerce!($VAR => {
-                $arms
-                one_of<
-                    ($FROM => $TO),
-                    ($FROM => return $TO),
-                    (Err($FROM) => Err($TO),
-                    (Err($FROM) => return Err($TO))
-                >?
-            })
-            "#)
+            compile_error!(r#"
+No patterns matched. 
+Possible reasons:
+    1. There are no intersections between the sets.
+    2. The last arm of of "$arms" has a trailing comma.
+    3. The pattern is incorrect.
+`coerce` is expected to follow the pattern:
+```
+coerce!($VAR => {
+    <$arms>+
+}< ||    one_of<
+            <$FROM => $TO>,
+            <$FROM => return $TO>,
+            <Err($FROM) => Err($TO)>,
+            <Err($FROM) => return Err($TO)>
+        >
+>?)
+```
+"#)
         };
     });
     token_stream.append_all(quote::quote! {
+        #[allow(unused_macros)]
         macro_rules! coerce {
             #macro_pattern_token_stream
         }
