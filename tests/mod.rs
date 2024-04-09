@@ -1,3 +1,5 @@
+mod temp;
+
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;

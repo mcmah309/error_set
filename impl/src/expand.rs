@@ -3,10 +3,14 @@ use std::{cell::RefCell, rc::Rc};
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::{Attribute, Ident};
+use std::collections::HashMap;
 
 use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
+    let enum_intersections = construct_set_intersections(&error_enums);
+    let mut token_stream = TokenStream::new();
+    add_coerce_macro(enum_intersections, &mut token_stream);
     let error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
         .into_iter()
         .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
@@ -33,7 +37,32 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
         }
     }
 
-    let mut token_stream = TokenStream::new();
+    // token_stream.append_all(quote::quote! {
+    //     macro_rules! match_coerce {
+
+    //         // Special case: When the last pattern is 'BookParsingError => BookSectionParsingError', inject specific match arms.
+    //         ($expr:expr, { $($patterns:pat => $results:expr),+ ; BookParsingError => BookSectionParsingError }) => {
+    //             match $expr {
+    //                 // Process all patterns before the last one normally.
+    //                 $($patterns => $results,)+
+    
+    //                 // Inject specific match arms for the special case.
+    //                 Err(BookParsingError::MissingNameArg) => { return Err(BookSectionParsingError::MissingNameArg); },
+    //                 Err(BookParsingError::NoContents) => { return Err(BookSectionParsingError::NoContents); },
+    //             }
+    //         };
+    
+    //         // General case: Handle all cases normally, without special additions.
+    //         // ($expr:expr, { $($patterns:pat => $results:expr),+ ; $last_pattern:pat => $last_result:expr }) => {
+    //         //     match $expr {
+    //         //         $($patterns => $results,)+
+    //         //         $last_pattern => $last_result,
+    //         //     }
+    //         // };
+    //     }
+
+    //     pub(crate) use match_coerce;
+    // });
     for error_enum_node in error_enum_nodes.iter() {
         add_code_for_node(&*(**error_enum_node).borrow(), &mut token_stream);
     }
@@ -249,6 +278,114 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                 }
             }
         })
+    }
+}
+
+//************************************************************************//
+
+fn add_coerce_macro(enum_intersections: Vec<EnumIntersection>, token_stream: &mut TokenStream) {
+    let mut macro_pattern_token_stream = TokenStream::new();
+    for enum_interscetion in enum_intersections {
+        let EnumIntersection {
+            enum1: enum1_name,
+            enum2: enum2_name,
+            intersection,
+        } = enum_interscetion;
+        let mut match_arms = TokenStream::new();
+        for variant in intersection {
+            match variant {
+                AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
+                    let variant = source_variant.name;
+                    //let source = source_variant.source;
+                    match_arms.append_all(quote::quote! {
+                        Err(#enum1_name::#variant(source)) => { return Err(#enum2_name::#variant(source)); },
+                    });
+                
+                },
+                AstErrorEnumVariant::Variant(variant) => {
+                    let variant = variant.name;
+                    match_arms.append_all(quote::quote! {
+                        Err(#enum1_name::#variant) => { return Err(#enum2_name::#variant); },
+                    });   
+                },
+            }
+        }
+        macro_pattern_token_stream.append_all(quote::quote! {
+                ($expr:expr => { $($patterns:pat => $results:expr),+ ; Err(#enum1_name) => return Err(#enum2_name) }) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms
+                    }
+                };
+        });
+    }
+    macro_pattern_token_stream.append_all(quote::quote! {
+        ($expr:expr => { $($patterns:pat => $results:expr),+ ;}) => {
+            match $expr {
+                $($patterns => $results,)+
+            }
+        };
+    });
+    macro_pattern_token_stream.append_all(quote::quote! {
+        ($($other:tt)*) => {
+            compile_error!(r#"No patterns matched. You pattern is either incorrect or there are no intersection between the sets. `coerce` is expected to follow the pattern:
+            coerce!($VAR => {
+                $arms
+                one_of<
+                    ($FROM => $TO),
+                    ($FROM => return $TO),
+                    (Err($FROM) => Err($TO),
+                    (Err($FROM) => return Err($TO))
+                >?
+            })
+            "#)
+        };
+    });
+    token_stream.append_all(quote::quote! {
+        macro_rules! coerce {
+            #macro_pattern_token_stream
+        }
+
+        pub(crate) use coerce;
+    });
+}
+
+
+fn construct_set_intersections(error_enums: &Vec<ErrorEnum>) -> Vec<EnumIntersection> {
+    let mut enum_intersections: Vec<EnumIntersection> = Vec::new();
+    let length = error_enums.len();
+    for index1 in 0..length {
+        for index2 in 0..length {
+            let enum1 = &error_enums[index1];
+            let enum2 = &error_enums[index2];
+            let mut intersections = Vec::new();
+            for variant in &enum1.error_variants {
+                if enum2.error_variants.contains(&variant)  {
+                    intersections.push(variant.clone());
+                }
+            }
+            if !intersections.is_empty() {
+            let enum_intersection = EnumIntersection::new(enum1.error_name.clone(), enum2.error_name.clone(), intersections);
+                enum_intersections.push(enum_intersection);
+            }
+        }
+    }
+    enum_intersections
+}
+
+struct EnumIntersection {
+    pub(crate) enum1: Ident,
+    pub(crate) enum2: Ident,
+    pub(crate) intersection: Vec<AstErrorEnumVariant>,
+}
+
+impl EnumIntersection {
+    pub(crate) fn new(enum1: Ident, enum2: Ident, intersection: Vec<AstErrorEnumVariant>) -> EnumIntersection {
+        EnumIntersection {
+            enum1,
+            enum2,
+            intersection,
+        }
     }
 }
 
