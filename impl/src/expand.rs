@@ -370,7 +370,7 @@ fn add_coerce_macro(enum_intersections: Vec<EnumIntersection>, token_stream: &mu
 No patterns matched. 
 Possible reasons:
     1. There are no intersections between the sets.
-    2. The last arm of of "$arms" has a trailing comma.
+    2. The last arm of "$arms" has a trailing comma.
     3. The pattern is incorrect.
 `coerce` is expected to follow the pattern:
 ```
