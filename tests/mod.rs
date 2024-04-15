@@ -263,7 +263,7 @@ pub mod coerce_macro {
     fn setx_result_to_sety_result_coerce_return() -> Result<(),SetY> {
         let _ok = coerce!(setx_result() => {
             Ok(ok) => ok,
-            Err(SetX::X) => () // handle
+            Err(SetX::X) => (), // handle
         } || Err(SetX) => return Err(SetY));
         Ok(())
     }
