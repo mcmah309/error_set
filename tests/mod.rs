@@ -230,7 +230,7 @@ pub mod readme_example_aggregation {
     }
 }
 
-pub mod coerce_trait {
+pub mod coerce_macro {
     use error_set::error_set;
 
     error_set! {
