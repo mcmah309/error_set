@@ -6,7 +6,7 @@
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
 
 
-A concise way to define errors and ergonomically coerce a subset into a superset with with just `.into()`, or `?`.
+A concise way to define errors and ergonomically coerce a subset into a superset with with just `.into()` or `?`, and coerce between disjointed sets with `coerce!`.
 
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
@@ -385,7 +385,7 @@ error_set! {
 ```
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
 
-### Examples
+### `error_set!` Examples
 <details>
 
   <summary>Base Functionality In Action</summary>
@@ -498,3 +498,72 @@ fn main() {
 }
 ```
 </details>
+
+## The `coerce!` Macro
+The `coerce!` macro handles coercing between intersecting sets (sets where some of the error types are in common), which allows you to care about only the parts that matter to you, such as the disjointedness.
+e.g. given:
+```rust
+error_set! {
+   SetX = {
+       X
+   } || Common;
+   SetY = {
+       Y
+   } || Common;
+   Common = {
+       A,
+       B,
+       C,
+       D,
+       E,
+       F,
+       G,
+       H,
+   };
+}
+```
+rather than writting:
+```rust
+fn setx_result_to_sety_result() -> Result<(), SetY> {
+   let _ok = match setx_result() {
+       Ok(ok) => ok,
+       Err(SetX::X) => {} // handle disjointedness
+       Err(SetX::A) => {
+           return Err(SetY::A);
+       }
+       Err(SetX::B) => {
+           return Err(SetY::B);
+       }
+       Err(SetX::C) => {
+           return Err(SetY::C);
+       }
+       Err(SetX::D) => {
+           return Err(SetY::D);
+       }
+       Err(SetX::E) => {
+           return Err(SetY::E);
+       }
+       Err(SetX::F) => {
+           return Err(SetY::F);
+       }
+       Err(SetX::G) => {
+           return Err(SetY::G);
+       }
+       Err(SetX::H) => {
+           return Err(SetY::H);
+       }
+   };
+   Ok(())
+}
+```
+you can write this:
+```rust
+fn setx_result_to_sety_result() -> Result<(),SetY> {
+   let _ok = coerce!(setx_result() => {
+       Ok(ok) => ok,
+       Err(SetX::X) => {} // handle disjointedness
+   } || Err(SetX) => return Err(SetY));
+   Ok(())
+}
+```
+The `coerce!` macro is a flat fast (no tt muncher 🦫) declarative macro created by `error_set!`. It compiles to the previous `match` statement above. With it, you can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
