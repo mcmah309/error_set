@@ -386,7 +386,7 @@ error_set! {
     };
 }
 ```
-Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
+As mentioned, any above subset can be converted into a superset with `.into()` or `?`. Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
 
 ### `error_set!` Examples
 <details>
