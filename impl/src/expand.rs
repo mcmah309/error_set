@@ -329,25 +329,25 @@ fn add_coerce_macro(enum_intersections: Vec<EnumIntersection>, token_stream: &mu
             }
         }
         macro_pattern_token_stream.append_all(quote::quote! {
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+  } || Err(#enum1_name) => return Err(#enum2_name)) => {
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => return Err(#enum2_name)} }) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms_return_err
                     }
                 };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+ } || Err(#enum1_name) => Err(#enum2_name)) => {
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => Err(#enum2_name)} }) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms_err
                     }
                 };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+ } || #enum1_name => return #enum2_name) => {
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => return #enum2_name} }) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms_return
                     }
                 };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+ } || #enum1_name => #enum2_name) => {
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => #enum2_name} }) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms
@@ -375,13 +375,13 @@ Possible reasons:
 ```
 coerce!($VAR => {
     <$arms>+
-}< ||    one_of<
+    <,{ one_of<
             <$FROM => $TO>,
             <$FROM => return $TO>,
             <Err($FROM) => Err($TO)>,
             <Err($FROM) => return Err($TO)>
-        >
->?)
+        > } >?
+});
 ```
 "#)
         };

@@ -264,26 +264,30 @@ pub mod coerce_macro {
         let _ok = coerce!(setx_result() => {
             Ok(ok) => ok,
             Err(SetX::X) => (), // handle
-        } || Err(SetX) => return Err(SetY));
+            { Err(SetX) => return Err(SetY) }
+        });
         Ok(())
     }
     fn setx_result_to_sety_result_coerce() -> Result<(),SetY> {
         let result: Result<(),SetY> = coerce!(setx_result() => {
             Ok(_) => Err(SetY::D),
-            Err(SetX::X) => Err(SetY::F) // handle
-        } || Err(SetX) => Err(SetY));
+            Err(SetX::X) => Err(SetY::F), // handle
+            { Err(SetX) => Err(SetY) }
+        });
         result
     }
     fn setx_to_sety_coerce() -> SetY {
         let sety = coerce!(setx() => {
-            SetX::X => SetY::C // handle
-        } || SetX => SetY);
+            SetX::X => SetY::C, // handle
+            {SetX => SetY}
+        });
         sety
     }
     fn setx_to_sety_coerce_return() -> SetY {
         let sety = coerce!(setx() => {
-            SetX::X => SetY::G // handle
-        } || SetX => return SetY);
+            SetX::X => SetY::G, // handle
+            {SetX => return SetY}
+        });
         sety
     }
 
