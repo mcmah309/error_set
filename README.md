@@ -503,7 +503,7 @@ fn main() {
 </details>
 
 ## The `coerce!` Macro
-The `coerce!` macro handles coercing between intersecting sets (sets where some of the error types are in common), which allows you to care about only the parts that matter to you, such as the disjointedness.
+The `coerce!` macro handles coercing between intersecting sets (sets where some of the error types are in common). This allows only being explicit where relevant, such as the disjointedness.
 e.g. given:
 ```rust
 error_set! {
@@ -559,23 +559,23 @@ fn setx_result_to_sety_result() -> Result<(), SetY> {
    Ok(())
 }
 ```
-you can write this, which compiles to the `match` statement above:
+one can write this, which compiles to the `match` statement above:
 ```rust
 fn setx_result_to_sety_result() -> Result<(),SetY> {
    let _ok = coerce!(setx_result() => {
        Ok(ok) => ok,
        Err(SetX::X) => {}, // handle disjointedness
-       { Err(SetX) => return Err(SetY) }
+       { Err(SetX) => return Err(SetY) } // terminal coercion
    });
    Ok(())
 }
 ```
 The `coerce!` macro is a flat fast (no tt muncher 🦫) declarative macro created by the `error_set!` macro for the set. 
-`coerce!` behaves like a regular `match` statement, except it allows you to specify a terminal coercion statement between sets. e.g.
+`coerce!` behaves like a regular `match` statement, except it allows a terminal coercion statement between sets. e.g.
 ```rust
 { Err(SetX) => return Err(SetY) }
 { Err(SetX) => Err(SetY) }
 { SetX => return SetY }
 { SetX => SetY }
 ```
-With `coerce!`, you can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
+With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
