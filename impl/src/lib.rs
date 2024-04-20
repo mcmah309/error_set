@@ -4,7 +4,7 @@ mod ast;
 mod expand;
 mod validate;
 
-use std::cell::RefCell;
+use std::cell::Cell;
 
 use ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
 use expand::{expand, ErrorEnum};
@@ -51,14 +51,23 @@ fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> 
         }
         error_enum_builders.push(error_enum_builder);
     }
-    let error_enums = resolve(error_enum_builders.into_iter().map(RefCell::new).collect())?;
+    let error_enum_builders: Vec<Cell<ErrorEnumBuilder>> = unsafe {
+        std::mem::transmute(error_enum_builders)
+    };
+    let error_enums = resolve(error_enum_builders)?;
 
     Ok(error_enums)
 }
 
-fn resolve(error_enum_builders: Vec<RefCell<ErrorEnumBuilder>>) -> syn::Result<Vec<ErrorEnum>> {
+fn resolve(error_enum_builders: Vec<Cell<ErrorEnumBuilder>>) -> syn::Result<Vec<ErrorEnum>> {
     for index in 0..error_enum_builders.len() {
-        if !error_enum_builders[index].borrow().ref_parts.is_empty() {
+        let has_ref_parts;
+        {
+            let error_enum_builder = error_enum_builders[index].take();
+            has_ref_parts = !error_enum_builder.ref_parts.is_empty();
+            error_enum_builders[index].set(error_enum_builder);
+        }
+        if has_ref_parts {
             resolve_helper(index, &error_enum_builders, &mut Vec::new())?;
         }
     }
@@ -72,15 +81,16 @@ fn resolve(error_enum_builders: Vec<RefCell<ErrorEnumBuilder>>) -> syn::Result<V
 
 fn resolve_helper<'a>(
     index: usize,
-    error_enum_builders: &'a [RefCell<ErrorEnumBuilder>],
+    error_enum_builders: &'a [Cell<ErrorEnumBuilder>],
     visited: &mut Vec<Ident>,
 ) -> syn::Result<Vec<AstErrorEnumVariant>> {
-    let this_error_enum_builder = &error_enum_builders[index];
+    let this_error_enum_builder_cell = &error_enum_builders[index];
     //println!("visited `{}`", visited.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" - "));
-    if visited.contains(&this_error_enum_builder.borrow().error_name) {
-        visited.push(this_error_enum_builder.borrow().error_name.clone());
+    let mut error_enum_builder = this_error_enum_builder_cell.take();
+    if visited.contains(&error_enum_builder.error_name) {
+        visited.push(error_enum_builder.error_name.clone());
         return Err(syn::parse::Error::new_spanned(
-            this_error_enum_builder.borrow().error_name.clone(),
+            error_enum_builder.error_name.clone(),
             format!(
                 "Recursive dependency: {}",
                 visited
@@ -91,48 +101,71 @@ fn resolve_helper<'a>(
             ),
         ));
     }
-    let ref_parts_to_resolve = this_error_enum_builder
-        .borrow()
+    let ref_parts_to_resolve = error_enum_builder
         .ref_parts_to_resolve
         .clone();
     if !ref_parts_to_resolve.is_empty() {
         for ref_part in ref_parts_to_resolve {
             let ref_error_enum_index = error_enum_builders
                 .iter()
-                .position(|e| e.borrow().error_name == ref_part);
+                .position(|e| {
+                    let take = e.take();
+                    let val  = take.error_name == ref_part;
+                    e.set(take);
+                    val
+            });
             let ref_error_enum_index = match ref_error_enum_index {
                 Some(e) => e,
                 None => {
                     return Err(syn::parse::Error::new_spanned(
                     &ref_part,
-                    format!("error enum '{0}' includes error enum '{1}' as a subset, but '{1}' does not exist.", this_error_enum_builder.borrow().error_name, ref_part)
+                    format!("error enum '{0}' includes error enum '{1}' as a subset, but '{1}' does not exist.", error_enum_builder.error_name, ref_part)
                 ));
                 }
             };
-            let ref_error_enum_builder = &error_enum_builders[ref_error_enum_index];
+            let ref_error_enum_builder_cell = &error_enum_builders[ref_error_enum_index];
+            let mut ref_error_enum_builder = ref_error_enum_builder_cell.take();
             if !ref_error_enum_builder
-                .borrow()
                 .ref_parts_to_resolve
                 .is_empty()
             {
-                visited.push(this_error_enum_builder.borrow().error_name.clone());
+                visited.push(error_enum_builder.error_name.clone());
+                ref_error_enum_builder_cell.set(ref_error_enum_builder);
+                this_error_enum_builder_cell.set(error_enum_builder);
                 resolve_helper(ref_error_enum_index, error_enum_builders, visited)?;
+                ref_error_enum_builder = ref_error_enum_builder_cell.take();
+                error_enum_builder = this_error_enum_builder_cell.take();
                 visited.pop();
             }
-            for variant in ref_error_enum_builder.borrow().error_variants.iter() {
-                let this_error_variants = &mut this_error_enum_builder.borrow_mut().error_variants;
+            for variant in ref_error_enum_builder.error_variants.iter() {
+                let this_error_variants = &mut error_enum_builder.error_variants;
                 if !this_error_variants.contains(&variant) {
                     this_error_variants.push(variant.clone());
                 }
             }
+            ref_error_enum_builder_cell.set(ref_error_enum_builder);
         }
-        this_error_enum_builder
-            .borrow_mut()
+        error_enum_builder
             .ref_parts_to_resolve
             .clear();
     }
+    let error_variants = error_enum_builder.error_variants.clone();
+    this_error_enum_builder_cell.set(error_enum_builder);
     // Now that are refs are solved and included in this's error_variants, return them.
-    Ok(this_error_enum_builder.borrow().error_variants.clone())
+    Ok(error_variants)
+}
+
+
+impl Default for ErrorEnumBuilder {
+    fn default() -> Self {
+        Self {
+            attributes: Vec::new(),
+            error_name: Ident::new("Default", proc_macro2::Span::call_site()),
+            error_variants: Vec::new(),
+            ref_parts: Vec::new(),
+            ref_parts_to_resolve: Vec::new(),
+        }
+    }
 }
 
 // #[derive(Debug)]
