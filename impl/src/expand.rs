@@ -36,32 +36,6 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
         }
     }
 
-    // token_stream.append_all(quote::quote! {
-    //     macro_rules! match_coerce {
-
-    //         // Special case: When the last pattern is 'BookParsingError => BookSectionParsingError', inject specific match arms.
-    //         ($expr:expr, { $($patterns:pat => $results:expr),+ ; BookParsingError => BookSectionParsingError }) => {
-    //             match $expr {
-    //                 // Process all patterns before the last one normally.
-    //                 $($patterns => $results,)+
-    
-    //                 // Inject specific match arms for the special case.
-    //                 Err(BookParsingError::MissingNameArg) => { return Err(BookSectionParsingError::MissingNameArg); },
-    //                 Err(BookParsingError::NoContents) => { return Err(BookSectionParsingError::NoContents); },
-    //             }
-    //         };
-    
-    //         // General case: Handle all cases normally, without special additions.
-    //         // ($expr:expr, { $($patterns:pat => $results:expr),+ ; $last_pattern:pat => $last_result:expr }) => {
-    //         //     match $expr {
-    //         //         $($patterns => $results,)+
-    //         //         $last_pattern => $last_result,
-    //         //     }
-    //         // };
-    //     }
-
-    //     pub(crate) use match_coerce;
-    // });
     for error_enum_node in error_enum_nodes.iter() {
         add_code_for_node(&*(**error_enum_node).borrow(), &mut token_stream);
     }
