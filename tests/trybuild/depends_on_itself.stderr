@@ -1,0 +1,11 @@
+error: Recursive dependency: BookParsingError->BookParsingError
+ --> tests/trybuild/depends_on_itself.rs:4:5
+  |
+4 |     BookParsingError = {
+  |     ^^^^^^^^^^^^^^^^
+
+error[E0601]: `main` function not found in crate `$CRATE`
+  --> tests/trybuild/depends_on_itself.rs:11:2
+   |
+11 | }
+   |  ^ consider adding a `main` function to `$DIR/tests/trybuild/depends_on_itself.rs`

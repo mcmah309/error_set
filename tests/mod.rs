@@ -393,6 +393,13 @@ pub mod documentation {
 pub mod should_not_compile_tests {
 
     #[test]
+    fn depends_on_self() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/depends_on_itself.rs");
+    }
+
+
+    #[test]
     fn multiple_same_sources() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/multiple_same_sources.rs");
