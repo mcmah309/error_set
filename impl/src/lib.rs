@@ -4,8 +4,6 @@ mod ast;
 mod expand;
 mod validate;
 
-use std::cell::RefCell;
-
 use ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
 use expand::{expand, ErrorEnum};
 
@@ -51,36 +49,34 @@ fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> 
         }
         error_enum_builders.push(error_enum_builder);
     }
-    let error_enums = resolve(error_enum_builders.into_iter().map(RefCell::new).collect())?;
+    let error_enums = resolve(error_enum_builders)?;
 
     Ok(error_enums)
 }
 
-fn resolve(error_enum_builders: Vec<RefCell<ErrorEnumBuilder>>) -> syn::Result<Vec<ErrorEnum>> {
+fn resolve(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<ErrorEnum>> {
     for index in 0..error_enum_builders.len() {
-        if !error_enum_builders[index].borrow().ref_parts.is_empty() {
-            resolve_helper(index, &error_enum_builders, &mut Vec::new())?;
+        if !error_enum_builders[index].ref_parts.is_empty() {
+            resolve_helper(index, &mut *error_enum_builders, &mut Vec::new())?;
         }
     }
     let error_enums = error_enum_builders
         .into_iter()
-        .map(|e| e.into_inner())
         .map(Into::into)
         .collect::<Vec<ErrorEnum>>();
     Ok(error_enums)
 }
 
 fn resolve_helper<'a>(
-    index: usize,
-    error_enum_builders: &'a [RefCell<ErrorEnumBuilder>],
+    index: usize, 
+    error_enum_builders: &'a mut [ErrorEnumBuilder],
     visited: &mut Vec<Ident>,
 ) -> syn::Result<Vec<AstErrorEnumVariant>> {
-    let this_error_enum_builder = &error_enum_builders[index];
     //println!("visited `{}`", visited.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" - "));
-    if visited.contains(&this_error_enum_builder.borrow().error_name) {
-        visited.push(this_error_enum_builder.borrow().error_name.clone());
+    if visited.contains(&error_enum_builders[index].error_name) {
+        visited.push(error_enum_builders[index].error_name.clone());
         return Err(syn::parse::Error::new_spanned(
-            this_error_enum_builder.borrow().error_name.clone(),
+            error_enum_builders[index].error_name.clone(),
             format!(
                 "Recursive dependency: {}",
                 visited
@@ -91,48 +87,44 @@ fn resolve_helper<'a>(
             ),
         ));
     }
-    let ref_parts_to_resolve = this_error_enum_builder
-        .borrow()
-        .ref_parts_to_resolve
-        .clone();
+    let ref_parts_to_resolve = error_enum_builders[index]
+        .ref_parts_to_resolve.clone();
     if !ref_parts_to_resolve.is_empty() {
         for ref_part in ref_parts_to_resolve {
             let ref_error_enum_index = error_enum_builders
                 .iter()
-                .position(|e| e.borrow().error_name == ref_part);
+                .position(|e| e.error_name == ref_part);
             let ref_error_enum_index = match ref_error_enum_index {
                 Some(e) => e,
                 None => {
                     return Err(syn::parse::Error::new_spanned(
                     &ref_part,
-                    format!("error enum '{0}' includes error enum '{1}' as a subset, but '{1}' does not exist.", this_error_enum_builder.borrow().error_name, ref_part)
+                    format!("")
                 ));
                 }
             };
-            let ref_error_enum_builder = &error_enum_builders[ref_error_enum_index];
-            if !ref_error_enum_builder
-                .borrow()
+            if !error_enum_builders[ref_error_enum_index]
                 .ref_parts_to_resolve
                 .is_empty()
             {
-                visited.push(this_error_enum_builder.borrow().error_name.clone());
+                visited.push(error_enum_builders[index].error_name.clone());
                 resolve_helper(ref_error_enum_index, error_enum_builders, visited)?;
                 visited.pop();
             }
-            for variant in ref_error_enum_builder.borrow().error_variants.iter() {
-                let this_error_variants = &mut this_error_enum_builder.borrow_mut().error_variants;
+            let (this_error_enum_builder, ref_error_enum_builder) = indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
+            for variant in ref_error_enum_builder.error_variants.iter() {
+                let this_error_variants = &mut this_error_enum_builder.error_variants;
                 if !this_error_variants.contains(&variant) {
                     this_error_variants.push(variant.clone());
                 }
             }
         }
-        this_error_enum_builder
-            .borrow_mut()
+        error_enum_builders[index]
             .ref_parts_to_resolve
             .clear();
     }
     // Now that are refs are solved and included in this's error_variants, return them.
-    Ok(this_error_enum_builder.borrow().error_variants.clone())
+    Ok(error_enum_builders[index].error_variants.clone())
 }
 
 // #[derive(Debug)]
