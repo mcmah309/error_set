@@ -6,11 +6,9 @@
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
 
 
-A concise way to define errors and ergonomically coerce a subset into a superset with with just `.into()` or `?`.
-Managing errors is no longer a tedious process.
+`error_set` provides a streamlined approach to defining errors and allows for easy converion between errors (e.g. convert a subset to a superset with just `.into()` or `?`). This makes error management straightforward and efficient.
 
-`error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
-and works functionally the same.
+Inspired by Zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type), `error_set` offers similar functionality and simplicity in Rust.
 
 Instead of defining various enums/structs for errors and hand rolling relations, use an error set:
 ```rust
@@ -389,6 +387,7 @@ error_set! {
 ```
 As mentioned, any above subset can be converted into a superset with `.into()` or `?`. 
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
+Intersecting sets can also be more easily handled with the `coerce!` macro (must have the "coerce_macro" feature enabled).
 
 ### `error_set!` Example
 <details>
