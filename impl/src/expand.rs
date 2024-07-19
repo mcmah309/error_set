@@ -1,5 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
+#[cfg(feature = "coerce_macro")]
+use coerce_macro::add_coerce_macro;
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::{Attribute, Ident};
@@ -253,165 +255,6 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         })
     }
 }
-
-//************************************************************************//
-
-#[cfg(feature = "coerce_macro")]
-fn add_coerce_macro(error_enums: &Vec<ErrorEnum>, token_stream: &mut TokenStream) {
-    let enum_intersections: Vec<EnumIntersection> = construct_set_intersections(&error_enums);
-    let mut macro_pattern_token_stream = TokenStream::new();
-    for enum_interscetion in enum_intersections {
-        let EnumIntersection {
-            enum1: enum1_name,
-            enum2: enum2_name,
-            intersection,
-        } = enum_interscetion;
-        let mut match_arms_return_err = TokenStream::new();
-        let mut match_arms_err = TokenStream::new();
-        let mut match_arms_return = TokenStream::new();
-        let mut match_arms = TokenStream::new();
-        for variant in intersection {
-            match variant {
-                AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
-                    let variant = source_variant.name;
-                    match_arms_return_err.append_all(quote::quote! {
-                        Err(#enum1_name::#variant(source)) => { return Err(#enum2_name::#variant(source)); },
-                    });
-                    match_arms_err.append_all(quote::quote! {
-                        Err(#enum1_name::#variant(source)) => { Err(#enum2_name::#variant(source)) },
-                    });
-                    match_arms_return.append_all(quote::quote! {
-                        #enum1_name::#variant(source) => { return #enum2_name::#variant(source); },
-                    });
-                    match_arms.append_all(quote::quote! {
-                        #enum1_name::#variant(source) => { #enum2_name::#variant(source) },
-                    });
-                },
-                AstErrorEnumVariant::Variant(variant) => {
-                    let variant = variant.name;
-                    match_arms_return_err.append_all(quote::quote! {
-                        Err(#enum1_name::#variant) => { return Err(#enum2_name::#variant); },
-                    });
-                    match_arms_err.append_all(quote::quote! {
-                        Err(#enum1_name::#variant) => { Err(#enum2_name::#variant) },
-                    });
-                    match_arms_return.append_all(quote::quote! {
-                        #enum1_name::#variant => { return #enum2_name::#variant; },
-                    });
-                    match_arms.append_all(quote::quote! {
-                        #enum1_name::#variant => { #enum2_name::#variant },
-                    }); 
-                },
-            }
-        }
-        macro_pattern_token_stream.append_all(quote::quote! {
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => return Err(#enum2_name)} }) => {
-                    match $expr {
-                        $($patterns => $results,)+
-                        #match_arms_return_err
-                    }
-                };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => Err(#enum2_name)} }) => {
-                    match $expr {
-                        $($patterns => $results,)+
-                        #match_arms_err
-                    }
-                };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => return #enum2_name} }) => {
-                    match $expr {
-                        $($patterns => $results,)+
-                        #match_arms_return
-                    }
-                };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => #enum2_name} }) => {
-                    match $expr {
-                        $($patterns => $results,)+
-                        #match_arms
-                    }
-                };
-        });
-    }
-    // when no default coercion
-    macro_pattern_token_stream.append_all(quote::quote! {
-        ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+ }) => {
-            match $expr {
-                $($patterns => $results,)+
-            }
-        };
-    });
-    // 
-    macro_pattern_token_stream.append_all(quote::quote! {
-        ($($other:tt)*) => {
-            compile_error!(r#"
-No patterns matched. 
-Possible reasons:
-    1. There are no intersections between the sets.
-    3. The pattern is incorrect.
-`coerce` is expected to follow the pattern:
-```
-coerce!($VAR => {
-    <$arms>+
-    <,{ one_of<
-            <$FROM => $TO>,
-            <$FROM => return $TO>,
-            <Err($FROM) => Err($TO)>,
-            <Err($FROM) => return Err($TO)>
-        > } >?
-});
-```
-"#)
-        };
-    });
-    token_stream.append_all(quote::quote! {
-        #[allow(unused_macros)]
-        macro_rules! coerce {
-            #macro_pattern_token_stream
-        }
-
-        pub(crate) use coerce;
-    });
-}
-
-#[cfg(feature = "coerce_macro")]
-fn construct_set_intersections(error_enums: &Vec<ErrorEnum>) -> Vec<EnumIntersection> {
-    let mut enum_intersections: Vec<EnumIntersection> = Vec::new();
-    let length = error_enums.len();
-    for index1 in 0..length {
-        for index2 in 0..length {
-            let enum1 = &error_enums[index1];
-            let enum2 = &error_enums[index2];
-            let mut intersections = Vec::new();
-            for variant in &enum1.error_variants {
-                if enum2.error_variants.contains(&variant)  {
-                    intersections.push(variant.clone());
-                }
-            }
-            if !intersections.is_empty() {
-            let enum_intersection = EnumIntersection::new(enum1.error_name.clone(), enum2.error_name.clone(), intersections);
-                enum_intersections.push(enum_intersection);
-            }
-        }
-    }
-    enum_intersections
-}
-
-#[cfg(feature = "coerce_macro")]
-struct EnumIntersection {
-    pub(crate) enum1: Ident,
-    pub(crate) enum2: Ident,
-    pub(crate) intersection: Vec<AstErrorEnumVariant>,
-}
-
-#[cfg(feature = "coerce_macro")]
-impl EnumIntersection {
-    pub(crate) fn new(enum1: Ident, enum2: Ident, intersection: Vec<AstErrorEnumVariant>) -> EnumIntersection {
-        EnumIntersection {
-            enum1,
-            enum2,
-            intersection,
-        }
-    }
-}
 //************************************************************************//
 #[derive(Clone)]
 struct ErrorEnumGraphNode {
@@ -453,5 +296,267 @@ impl Eq for ErrorEnum {}
 impl PartialEq for ErrorEnum {
     fn eq(&self, other: &Self) -> bool {
         self.error_name == other.error_name
+    }
+}
+
+//************************************************************************//
+
+#[cfg(feature = "coerce_macro")]
+mod coerce_macro {
+    //! ## The `coerce!` Macro
+    //!
+    //! The `coerce!` macro handles coercing between intersecting sets (sets where some of the error types are in common). This allows only being explicit where relevant, such as the disjointedness.
+    //!
+    //! e.g. given:
+    //!
+    //! ```rust
+    //! error_set! {
+    //!    SetX = {
+    //!        X
+    //!    } || Common;
+    //!    SetY = {
+    //!        Y
+    //!    } || Common;
+    //!    Common = {
+    //!        A,
+    //!        B,
+    //!        C,
+    //!        D,
+    //!        E,
+    //!        F,
+    //!        G,
+    //!        H,
+    //!    };
+    //! }
+    //! ```
+    //!
+    //! rather than writing:
+    //!
+    //! ```rust
+    //! fn setx_result_to_sety_result() -> Result<(), SetY> {
+    //!    let _ok = match setx_result() {
+    //!        Ok(ok) => ok,
+    //!        Err(SetX::X) => {} // handle disjointedness
+    //!        Err(SetX::A) => {
+    //!            return Err(SetY::A);
+    //!        }
+    //!        Err(SetX::B) => {
+    //!            return Err(SetY::B);
+    //!        }
+    //!        Err(SetX::C) => {
+    //!            return Err(SetY::C);
+    //!        }
+    //!        Err(SetX::D) => {
+    //!            return Err(SetY::D);
+    //!        }
+    //!        Err(SetX::E) => {
+    //!            return Err(SetY::E);
+    //!        }
+    //!        Err(SetX::F) => {
+    //!            return Err(SetY::F);
+    //!        }
+    //!        Err(SetX::G) => {
+    //!            return Err(SetY::G);
+    //!        }
+    //!        Err(SetX::H) => {
+    //!            return Err(SetY::H);
+    //!        }
+    //!    };
+    //!    Ok(())
+    //! }
+    //! ```
+    //!
+    //! one can write this, which compiles to the `match` statement above:
+    //!
+    //! ```rust
+    //! fn setx_result_to_sety_result() -> Result<(), SetY> {
+    //!    let _ok = coerce!(setx_result() => {
+    //!        Ok(ok) => ok,
+    //!        Err(SetX::X) => {}, // handle disjointedness
+    //!        { Err(SetX) => return Err(SetY) } // terminal coercion
+    //!    });
+    //!    Ok(())
+    //! }
+    //! ```
+    //!
+    //! The `coerce!` macro is a flat fast (no tt muncher 🦫) declarative macro created by the `error_set!` macro for the set.
+    //! `coerce!` behaves like a regular `match` statement, except it allows a terminal coercion statement between sets. e.g.
+    //!
+    //! ```rust
+    //! { Err(SetX) => return Err(SetY) }
+    //! { Err(SetX) => Err(SetY) }
+    //! { SetX => return SetY }
+    //! { SetX => SetY }
+    //! ```
+    //!
+    //! With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
+
+    use proc_macro2::TokenStream;
+    use quote::TokenStreamExt;
+    use syn::Ident;
+
+    use crate::ast::AstErrorEnumVariant;
+
+    use super::ErrorEnum;
+
+    pub(crate) fn add_coerce_macro(error_enums: &Vec<ErrorEnum>, token_stream: &mut TokenStream) {
+        let enum_intersections: Vec<EnumIntersection> = construct_set_intersections(&error_enums);
+        let mut macro_pattern_token_stream = TokenStream::new();
+        for enum_interscetion in enum_intersections {
+            let EnumIntersection {
+                enum1: enum1_name,
+                enum2: enum2_name,
+                intersection,
+            } = enum_interscetion;
+            let mut match_arms_return_err = TokenStream::new();
+            let mut match_arms_err = TokenStream::new();
+            let mut match_arms_return = TokenStream::new();
+            let mut match_arms = TokenStream::new();
+            for variant in intersection {
+                match variant {
+                    AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
+                        let variant = source_variant.name;
+                        match_arms_return_err.append_all(quote::quote! {
+                        Err(#enum1_name::#variant(source)) => { return Err(#enum2_name::#variant(source)); },
+                    });
+                        match_arms_err.append_all(quote::quote! {
+                        Err(#enum1_name::#variant(source)) => { Err(#enum2_name::#variant(source)) },
+                    });
+                        match_arms_return.append_all(quote::quote! {
+                        #enum1_name::#variant(source) => { return #enum2_name::#variant(source); },
+                    });
+                        match_arms.append_all(quote::quote! {
+                            #enum1_name::#variant(source) => { #enum2_name::#variant(source) },
+                        });
+                    }
+                    AstErrorEnumVariant::Variant(variant) => {
+                        let variant = variant.name;
+                        match_arms_return_err.append_all(quote::quote! {
+                            Err(#enum1_name::#variant) => { return Err(#enum2_name::#variant); },
+                        });
+                        match_arms_err.append_all(quote::quote! {
+                            Err(#enum1_name::#variant) => { Err(#enum2_name::#variant) },
+                        });
+                        match_arms_return.append_all(quote::quote! {
+                            #enum1_name::#variant => { return #enum2_name::#variant; },
+                        });
+                        match_arms.append_all(quote::quote! {
+                            #enum1_name::#variant => { #enum2_name::#variant },
+                        });
+                    }
+                }
+            }
+            macro_pattern_token_stream.append_all(quote::quote! {
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => return Err(#enum2_name)} }) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms_return_err
+                    }
+                };
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => Err(#enum2_name)} }) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms_err
+                    }
+                };
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => return #enum2_name} }) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms_return
+                    }
+                };
+                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => #enum2_name} }) => {
+                    match $expr {
+                        $($patterns => $results,)+
+                        #match_arms
+                    }
+                };
+        });
+        }
+        // when no default coercion
+        macro_pattern_token_stream.append_all(quote::quote! {
+            ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+ }) => {
+                match $expr {
+                    $($patterns => $results,)+
+                }
+            };
+        });
+        //
+        macro_pattern_token_stream.append_all(quote::quote! {
+            ($($other:tt)*) => {
+                compile_error!(r#"
+No patterns matched. 
+Possible reasons:
+    1. There are no intersections between the sets.
+    3. The pattern is incorrect.
+`coerce` is expected to follow the pattern:
+```
+coerce!($VAR => {
+    <$arms>+
+    <,{ one_of<
+            <$FROM => $TO>,
+            <$FROM => return $TO>,
+            <Err($FROM) => Err($TO)>,
+            <Err($FROM) => return Err($TO)>
+        > } >?
+});
+```
+"#)
+            };
+        });
+        token_stream.append_all(quote::quote! {
+            #[allow(unused_macros)]
+            macro_rules! coerce {
+                #macro_pattern_token_stream
+            }
+
+            pub(crate) use coerce;
+        });
+    }
+
+    fn construct_set_intersections(error_enums: &Vec<ErrorEnum>) -> Vec<EnumIntersection> {
+        let mut enum_intersections: Vec<EnumIntersection> = Vec::new();
+        let length = error_enums.len();
+        for index1 in 0..length {
+            for index2 in 0..length {
+                let enum1 = &error_enums[index1];
+                let enum2 = &error_enums[index2];
+                let mut intersections = Vec::new();
+                for variant in &enum1.error_variants {
+                    if enum2.error_variants.contains(&variant) {
+                        intersections.push(variant.clone());
+                    }
+                }
+                if !intersections.is_empty() {
+                    let enum_intersection = EnumIntersection::new(
+                        enum1.error_name.clone(),
+                        enum2.error_name.clone(),
+                        intersections,
+                    );
+                    enum_intersections.push(enum_intersection);
+                }
+            }
+        }
+        enum_intersections
+    }
+
+    struct EnumIntersection {
+        pub(crate) enum1: Ident,
+        pub(crate) enum2: Ident,
+        pub(crate) intersection: Vec<AstErrorEnumVariant>,
+    }
+
+    impl EnumIntersection {
+        pub(crate) fn new(
+            enum1: Ident,
+            enum2: Ident,
+            intersection: Vec<AstErrorEnumVariant>,
+        ) -> EnumIntersection {
+            EnumIntersection {
+                enum1,
+                enum2,
+                intersection,
+            }
+        }
     }
 }

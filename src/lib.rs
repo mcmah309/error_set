@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 pub use error_set_impl::*;
 
 pub trait Coerce<T> {
