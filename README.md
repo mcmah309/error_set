@@ -353,7 +353,7 @@ impl core::fmt::Display for ParseUploadError {
 ```
 </details>
 
-which is also equivalent to writing:
+which is also equivalent to writing the full expansion:
 ```rust
 error_set! {
     MediaError = {
@@ -387,9 +387,10 @@ error_set! {
     };
 }
 ```
-As mentioned, any above subset can be converted into a superset with `.into()` or `?`. Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
+As mentioned, any above subset can be converted into a superset with `.into()` or `?`. 
+Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
 
-### `error_set!` Examples
+### `error_set!` Example
 <details>
 
   <summary>Base Functionality In Action</summary>
@@ -434,3 +435,35 @@ fn main() {
 }
 ```
 </details>
+
+### Why Choose `error_set` Over `thiserror` or `anyhow`
+
+If your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely the best choice for you. It's straightforward and effective for simple error management.
+
+However, for projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially when using "mega enums." 
+
+**What is a Mega Enum?**
+
+A mega enum, or mega error enum, is an enum that combines various error types into one large enumeration. This approach can lead to inefficiencies and confusion because it includes error variants that are not relevant in certain scopes. 
+
+**Example Scenario:**
+
+Consider the following functions and their respective error types:
+
+- `func1` can produce errors `a` and `b`, represented by `enum1`.
+- `func2` can produce errors `c` and `d`, represented by `enum2`.
+- `func3` calls both `func1` and `func2`.
+
+If `func3` does not handle the errors from `func1` and `func2`, it must return an error enum that encompasses variants `a`, `b`, `c`, and `d`. Without a tool like `error_set`, developers might skip defining `enum1` and `enum2` due to the complexity and instead create a mega enum with all possible error variants (`a`, `b`, `c`, `d`). This means that any caller of `func1` or `func2` would have to handle all these cases, even those that are not possible in that specific context.
+
+**How `error_set` Simplifies Error Management:**
+
+`error_set` allows you to define these subsets of errors and convert them into a superset effortlessly using `.into()`. This approach ensures that each function only deals with relevant error variants, avoiding the clutter and inefficiency of mega enums.
+
+**Benefits of `error_set`:**
+
+- **Precision:** Define error subsets and supersets clearly, maintaining relevant error handling within appropriate scopes.
+- **Efficiency:** Reduce the overhead of managing unnecessary error variants.
+- **Ease of Use:** Convert subsets into supersets with simple and ergonomic syntax.
+
+By using `error_set`, your project can maintain clear and precise error definitions, enhancing code readability and maintainability without the tedious process of manually defining and managing error relations.
