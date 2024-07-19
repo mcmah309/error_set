@@ -230,6 +230,7 @@ pub mod readme_example_aggregation {
     }
 }
 
+#[cfg(feature = "coerce_macro")]
 pub mod coerce_macro {
     use error_set::error_set;
 

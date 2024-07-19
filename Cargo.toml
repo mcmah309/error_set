@@ -17,3 +17,7 @@ trybuild = "^1.0.91"
 
 [workspace]
 members = ["impl"]
+
+[features]
+default = []
+coerce_macro = ["error_set_impl/coerce_macro"]

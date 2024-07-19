@@ -7,9 +7,9 @@ use syn::{Attribute, Ident};
 use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
-    let enum_intersections = construct_set_intersections(&error_enums);
     let mut token_stream = TokenStream::new();
-    add_coerce_macro(enum_intersections, &mut token_stream);
+    #[cfg(feature = "coerce_macro")]
+    add_coerce_macro(&error_enums, &mut token_stream);
     let error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
         .into_iter()
         .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
@@ -256,7 +256,9 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
 
 //************************************************************************//
 
-fn add_coerce_macro(enum_intersections: Vec<EnumIntersection>, token_stream: &mut TokenStream) {
+#[cfg(feature = "coerce_macro")]
+fn add_coerce_macro(error_enums: &Vec<ErrorEnum>, token_stream: &mut TokenStream) {
+    let enum_intersections: Vec<EnumIntersection> = construct_set_intersections(&error_enums);
     let mut macro_pattern_token_stream = TokenStream::new();
     for enum_interscetion in enum_intersections {
         let EnumIntersection {
@@ -370,7 +372,7 @@ coerce!($VAR => {
     });
 }
 
-
+#[cfg(feature = "coerce_macro")]
 fn construct_set_intersections(error_enums: &Vec<ErrorEnum>) -> Vec<EnumIntersection> {
     let mut enum_intersections: Vec<EnumIntersection> = Vec::new();
     let length = error_enums.len();
@@ -393,12 +395,14 @@ fn construct_set_intersections(error_enums: &Vec<ErrorEnum>) -> Vec<EnumIntersec
     enum_intersections
 }
 
+#[cfg(feature = "coerce_macro")]
 struct EnumIntersection {
     pub(crate) enum1: Ident,
     pub(crate) enum2: Ident,
     pub(crate) intersection: Vec<AstErrorEnumVariant>,
 }
 
+#[cfg(feature = "coerce_macro")]
 impl EnumIntersection {
     pub(crate) fn new(enum1: Ident, enum2: Ident, intersection: Vec<AstErrorEnumVariant>) -> EnumIntersection {
         EnumIntersection {
@@ -408,7 +412,6 @@ impl EnumIntersection {
         }
     }
 }
-
 //************************************************************************//
 #[derive(Clone)]
 struct ErrorEnumGraphNode {
