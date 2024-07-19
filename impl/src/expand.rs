@@ -92,8 +92,6 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         pub enum #enum_name {
             #error_variant_tokens
         }
-
-        impl error_set::ErrorSetMarker for #enum_name {}
     });
 }
 

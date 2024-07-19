@@ -7,6 +7,7 @@
 
 
 A concise way to define errors and ergonomically coerce a subset into a superset with with just `.into()` or `?`.
+Managing errors is no longer a tedious process.
 
 `error_set` was inspired by zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type)
 and works functionally the same.
@@ -394,110 +395,42 @@ As mentioned, any above subset can be converted into a superset with `.into()` o
   <summary>Base Functionality In Action</summary>
 
 ```rust
-fn main() {
-    let book_section_parsing_error = BookSectionParsingError::MissingName;
-    let book_parsing_error: BookParsingError = book_section_parsing_error.coerce(); // `.coerce()` == `.into()`
-    assert!(matches!(book_parsing_error, BookParsingError::MissingName));
-    let media_error: MediaError = book_parsing_error.coerce(); // `.coerce()` == `.into()`
-    assert!(matches!(media_error, MediaError::MissingName));
+use error_set::error_set;
 
-    let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-    let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
-    let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
-    assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
-}
-```
-</details>
-
-<details>
-Here we can easily define all the different error states a function could exit with. Note this example is verbose as not all error states have downstream handlers that care about the error type, but imagine it so.
-  <summary>More Intricate Example</summary>
-
-```rust
-error_set::error_set! {
+error_set! {
     MediaError = {
         IoError(std::io::Error)
-    } || BookParsingError || DownloadError || UploadError;
+    } || BookParsingError || DownloadError || ParseUploadError;
     BookParsingError = {
-        MissingContent,
-        BookAccess(std::io::Error),
+        MissingBookDescription,
+        CouldNotReadBook(std::io::Error),
+    } || BookSectionParsingError;
+    BookSectionParsingError = {
+        MissingName,
+        NoContents,
     };
     DownloadError = {
         InvalidUrl,
         CouldNotSaveBook(std::io::Error),
     };
-    UploadError = {
+    ParseUploadError = {
         MaximumUploadSizeReached,
         TimedOut,
         AuthenticationFailed,
     };
 }
 
-fn parse_book(file_path: &str) -> Result<String, BookParsingError> {
-    let mut file = File::open(file_path).coerce::<BookParsingError>()?;
-    let mut content = String::new();
-    file.read_to_string(&mut content).coerce::<BookParsingError>()?;
-    if content.is_empty() {
-        Err(BookParsingError::MissingContent)
-    } else {
-        Ok(content)
-    }
-}
-
-fn download_book(url: &str, save_path: &str) -> Result<(), DownloadError> {
-    if url.is_empty() {
-        Err(DownloadError::InvalidUrl)
-    } else {
-        let simulated_book_content = "This is a downloaded book content.";
-        let mut file = File::create(save_path).coerce::<DownloadError>()?;
-        file.write_all(simulated_book_content.as_bytes()).coerce::<DownloadError>()?;
-        Ok(())
-    }
-}
-
-fn upload_content(content: &str) -> Result<(), UploadError> {
-    let auth = true;
-    if !auth { // Simulate auth
-        return Err(UploadError::AuthenticationFailed);
-    }
-    let time_out = false;
-    if !time_out { // Simulate timeout uploading
-        return Err(UploadError::TimedOut);
-    }
-    if content.len() > 1024 { // Simulate an upload size limit
-        Err(UploadError::MaximumUploadSizeReached)
-    } else {
-        println!("Book uploaded successfully.");
-        Ok(())
-    }
-}
-
-fn process_book(download_path: &str, download_url: &str) -> Result<String, MediaError> {
-    download_book(download_url, download_path).coerce::<MediaError>()?;
-    let content = parse_book(download_path).coerce::<MediaError>()?;
-    const MAX_RETRIES: u8  = 3;
-    let mut current_retries = 0;
-    match upload_content(&content) {
-        Err(UploadError::TimedOut) => {
-            while current_retries < MAX_RETRIES {
-                current_retries += 1;
-                if let Ok(_) = upload_content(&content) {
-                    break;
-                }
-            }
-        }
-        Err(e) => return Err(e.coerce()),
-        _ => (),
-    }
-    fs::remove_file(download_path).coerce::<MediaError>()?;
-    Ok(content)
-}
-
 fn main() {
-    match process_book("downloaded_book.txt", "http://example.com/book") {
-        Ok(content) => println!("Book processed successfully: {}", content),
-        Err(e) => eprintln!("An error occurred: {:?}", e),
-    }
+    let book_section_parsing_error: BookSectionParsingError = BookSectionParsingError::MissingName;
+    let book_parsing_error: BookParsingError = book_section_parsing_error.into();
+    assert!(matches!(book_parsing_error, BookParsingError::MissingName));
+    let media_error: MediaError = book_parsing_error.into();
+    assert!(matches!(media_error, MediaError::MissingName));
+
+    let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+    let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
+    let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
+    assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
 }
 ```
 </details>

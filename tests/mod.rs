@@ -91,7 +91,6 @@ pub mod error_sources_of_same_name {
         };
     }
 
-
     #[test]
     fn test() {
         let x = X::IoError(std::io::Error::new(
@@ -133,7 +132,7 @@ pub mod error_sources_of_different_names {
 
 #[cfg(test)]
 pub mod readme_example {
-    use error_set::error_set;
+    use error_set::{error_set, CoerceResult};
 
     error_set! {
         MediaError = {
@@ -169,17 +168,15 @@ pub mod readme_example {
 
     #[test]
     fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingName;
+        let book_section_parsing_error: BookSectionParsingError =
+            BookSectionParsingError::MissingName;
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(
-            book_parsing_error,
-            BookParsingError::MissingName
-        ));
+        assert!(matches!(book_parsing_error, BookParsingError::MissingName));
         let media_error: MediaError = book_parsing_error.into();
         assert!(matches!(media_error, MediaError::MissingName));
 
-        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
@@ -216,14 +213,11 @@ pub mod readme_example_aggregation {
     fn test() {
         let book_section_parsing_error = BookSectionParsingError::MissingName;
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(
-            book_parsing_error,
-            BookParsingError::MissingName
-        ));
+        assert!(matches!(book_parsing_error, BookParsingError::MissingName));
         let media_error: MediaError = book_parsing_error.into();
         assert!(matches!(media_error, MediaError::MissingName));
 
-        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
@@ -254,14 +248,14 @@ pub mod coerce_macro {
         };
     }
 
-    fn setx_result() -> Result<(),SetX> {
+    fn setx_result() -> Result<(), SetX> {
         Err(SetX::A)
     }
     fn setx() -> SetX {
         SetX::A
     }
 
-    fn setx_result_to_sety_result_coerce_return() -> Result<(),SetY> {
+    fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
         let _ok = coerce!(setx_result() => {
             Ok(ok) => ok,
             Err(SetX::X) => (), // handle
@@ -269,8 +263,8 @@ pub mod coerce_macro {
         });
         Ok(())
     }
-    fn setx_result_to_sety_result_coerce() -> Result<(),SetY> {
-        let result: Result<(),SetY> = coerce!(setx_result() => {
+    fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
+        let result: Result<(), SetY> = coerce!(setx_result() => {
             Ok(_) => Err(SetY::D),
             Err(SetX::X) => Err(SetY::F), // handle
             { Err(SetX) => Err(SetY) }
@@ -326,7 +320,10 @@ pub mod coerce_macro {
 
     #[test]
     fn test() {
-        assert_eq!(setx_result_to_sety_result_coerce_return().unwrap_err(), SetY::A);
+        assert_eq!(
+            setx_result_to_sety_result_coerce_return().unwrap_err(),
+            SetY::A
+        );
         assert_eq!(setx_result_to_sety_result_coerce().unwrap_err(), SetY::A);
         assert_eq!(setx_to_sety_coerce(), SetY::A);
         assert_eq!(setx_to_sety_coerce_return(), SetY::A);
@@ -336,7 +333,7 @@ pub mod coerce_macro {
 }
 
 pub mod documentation {
-    use error_set::{error_set, Coerce, CoerceResult};
+    use error_set::{error_set, CoerceResult};
 
     error_set! {
         /// This is a MediaError doc
@@ -375,15 +372,15 @@ pub mod documentation {
     #[test]
     fn test() {
         let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
-        let book_parsing_error: BookParsingError = book_section_parsing_error.coerce();
+        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
         assert!(matches!(
             book_parsing_error,
             BookParsingError::MissingNameArg
         ));
-        let media_error: MediaError = book_parsing_error.coerce();
+        let media_error: MediaError = book_parsing_error.into();
         assert!(matches!(media_error, MediaError::MissingNameArg));
 
-        let io_error =std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.coerce();
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
@@ -398,7 +395,6 @@ pub mod should_not_compile_tests {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/depends_on_itself.rs");
     }
-
 
     #[test]
     fn multiple_same_sources() {
