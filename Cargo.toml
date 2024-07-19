@@ -11,9 +11,11 @@ repository = "https://github.com/mcmah309/error_set"
 
 [dependencies]
 error_set_impl = { version = "=0.3.2", path = "impl" }
+tracing = { version = "0.1", optional = true }
 
 [dev-dependencies]
 trybuild = "^1.0.91"
+tracing-test = { version = "0.2", features = ["no-env-filter"] }
 
 [workspace]
 members = ["impl"]
@@ -21,3 +23,4 @@ members = ["impl"]
 [features]
 default = []
 coerce_macro = ["error_set_impl/coerce_macro"]
+tracing = ["dep:tracing"]

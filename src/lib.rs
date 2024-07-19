@@ -1,5 +1,10 @@
 #![doc = include_str!("../README.md")]
 
+#[cfg(feature = "tracing")]
+mod tracing;
+#[cfg(feature = "tracing")]
+pub use tracing::*;
+
 pub use error_set_impl::*;
 
 pub trait CoerceResult<T, E1> {

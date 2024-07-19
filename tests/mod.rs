@@ -225,6 +225,7 @@ pub mod readme_example_aggregation {
 }
 
 #[cfg(feature = "coerce_macro")]
+#[cfg(test)]
 pub mod coerce_macro {
     use error_set::error_set;
 
@@ -332,6 +333,7 @@ pub mod coerce_macro {
     }
 }
 
+#[cfg(test)]
 pub mod documentation {
     use error_set::{error_set, CoerceResult};
 
@@ -412,5 +414,66 @@ pub mod should_not_compile_tests {
     fn recursive_dependency() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/recursive_dependency.rs");
+    }
+}
+
+#[cfg(feature = "tracing")]
+#[cfg(test)]
+mod tracing {
+    use error_set::LogErr;
+    use tracing_test::traced_test;
+
+    #[traced_test]
+    #[test]
+    fn test_log_error() {
+        let result: Result<(), &str> = Err("error");
+        let _ = result.log_e("An error occurred");
+
+        assert!(logs_contain("An error occurred: \"error\""));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_warn() {
+        let result: Result<(), &str> = Err("warning");
+        let _ = result.log_w("A warning occurred");
+
+        assert!(logs_contain("A warning occurred: \"warning\""));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_info() {
+        let result: Result<(), &str> = Err("info");
+        let _ = result.log_i("An info message");
+
+        assert!(logs_contain("An info message: \"info\""));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_debug() {
+        let result: Result<(), &str> = Err("debug");
+        let _ = result.log_d("A debug message");
+
+        assert!(logs_contain("A debug message: \"debug\""));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_trace() {
+        let result: Result<(), &str> = Err("trace");
+        let _ = result.log_t("A trace message");
+
+        assert!(logs_contain("A trace message: \"trace\""));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_success() {
+        let result: Result<(), &str> = Ok(());
+        let _ = result.log_e("This should not log an error");
+
+        assert!(!logs_contain("This should not log an error"));
     }
 }
