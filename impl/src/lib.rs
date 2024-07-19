@@ -31,9 +31,13 @@ fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> 
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
     for declaration in error_set.set_items.into_iter() {
-        let AstErrorDeclaration { attributes: attribute, error_name, parts } = declaration;
+        let AstErrorDeclaration {
+            attributes: attribute,
+            error_name,
+            parts,
+        } = declaration;
 
-        let mut error_enum_builder = ErrorEnumBuilder::new(error_name,attribute);
+        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attribute);
 
         for part in parts.into_iter() {
             match part {
@@ -68,7 +72,7 @@ fn resolve(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<Er
 }
 
 fn resolve_helper<'a>(
-    index: usize, 
+    index: usize,
     error_enum_builders: &'a mut [ErrorEnumBuilder],
     visited: &mut Vec<Ident>,
 ) -> syn::Result<Vec<AstErrorEnumVariant>> {
@@ -87,8 +91,7 @@ fn resolve_helper<'a>(
             ),
         ));
     }
-    let ref_parts_to_resolve = error_enum_builders[index]
-        .ref_parts_to_resolve.clone();
+    let ref_parts_to_resolve = error_enum_builders[index].ref_parts_to_resolve.clone();
     if !ref_parts_to_resolve.is_empty() {
         for ref_part in ref_parts_to_resolve {
             let ref_error_enum_index = error_enum_builders
@@ -97,10 +100,7 @@ fn resolve_helper<'a>(
             let ref_error_enum_index = match ref_error_enum_index {
                 Some(e) => e,
                 None => {
-                    return Err(syn::parse::Error::new_spanned(
-                    &ref_part,
-                    format!("")
-                ));
+                    return Err(syn::parse::Error::new_spanned(&ref_part, format!("")));
                 }
             };
             if !error_enum_builders[ref_error_enum_index]
@@ -111,7 +111,8 @@ fn resolve_helper<'a>(
                 resolve_helper(ref_error_enum_index, error_enum_builders, visited)?;
                 visited.pop();
             }
-            let (this_error_enum_builder, ref_error_enum_builder) = indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
+            let (this_error_enum_builder, ref_error_enum_builder) =
+                indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
             for variant in ref_error_enum_builder.error_variants.iter() {
                 let this_error_variants = &mut this_error_enum_builder.error_variants;
                 if !this_error_variants.contains(&variant) {
@@ -119,9 +120,7 @@ fn resolve_helper<'a>(
                 }
             }
         }
-        error_enum_builders[index]
-            .ref_parts_to_resolve
-            .clear();
+        error_enum_builders[index].ref_parts_to_resolve.clear();
     }
     // Now that are refs are solved and included in this's error_variants, return them.
     Ok(error_enum_builders[index].error_variants.clone())

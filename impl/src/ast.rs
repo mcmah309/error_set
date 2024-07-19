@@ -166,21 +166,17 @@ pub(crate) fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -
         .all(|(seg1, seg2)| seg1.ident == seg2.ident);
 }
 
-
 #[derive(Clone)]
 pub(crate) struct AstErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
-    pub(crate) name: Ident,   
+    pub(crate) name: Ident,
 }
 
 impl Parse for AstErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
         let attributes = input.call(Attribute::parse_outer)?;
         let name = input.parse::<Ident>()?;
-        Ok(AstErrorVariant {
-            attributes,
-            name,
-        })
+        Ok(AstErrorVariant { attributes, name })
     }
 }
 
