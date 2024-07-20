@@ -9,60 +9,58 @@ pub trait RecordErr<T, E> {
 }
 
 impl<T, E> RecordErr<T, E> for Result<T, E>
-where
-    E: std::fmt::Debug,
 {
     #[inline]
     fn error(self, context: impl Display) -> Result<T, E> {
-        if let Err(ref err) = self {
+        if self.is_err() {
             #[cfg(feature = "tracing")]
-            tracing::error!("{}: {:?}", context, err);
+            tracing::error!("{}", context);
             #[cfg(feature = "log")]
-            log::error!("{}: {:?}", context, err);
+            log::error!("{}", context);
         }
         self
     }
 
     #[inline]
     fn warn(self, context: impl Display) -> Result<T, E> {
-        if let Err(ref err) = self {
+        if self.is_err() {
             #[cfg(feature = "tracing")]
-            tracing::warn!("{}: {:?}", context, err);
+            tracing::warn!("{}", context);
             #[cfg(feature = "log")]
-            log::warn!("{}: {:?}", context, err);
+            log::warn!("{}", context);
         }
         self
     }
 
     #[inline]
     fn info(self, context: impl Display) -> Result<T, E> {
-        if let Err(ref err) = self {
+        if self.is_err() {
             #[cfg(feature = "tracing")]
-            tracing::info!("{}: {:?}", context, err);
+            tracing::info!("{}", context);
             #[cfg(feature = "log")]
-            log::info!("{}: {:?}", context, err);
+            log::info!("{}", context);
         }
         self
     }
 
     #[inline]
     fn debug(self, context: impl Display) -> Result<T, E> {
-        if let Err(ref err) = self {
+        if self.is_err() {
             #[cfg(feature = "tracing")]
-            tracing::debug!("{}: {:?}", context, err);
+            tracing::debug!("{}", context);
             #[cfg(feature = "log")]
-            log::debug!("{}: {:?}", context, err);
+            log::debug!("{}", context);
         }
         self
     }
 
     #[inline]
     fn trace(self, context: impl Display) -> Result<T, E> {
-        if let Err(ref err) = self {
+        if self.is_err() {
             #[cfg(feature = "tracing")]
-            tracing::trace!("{}: {:?}", context, err);
+            tracing::trace!("{}", context);
             #[cfg(feature = "log")]
-            log::trace!("{}: {:?}", context, err);
+            log::trace!("{}", context);
         }
         self
     }
