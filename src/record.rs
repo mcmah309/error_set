@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log"))))]
 pub trait RecordContext<T, E> {
     fn error(self, context: impl Display) -> Result<T, E>;
     fn warn(self, context: impl Display) -> Result<T, E>;
