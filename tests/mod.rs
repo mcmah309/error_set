@@ -427,7 +427,7 @@ mod tracing {
     #[test]
     fn test_log_error() {
         let result: Result<(), &str> = Err("error");
-        let _ = result.log_e("An error occurred");
+        let _ = result.error("An error occurred");
 
         assert!(logs_contain("An error occurred: \"error\""));
     }
@@ -436,7 +436,7 @@ mod tracing {
     #[test]
     fn test_log_warn() {
         let result: Result<(), &str> = Err("warning");
-        let _ = result.log_w("A warning occurred");
+        let _ = result.warn("A warning occurred");
 
         assert!(logs_contain("A warning occurred: \"warning\""));
     }
@@ -445,7 +445,7 @@ mod tracing {
     #[test]
     fn test_log_info() {
         let result: Result<(), &str> = Err("info");
-        let _ = result.log_i("An info message");
+        let _ = result.info("An info message");
 
         assert!(logs_contain("An info message: \"info\""));
     }
@@ -454,7 +454,7 @@ mod tracing {
     #[test]
     fn test_log_debug() {
         let result: Result<(), &str> = Err("debug");
-        let _ = result.log_d("A debug message");
+        let _ = result.debug("A debug message");
 
         assert!(logs_contain("A debug message: \"debug\""));
     }
@@ -463,7 +463,7 @@ mod tracing {
     #[test]
     fn test_log_trace() {
         let result: Result<(), &str> = Err("trace");
-        let _ = result.log_t("A trace message");
+        let _ = result.trace("A trace message");
 
         assert!(logs_contain("A trace message: \"trace\""));
     }
@@ -472,7 +472,7 @@ mod tracing {
     #[test]
     fn test_log_success() {
         let result: Result<(), &str> = Ok(());
-        let _ = result.log_e("This should not log an error");
+        let _ = result.error("This should not log an error");
 
         assert!(!logs_contain("This should not log an error"));
     }
