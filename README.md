@@ -5,7 +5,7 @@
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-error_set-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/error_set)
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
 
-Error Set simplifies error management by providing a streamlined method for defining errors and easily converting between them (e.g. convert a subset to a superset with just `.into()` or `?`).  This makes handling errors both straightforward and efficient.
+Error Set simplifies error management by providing a streamlined method for defining errors and easily converting between them. Resultingly, error handling becomes both straightforward and efficient.
 
 Error Set is inspired by Zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type), and offers similar functionality.
 
@@ -381,7 +381,8 @@ error_set! {
     };
 }
 ```
-As mentioned, any above subset can be converted into a superset with `.into()` or `?`. 
+Any above subset can be converted into a superset with `.into()` or `?`. 
+This makes correctly scoping and passing around errors a breeze.
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
 
 <details>
