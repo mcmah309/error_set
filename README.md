@@ -389,10 +389,9 @@ As mentioned, any above subset can be converted into a superset with `.into()` o
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
 Intersecting sets can also be more easily handled with the `coerce!` macro (must have the "coerce_macro" feature enabled).
 
-### `error_set!` Example
 <details>
 
-  <summary>Base Functionality In Action</summary>
+  <summary>Basic Example</summary>
 
 ```rust
 use error_set::error_set;
@@ -434,6 +433,115 @@ fn main() {
 }
 ```
 </details>
+
+### Features
+
+**coerce_macro:** Each error set will generates a `coerce!` macro to help handle coercsion between partially intersecting sets.
+
+```rust
+let val = coerce!(setx => {
+                    Ok(val) => val,
+                    Err(SetX::X) => {}, // handle disjointedness
+                    { Err(SetX) => return Err(SetY) } // terminal coercion
+                })?;
+```
+
+<details>
+
+<summary>More Details</summary>
+
+Given:
+ ```rust
+ error_set! {
+    SetX = {
+        X
+    } || Common;
+    SetY = {
+        Y
+    } || Common;
+    Common = {
+        A,
+        B,
+        C,
+        D,
+        E,
+        F,
+        G,
+        H,
+    };
+ }
+ ```
+
+ rather than writing:
+
+ ```rust
+ fn setx_result_to_sety_result() -> Result<(), SetY> {
+    let _ok = match setx_result() {
+        Ok(ok) => ok,
+        Err(SetX::X) => {} // handle disjointedness
+        Err(SetX::A) => {
+            return Err(SetY::A);
+        }
+        Err(SetX::B) => {
+            return Err(SetY::B);
+        }
+        Err(SetX::C) => {
+            return Err(SetY::C);
+        }
+        Err(SetX::D) => {
+            return Err(SetY::D);
+        }
+        Err(SetX::E) => {
+            return Err(SetY::E);
+        }
+        Err(SetX::F) => {
+            return Err(SetY::F);
+        }
+        Err(SetX::G) => {
+            return Err(SetY::G);
+        }
+        Err(SetX::H) => {
+            return Err(SetY::H);
+        }
+    };
+    Ok(())
+ }
+ ```
+
+ one can write this, which compiles to the `match` statement above:
+
+ ```rust
+ fn setx_result_to_sety_result() -> Result<(), SetY> {
+    let _ok = coerce!(setx_result() => {
+        Ok(ok) => ok,
+        Err(SetX::X) => {}, // handle disjointedness
+        { Err(SetX) => return Err(SetY) } // terminal coercion
+    });
+    Ok(())
+ }
+ ```
+
+ The `coerce!` macro is a flat fast (no tt muncher 🦫) declarative macro created by the `error_set!` macro for the set.
+ `coerce!` behaves like a regular `match` statement, except it allows a terminal coercion statement between sets. e.g.
+
+ ```rust
+ { Err(SetX) => return Err(SetY) }
+ { Err(SetX) => Err(SetY) }
+ { SetX => return SetY }
+ { SetX => SetY }
+ ```
+
+ With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
+</details>
+
+**tracing:** Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err`. Similar to anyhow's `.context(..)`.
+```rust
+let value = result.warn("This a warning that will be passed to tracing if `Err`")?;
+```
+**log:** Enables support for the log crate. Adds methods to `Result` that are applied on `Err`. Similar to anyhow's `.context(..)`.
+```rust
+let value = result.warn("This a warning that will be passed to tracing if `Err`")?;
+```
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 

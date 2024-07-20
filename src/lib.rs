@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
-#![cfg_attr(feature = "coerce_macro", doc = "Generates a `coerce!` macro for each error set to handle coercing between intersections.")]
-#![cfg_attr(feature = "tracing", doc = "Enables tracing crate methods on `Result` that are applied on `Err` - e.g. `result.warn(...)`.")]
-#![cfg_attr(feature = "log", doc = "Enables logging crate methods on `Result` that are applied on `Err` - e.g. `result.warn(...)`.")]
+#![cfg_attr(feature = "coerce_macro", doc = "Each error set will generates a `coerce!` macro to help handle coercsion between partially intersecting sets.")]
+#![cfg_attr(feature = "tracing", doc = "Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.")]
+#![cfg_attr(feature = "log", doc = "Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.")]
 #[cfg(all(feature = "tracing", feature = "log"))]
 compile_error!("Features 'tracing' and 'log' cannot be enabled at the same time.");
 
