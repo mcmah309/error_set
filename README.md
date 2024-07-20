@@ -432,7 +432,7 @@ fn main() {
 
 ### Feature Flags
 
-**coerce_macro:** Each error set will generates a `coerce!` macro to help handle coercsion between partially intersecting sets.
+**coerce_macro:** Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
 
 ```rust
 let val = coerce!(setx => {
