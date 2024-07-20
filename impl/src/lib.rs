@@ -82,7 +82,7 @@ fn resolve_helper<'a>(
         return Err(syn::parse::Error::new_spanned(
             error_enum_builders[index].error_name.clone(),
             format!(
-                "Recursive dependency: {}",
+                "Cycle Detected: {}",
                 visited
                     .iter()
                     .map(|e| e.to_string())
