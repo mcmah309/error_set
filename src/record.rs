@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-pub trait RecordErr<T, E> {
+pub trait RecordContext<T, E> {
     fn error(self, context: impl Display) -> Result<T, E>;
     fn warn(self, context: impl Display) -> Result<T, E>;
     fn info(self, context: impl Display) -> Result<T, E>;
@@ -8,7 +8,7 @@ pub trait RecordErr<T, E> {
     fn trace(self, context: impl Display) -> Result<T, E>;
 }
 
-impl<T, E> RecordErr<T, E> for Result<T, E>
+impl<T, E> RecordContext<T, E> for Result<T, E>
 {
     #[inline]
     fn error(self, context: impl Display) -> Result<T, E> {
