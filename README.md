@@ -536,12 +536,12 @@ let value = result.warn("This a warning that will be passed to tracing if `Err`"
 ```
 **log:** Enables support for the log crate. Adds methods to `Result` that are applied on `Err`. Similar to anyhow's `.context(..)`.
 ```rust
-let value = result.warn("This a warning that will be passed to tracing if `Err`")?;
+let value = result.warn("This a warning that will be passed to log if `Err`")?;
 ```
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
-If your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely the best choice for you. It's straightforward and effective for simple error management.
+If your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
 
 However, for projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially when using "mega enums." 
 
