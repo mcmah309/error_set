@@ -1,4 +1,7 @@
 #![doc = include_str!("../README.md")]
+#![cfg_attr(feature = "coerce_macro", doc = "Generates a `coerce!` macro for each error set to handle coercing between intersections.")]
+#![cfg_attr(feature = "tracing", doc = "Enables tracing methods on `Result` that are applied on `Err` - `result.log_*(...)`.")]
+
 
 #[cfg(feature = "tracing")]
 mod tracing;
