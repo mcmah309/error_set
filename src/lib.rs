@@ -1,7 +1,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-
 #[cfg(any(feature = "tracing", feature = "log"))]
 mod record;
 #[cfg(any(feature = "tracing", feature = "log"))]

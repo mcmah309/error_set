@@ -9,8 +9,7 @@ pub trait RecordContext<T, E> {
     fn trace(self, context: impl Display) -> Result<T, E>;
 }
 
-impl<T, E> RecordContext<T, E> for Result<T, E>
-{
+impl<T, E> RecordContext<T, E> for Result<T, E> {
     #[inline]
     fn error(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
