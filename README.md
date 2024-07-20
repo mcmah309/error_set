@@ -543,11 +543,13 @@ let value = result.warn("This a warning that will be passed to log if `Err`")?;
 
 If your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
 
-However, for projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially when using "mega enums." 
+However, for libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially if "mega enums" arise. 
 
 **What is a Mega Enum?**
 
-A mega enum, or mega error enum, is an enum that combines various error types into one large enumeration. This approach can lead to inefficiencies and confusion because it includes error variants that are not relevant in certain scopes. 
+A mega enum, or mega error enum, is an enumeration that consolidates various error types into one large enum, whereas the code would be more precise if split into multiple enums.
+These often arise due to refactors or developers opting for less intrusive programming approach.
+This method can lead to inefficiencies and confusion because it includes error variants that are not relevant in certain scopes. 
 
 **Example Scenario:**
 
@@ -561,12 +563,7 @@ If `func3` does not handle the errors from `func1` and `func2`, it must return a
 
 **How `error_set` Simplifies Error Management:**
 
-`error_set` allows you to define these subsets of errors and convert them into a superset effortlessly using `.into()`. This approach ensures that each function only deals with relevant error variants, avoiding the clutter and inefficiency of mega enums.
-
-**Benefits of `error_set`:**
-
-- **Precision:** Define error subsets and supersets clearly, maintaining relevant error handling within appropriate scopes.
-- **Efficiency:** Reduce the overhead of managing unnecessary error variants.
-- **Ease of Use:** Convert subsets into supersets with simple and ergonomic syntax.
-
+`error_set` allows you to define errors quickly and precisely. Correctly scoping errors is easy and no wrapping of
+various error enum types is necessary, just use `.into()` or `?` (or `coerce!` macro).
+This approach ensures that each function only deals with relevant error variants, avoiding the clutter and inefficiency of mega enums. 
 By using `error_set`, your project can maintain clear and precise error definitions, enhancing code readability and maintainability without the tedious process of manually defining and managing error relations.
