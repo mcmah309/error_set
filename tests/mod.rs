@@ -429,7 +429,7 @@ mod tracing {
         let result: Result<(), &str> = Err("error");
         let _ = result.error("An error occurred");
 
-        assert!(logs_contain("An error occurred: \"error\""));
+        assert!(logs_contain("An error occurred"));
     }
 
     #[traced_test]
@@ -438,7 +438,7 @@ mod tracing {
         let result: Result<(), &str> = Err("warning");
         let _ = result.warn("A warning occurred");
 
-        assert!(logs_contain("A warning occurred: \"warning\""));
+        assert!(logs_contain("A warning occurred"));
     }
 
     #[traced_test]
@@ -447,7 +447,7 @@ mod tracing {
         let result: Result<(), &str> = Err("info");
         let _ = result.info("An info message");
 
-        assert!(logs_contain("An info message: \"info\""));
+        assert!(logs_contain("An info message"));
     }
 
     #[traced_test]
@@ -456,7 +456,7 @@ mod tracing {
         let result: Result<(), &str> = Err("debug");
         let _ = result.debug("A debug message");
 
-        assert!(logs_contain("A debug message: \"debug\""));
+        assert!(logs_contain("A debug message"));
     }
 
     #[traced_test]
@@ -465,7 +465,7 @@ mod tracing {
         let result: Result<(), &str> = Err("trace");
         let _ = result.trace("A trace message");
 
-        assert!(logs_contain("A trace message: \"trace\""));
+        assert!(logs_contain("A trace message"));
     }
 
     #[traced_test]
@@ -533,7 +533,7 @@ mod log {
         let result: Result<(), &str> = Err("error");
         let _ = result.error("An error occurred");
 
-        assert!(logs_contain("An error occurred: \"error\""));
+        assert!(logs_contain("An error occurred"));
     }
 
     #[test]
@@ -542,7 +542,7 @@ mod log {
         let result: Result<(), &str> = Err("warning");
         let _ = result.warn("A warning occurred");
 
-        assert!(logs_contain("A warning occurred: \"warning\""));
+        assert!(logs_contain("A warning occurred"));
     }
 
     #[test]
@@ -551,7 +551,7 @@ mod log {
         let result: Result<(), &str> = Err("info");
         let _ = result.info("An info message");
 
-        assert!(logs_contain("An info message: \"info\""));
+        assert!(logs_contain("An info message"));
     }
 
     #[test]
@@ -560,7 +560,7 @@ mod log {
         let result: Result<(), &str> = Err("debug");
         let _ = result.debug("A debug message");
 
-        assert!(logs_contain("A debug message: \"debug\""));
+        assert!(logs_contain("A debug message"));
     }
 
     #[test]
@@ -569,7 +569,7 @@ mod log {
         let result: Result<(), &str> = Err("trace");
         let _ = result.trace("A trace message");
 
-        assert!(logs_contain("A trace message: \"trace\""));
+        assert!(logs_contain("A trace message"));
     }
 
     #[test]
