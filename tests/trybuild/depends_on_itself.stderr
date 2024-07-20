@@ -1,4 +1,4 @@
-error: Recursive dependency: BookParsingError->BookParsingError
+error: Cycle Detected: BookParsingError->BookParsingError
  --> tests/trybuild/depends_on_itself.rs:4:5
   |
 4 |     BookParsingError = {
