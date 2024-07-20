@@ -1,14 +1,13 @@
-# error_set
+# Error Set
 
 [<img alt="github" src="https://img.shields.io/badge/github-mcmah309/error_set-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/mcmah309/error_set)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/error_set.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/error_set)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-error_set-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/error_set)
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
 
+Error Set simplifies error management by providing a streamlined method for defining errors and easily converting between them (e.g. convert a subset to a superset with just `.into()` or `?`).  This makes handling errors both straightforward and efficient.
 
-`error_set` provides a streamlined approach to defining errors and allows for easy converion between errors (e.g. convert a subset to a superset with just `.into()` or `?`). This makes error management straightforward and efficient.
-
-Inspired by Zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type), `error_set` offers similar functionality and simplicity in Rust.
+Error Set is inspired by Zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type), and offers similar functionality.
 
 Instead of defining various enums/structs for errors and hand rolling relations, use an error set:
 ```rust
@@ -345,9 +344,6 @@ impl core::fmt::Display for ParseUploadError {
         f.write_fmt(format_args!("{0}", variant_name))
     }
 }
-
-// `coerce` macro omitted
-
 ```
 </details>
 
@@ -387,7 +383,6 @@ error_set! {
 ```
 As mentioned, any above subset can be converted into a superset with `.into()` or `?`. 
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
-Intersecting sets can also be more easily handled with the `coerce!` macro (must have the "coerce_macro" feature enabled).
 
 <details>
 
