@@ -25,7 +25,7 @@ lazy_static = "1"
 members = ["impl"]
 
 [features]
-default = ["log"]
+default = []
 coerce_macro = ["error_set_impl/coerce_macro"]
 tracing = ["dep:tracing"]
 log = ["dep:log"]
