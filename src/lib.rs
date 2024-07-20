@@ -1,12 +1,13 @@
 #![doc = include_str!("../README.md")]
 #![cfg_attr(feature = "coerce_macro", doc = "Generates a `coerce!` macro for each error set to handle coercing between intersections.")]
 #![cfg_attr(feature = "tracing", doc = "Enables tracing methods on `Result` that are applied on `Err` - `result.log_*(...)`.")]
+#[cfg(all(feature = "tracing", feature = "log"))]
+compile_error!("Features 'tracing' and 'log' cannot be enabled at the same time.");
 
-
-#[cfg(feature = "tracing")]
-mod tracing;
-#[cfg(feature = "tracing")]
-pub use tracing::*;
+#[cfg(any(feature = "tracing", feature = "log"))]
+mod record;
+#[cfg(any(feature = "tracing", feature = "log"))]
+pub use record::*;
 
 pub use error_set_impl::*;
 

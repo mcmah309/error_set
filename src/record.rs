@@ -1,8 +1,6 @@
 use std::fmt::Display;
 
-use tracing::{debug, error, info, trace, warn};
-
-pub trait LogErr<T, E> {
+pub trait RecordErr<T, E> {
     fn error(self, context: impl Display) -> Result<T, E>;
     fn warn(self, context: impl Display) -> Result<T, E>;
     fn info(self, context: impl Display) -> Result<T, E>;
@@ -10,14 +8,17 @@ pub trait LogErr<T, E> {
     fn trace(self, context: impl Display) -> Result<T, E>;
 }
 
-impl<T, E> LogErr<T, E> for Result<T, E>
+impl<T, E> RecordErr<T, E> for Result<T, E>
 where
     E: std::fmt::Debug,
 {
     #[inline]
     fn error(self, context: impl Display) -> Result<T, E> {
         if let Err(ref err) = self {
-            error!("{}: {:?}", context, err);
+            #[cfg(feature = "tracing")]
+            tracing::error!("{}: {:?}", context, err);
+            #[cfg(feature = "log")]
+            log::error!("{}: {:?}", context, err);
         }
         self
     }
@@ -25,7 +26,10 @@ where
     #[inline]
     fn warn(self, context: impl Display) -> Result<T, E> {
         if let Err(ref err) = self {
-            warn!("{}: {:?}", context, err);
+            #[cfg(feature = "tracing")]
+            tracing::warn!("{}: {:?}", context, err);
+            #[cfg(feature = "log")]
+            log::warn!("{}: {:?}", context, err);
         }
         self
     }
@@ -33,7 +37,10 @@ where
     #[inline]
     fn info(self, context: impl Display) -> Result<T, E> {
         if let Err(ref err) = self {
-            info!("{}: {:?}", context, err);
+            #[cfg(feature = "tracing")]
+            tracing::info!("{}: {:?}", context, err);
+            #[cfg(feature = "log")]
+            log::info!("{}: {:?}", context, err);
         }
         self
     }
@@ -41,7 +48,10 @@ where
     #[inline]
     fn debug(self, context: impl Display) -> Result<T, E> {
         if let Err(ref err) = self {
-            debug!("{}: {:?}", context, err);
+            #[cfg(feature = "tracing")]
+            tracing::debug!("{}: {:?}", context, err);
+            #[cfg(feature = "log")]
+            log::debug!("{}: {:?}", context, err);
         }
         self
     }
@@ -49,7 +59,10 @@ where
     #[inline]
     fn trace(self, context: impl Display) -> Result<T, E> {
         if let Err(ref err) = self {
-            trace!("{}: {:?}", context, err);
+            #[cfg(feature = "tracing")]
+            tracing::trace!("{}: {:?}", context, err);
+            #[cfg(feature = "log")]
+            log::trace!("{}: {:?}", context, err);
         }
         self
     }

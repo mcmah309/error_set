@@ -420,7 +420,7 @@ pub mod should_not_compile_tests {
 #[cfg(feature = "tracing")]
 #[cfg(test)]
 mod tracing {
-    use error_set::LogErr;
+    use error_set::RecordErr;
     use tracing_test::traced_test;
 
     #[traced_test]
@@ -471,6 +471,110 @@ mod tracing {
     #[traced_test]
     #[test]
     fn test_log_success() {
+        let result: Result<(), &str> = Ok(());
+        let _ = result.error("This should not log an error");
+
+        assert!(!logs_contain("This should not log an error"));
+    }
+}
+
+#[cfg(feature = "log")]
+#[cfg(test)]
+mod log {
+    use error_set::RecordErr;
+    use lazy_static::lazy_static;
+    use log::{Level, Metadata, Record};
+    use std::sync::{Arc, Mutex};
+
+    struct TestLogger {
+        logs: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl log::Log for TestLogger {
+        fn enabled(&self, metadata: &Metadata) -> bool {
+            metadata.level() <= Level::Trace
+        }
+
+        fn log(&self, record: &Record) {
+            if self.enabled(record.metadata()) {
+                let mut logs = self.logs.lock().unwrap();
+                logs.push(format!("{}", record.args()));
+            }
+        }
+
+        fn flush(&self) {}
+    }
+
+    lazy_static! {
+        static ref LOGS: Arc<Mutex<Vec<String>>> = {
+            let logs = Arc::new(Mutex::new(Vec::new()));
+            let test_logger = TestLogger { logs: logs.clone() };
+
+            log::set_boxed_logger(Box::new(test_logger)).unwrap();
+            log::set_max_level(log::LevelFilter::Trace);
+
+            logs
+        };
+    }
+
+    fn logs_contain(expected: &str) -> bool {
+        let logs = LOGS.lock().unwrap();
+        logs.iter().any(|log| log.contains(expected))
+    }
+
+    fn clear_logs() {
+        let mut logs = LOGS.lock().unwrap();
+        logs.clear();
+    }
+
+    #[test]
+    fn test_log_error() {
+        clear_logs();
+        let result: Result<(), &str> = Err("error");
+        let _ = result.error("An error occurred");
+
+        assert!(logs_contain("An error occurred: \"error\""));
+    }
+
+    #[test]
+    fn test_log_warn() {
+        clear_logs();
+        let result: Result<(), &str> = Err("warning");
+        let _ = result.warn("A warning occurred");
+
+        assert!(logs_contain("A warning occurred: \"warning\""));
+    }
+
+    #[test]
+    fn test_log_info() {
+        clear_logs();
+        let result: Result<(), &str> = Err("info");
+        let _ = result.info("An info message");
+
+        assert!(logs_contain("An info message: \"info\""));
+    }
+
+    #[test]
+    fn test_log_debug() {
+        clear_logs();
+        let result: Result<(), &str> = Err("debug");
+        let _ = result.debug("A debug message");
+
+        assert!(logs_contain("A debug message: \"debug\""));
+    }
+
+    #[test]
+    fn test_log_trace() {
+        clear_logs();
+        let result: Result<(), &str> = Err("trace");
+        let _ = result.trace("A trace message");
+
+        assert!(logs_contain("A trace message: \"trace\""));
+    }
+
+    #[test]
+    fn test_log_success() {
+        clear_logs();
         let result: Result<(), &str> = Ok(());
         let _ = result.error("This should not log an error");
 
