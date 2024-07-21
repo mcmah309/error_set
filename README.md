@@ -86,7 +86,6 @@ impl ::core::fmt::Debug for MediaError {
         }
     }
 }
-impl error_set::ErrorSetMarker for MediaError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for MediaError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -189,7 +188,6 @@ impl ::core::fmt::Debug for BookParsingError {
         }
     }
 }
-impl error_set::ErrorSetMarker for BookParsingError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for BookParsingError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -244,7 +242,6 @@ impl ::core::fmt::Debug for BookSectionParsingError {
         )
     }
 }
-impl error_set::ErrorSetMarker for BookSectionParsingError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for BookSectionParsingError {}
 impl core::fmt::Display for BookSectionParsingError {
@@ -281,7 +278,6 @@ impl ::core::fmt::Debug for DownloadError {
         }
     }
 }
-impl error_set::ErrorSetMarker for DownloadError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for DownloadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
@@ -326,7 +322,6 @@ impl ::core::fmt::Debug for ParseUploadError {
         )
     }
 }
-impl error_set::ErrorSetMarker for ParseUploadError {}
 #[allow(unused_qualifications)]
 impl std::error::Error for ParseUploadError {}
 impl core::fmt::Display for ParseUploadError {
