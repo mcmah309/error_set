@@ -10,7 +10,7 @@ documentation = "https://docs.rs/error_set"
 repository = "https://github.com/mcmah309/error_set"
 
 [dependencies]
-error_set_impl = { version = "=0.4.1", path = "impl" }
+error_set_impl = { version = "=0.4.2", path = "impl" }
 
 # features
 tracing = { version = "0.1", optional = true }
