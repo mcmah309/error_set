@@ -14,12 +14,10 @@ Instead of defining various enums/structs for errors and hand rolling relations,
 use error_set::error_set;
 
 error_set! {
-    MediaError = {
-        IoError(std::io::Error)
-    } || BookParsingError || DownloadError || ParseUploadError;
+    MediaError = BookParsingError || DownloadError || ParseUploadError;
     BookParsingError = {
         MissingBookDescription,
-        CouldNotReadBook(std::io::Error),
+        IoError(std::io::Error),
     } || BookSectionParsingError;
     BookSectionParsingError = {
         MissingName,
@@ -27,7 +25,7 @@ error_set! {
     };
     DownloadError = {
         InvalidUrl,
-        CouldNotSaveBook(std::io::Error),
+        IoError(std::io::Error),
     };
     ParseUploadError = {
         MaximumUploadSizeReached,
@@ -41,50 +39,16 @@ error_set! {
   <summary>Cargo Expand</summary>
 
 ```rust
-#![feature(prelude_import)]
-#[prelude_import]
-use std::prelude::rust_2021::*;
-#[macro_use]
-extern crate std;
+#[derive(Debug)]
 pub enum MediaError {
-    IoError(std::io::Error),
     MissingBookDescription,
+    IoError(std::io::Error),
     MissingName,
     NoContents,
     InvalidUrl,
     MaximumUploadSizeReached,
     TimedOut,
     AuthenticationFailed,
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for MediaError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            MediaError::IoError(__self_0) => {
-                ::core::fmt::Formatter::debug_tuple_field1_finish(
-                    f,
-                    "IoError",
-                    &__self_0,
-                )
-            }
-            MediaError::MissingBookDescription => {
-                ::core::fmt::Formatter::write_str(f, "MissingBookDescription")
-            }
-            MediaError::MissingName => {
-                ::core::fmt::Formatter::write_str(f, "MissingName")
-            }
-            MediaError::NoContents => ::core::fmt::Formatter::write_str(f, "NoContents"),
-            MediaError::InvalidUrl => ::core::fmt::Formatter::write_str(f, "InvalidUrl"),
-            MediaError::MaximumUploadSizeReached => {
-                ::core::fmt::Formatter::write_str(f, "MaximumUploadSizeReached")
-            }
-            MediaError::TimedOut => ::core::fmt::Formatter::write_str(f, "TimedOut"),
-            MediaError::AuthenticationFailed => {
-                ::core::fmt::Formatter::write_str(f, "AuthenticationFailed")
-            }
-        }
-    }
 }
 #[allow(unused_qualifications)]
 impl std::error::Error for MediaError {
@@ -100,27 +64,23 @@ impl core::fmt::Display for MediaError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
-            MediaError::IoError(_) => "MediaError::IoError",
             MediaError::MissingBookDescription => "MediaError::MissingBookDescription",
+            MediaError::IoError(_) => "MediaError::IoError",
             MediaError::MissingName => "MediaError::MissingName",
             MediaError::NoContents => "MediaError::NoContents",
             MediaError::InvalidUrl => "MediaError::InvalidUrl",
-            MediaError::MaximumUploadSizeReached => {
-                "MediaError::MaximumUploadSizeReached"
-            }
+            MediaError::MaximumUploadSizeReached => "MediaError::MaximumUploadSizeReached",
             MediaError::TimedOut => "MediaError::TimedOut",
             MediaError::AuthenticationFailed => "MediaError::AuthenticationFailed",
         };
-        f.write_fmt(format_args!("{0}", variant_name))
+        f.write_fmt($crate::format_args!("{}", variant_name))
     }
 }
 impl From<BookParsingError> for MediaError {
     fn from(error: BookParsingError) -> Self {
         match error {
-            BookParsingError::MissingBookDescription => {
-                MediaError::MissingBookDescription
-            }
-            BookParsingError::CouldNotReadBook(source) => MediaError::IoError(source),
+            BookParsingError::MissingBookDescription => MediaError::MissingBookDescription,
+            BookParsingError::IoError(source) => MediaError::IoError(source),
             BookParsingError::MissingName => MediaError::MissingName,
             BookParsingError::NoContents => MediaError::NoContents,
         }
@@ -138,16 +98,14 @@ impl From<DownloadError> for MediaError {
     fn from(error: DownloadError) -> Self {
         match error {
             DownloadError::InvalidUrl => MediaError::InvalidUrl,
-            DownloadError::CouldNotSaveBook(source) => MediaError::IoError(source),
+            DownloadError::IoError(source) => MediaError::IoError(source),
         }
     }
 }
 impl From<ParseUploadError> for MediaError {
     fn from(error: ParseUploadError) -> Self {
         match error {
-            ParseUploadError::MaximumUploadSizeReached => {
-                MediaError::MaximumUploadSizeReached
-            }
+            ParseUploadError::MaximumUploadSizeReached => MediaError::MaximumUploadSizeReached,
             ParseUploadError::TimedOut => MediaError::TimedOut,
             ParseUploadError::AuthenticationFailed => MediaError::AuthenticationFailed,
         }
@@ -158,41 +116,18 @@ impl From<std::io::Error> for MediaError {
         MediaError::IoError(error)
     }
 }
+#[derive(Debug)]
 pub enum BookParsingError {
     MissingBookDescription,
-    CouldNotReadBook(std::io::Error),
+    IoError(std::io::Error),
     MissingName,
     NoContents,
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for BookParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            BookParsingError::MissingBookDescription => {
-                ::core::fmt::Formatter::write_str(f, "MissingBookDescription")
-            }
-            BookParsingError::CouldNotReadBook(__self_0) => {
-                ::core::fmt::Formatter::debug_tuple_field1_finish(
-                    f,
-                    "CouldNotReadBook",
-                    &__self_0,
-                )
-            }
-            BookParsingError::MissingName => {
-                ::core::fmt::Formatter::write_str(f, "MissingName")
-            }
-            BookParsingError::NoContents => {
-                ::core::fmt::Formatter::write_str(f, "NoContents")
-            }
-        }
-    }
 }
 #[allow(unused_qualifications)]
 impl std::error::Error for BookParsingError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
-            BookParsingError::CouldNotReadBook(ref source) => source.source(),
+            BookParsingError::IoError(ref source) => source.source(),
             #[allow(unreachable_patterns)]
             _ => None,
         }
@@ -202,14 +137,12 @@ impl core::fmt::Display for BookParsingError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
-            BookParsingError::MissingBookDescription => {
-                "BookParsingError::MissingBookDescription"
-            }
-            BookParsingError::CouldNotReadBook(_) => "BookParsingError::CouldNotReadBook",
+            BookParsingError::MissingBookDescription => "BookParsingError::MissingBookDescription",
+            BookParsingError::IoError(_) => "BookParsingError::IoError",
             BookParsingError::MissingName => "BookParsingError::MissingName",
             BookParsingError::NoContents => "BookParsingError::NoContents",
         };
-        f.write_fmt(format_args!("{0}", variant_name))
+        f.write_fmt($crate::format_args!("{}", variant_name))
     }
 }
 impl From<BookSectionParsingError> for BookParsingError {
@@ -222,67 +155,37 @@ impl From<BookSectionParsingError> for BookParsingError {
 }
 impl From<std::io::Error> for BookParsingError {
     fn from(error: std::io::Error) -> Self {
-        BookParsingError::CouldNotReadBook(error)
+        BookParsingError::IoError(error)
     }
 }
+#[derive(Debug)]
 pub enum BookSectionParsingError {
     MissingName,
     NoContents,
 }
-#[automatically_derived]
-impl ::core::fmt::Debug for BookSectionParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        ::core::fmt::Formatter::write_str(
-            f,
-            match self {
-                BookSectionParsingError::MissingName => "MissingName",
-                BookSectionParsingError::NoContents => "NoContents",
-            },
-        )
-    }
-}
 #[allow(unused_qualifications)]
 impl std::error::Error for BookSectionParsingError {}
+
 impl core::fmt::Display for BookSectionParsingError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
-            BookSectionParsingError::MissingName => {
-                "BookSectionParsingError::MissingName"
-            }
+            BookSectionParsingError::MissingName => "BookSectionParsingError::MissingName",
             BookSectionParsingError::NoContents => "BookSectionParsingError::NoContents",
         };
-        f.write_fmt(format_args!("{0}", variant_name))
+        f.write_fmt($crate::format_args!("{}", variant_name))
     }
 }
+#[derive(Debug)]
 pub enum DownloadError {
     InvalidUrl,
-    CouldNotSaveBook(std::io::Error),
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for DownloadError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            DownloadError::InvalidUrl => {
-                ::core::fmt::Formatter::write_str(f, "InvalidUrl")
-            }
-            DownloadError::CouldNotSaveBook(__self_0) => {
-                ::core::fmt::Formatter::debug_tuple_field1_finish(
-                    f,
-                    "CouldNotSaveBook",
-                    &__self_0,
-                )
-            }
-        }
-    }
+    IoError(std::io::Error),
 }
 #[allow(unused_qualifications)]
 impl std::error::Error for DownloadError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
-            DownloadError::CouldNotSaveBook(ref source) => source.source(),
+            DownloadError::IoError(ref source) => source.source(),
             #[allow(unreachable_patterns)]
             _ => None,
         }
@@ -293,37 +196,25 @@ impl core::fmt::Display for DownloadError {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let variant_name = match *self {
             DownloadError::InvalidUrl => "DownloadError::InvalidUrl",
-            DownloadError::CouldNotSaveBook(_) => "DownloadError::CouldNotSaveBook",
+            DownloadError::IoError(_) => "DownloadError::IoError",
         };
-        f.write_fmt(format_args!("{0}", variant_name))
+        f.write_fmt($crate::format_args!("{}", variant_name))
     }
 }
 impl From<std::io::Error> for DownloadError {
     fn from(error: std::io::Error) -> Self {
-        DownloadError::CouldNotSaveBook(error)
+        DownloadError::IoError(error)
     }
 }
+#[derive(Debug)]
 pub enum ParseUploadError {
     MaximumUploadSizeReached,
     TimedOut,
     AuthenticationFailed,
 }
-#[automatically_derived]
-impl ::core::fmt::Debug for ParseUploadError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        ::core::fmt::Formatter::write_str(
-            f,
-            match self {
-                ParseUploadError::MaximumUploadSizeReached => "MaximumUploadSizeReached",
-                ParseUploadError::TimedOut => "TimedOut",
-                ParseUploadError::AuthenticationFailed => "AuthenticationFailed",
-            },
-        )
-    }
-}
 #[allow(unused_qualifications)]
 impl std::error::Error for ParseUploadError {}
+
 impl core::fmt::Display for ParseUploadError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -332,11 +223,9 @@ impl core::fmt::Display for ParseUploadError {
                 "ParseUploadError::MaximumUploadSizeReached"
             }
             ParseUploadError::TimedOut => "ParseUploadError::TimedOut",
-            ParseUploadError::AuthenticationFailed => {
-                "ParseUploadError::AuthenticationFailed"
-            }
+            ParseUploadError::AuthenticationFailed => "ParseUploadError::AuthenticationFailed",
         };
-        f.write_fmt(format_args!("{0}", variant_name))
+        f.write_fmt($crate::format_args!("{}", variant_name))
     }
 }
 ```
@@ -357,7 +246,7 @@ error_set! {
     };
     BookParsingError = {
         MissingBookDescription,
-        CouldNotReadBook(std::io::Error),
+        IoError(std::io::Error),
         MissingName,
         NoContents,
     };
@@ -367,7 +256,7 @@ error_set! {
     };
     DownloadError = {
         InvalidUrl,
-        CouldNotSaveBook(std::io::Error),
+        IoError(std::io::Error),
     };
     ParseUploadError = {
         MaximumUploadSizeReached,
@@ -379,6 +268,8 @@ error_set! {
 Any above subset can be converted into a superset with `.into()` or `?`. 
 This makes correctly scoping and passing around errors a breeze.
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
+The typical project approach is to have one `errors.rs` file with a single `error_set`. This keeps
+all the errors in one place and allows your IDE to autocomplete `crate::errors::` with of all errors.
 
 <details>
 
