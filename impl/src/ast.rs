@@ -16,7 +16,12 @@ impl Parse for AstErrorSet {
         while !input.is_empty() {
             let set_item = input.parse::<AstErrorDeclaration>()?;
             set_items.push(set_item);
-            let _punc = input.parse::<token::Semi>()?;
+            if input.parse::<token::Semi>().is_err() {
+                return Err(syn::Error::new(
+                    input.span(),
+                    "Missing ending `;` for the set.",
+                ));
+            }
         }
         Ok(AstErrorSet { set_items })
     }
@@ -32,21 +37,39 @@ pub(crate) struct AstErrorDeclaration {
 impl Parse for AstErrorDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
         let attributes = input.call(Attribute::parse_outer)?;
+        let save_position = input.fork();
         let error_name: Ident = input.parse()?;
-        input.parse::<syn::Token![=]>()?;
+        if !input.peek(syn::Token![=]) {
+            return Err(syn::Error::new(
+                save_position.span(),
+                "Expected `=` to be next next.",
+            ));
+        }
+        let last_position_save = input.fork();
+        input.parse::<syn::Token![=]>().unwrap();
         let mut parts = Vec::new();
         while !input.is_empty() {
             let part = input.parse::<AstInlineOrRefError>()?;
             parts.push(part);
+            if input.is_empty() {
+                break;
+            }
+            if !input.peek(token::Semi) && !input.peek(token::OrOr) {
+                return Err(syn::Error::new(
+                    input.span(),
+                    "Expected `;` or `||` to be next.",
+                ));
+            }
             if input.peek(token::Semi) {
                 break;
             }
-            match input.parse::<token::OrOr>() {
-                Ok(_) => {}
-                Err(_) => {
-                    return Err(syn::Error::new(input.span(), "Expected `;` or `||`"));
-                }
-            }
+            input.parse::<token::OrOr>().unwrap();
+        }
+        if parts.is_empty() {
+            return Err(syn::Error::new(
+                last_position_save.span(),
+                "Missing error definitions",
+            ));
         }
         return Ok(AstErrorDeclaration {
             attributes,
@@ -66,10 +89,11 @@ pub(crate) enum AstInlineOrRefError {
 
 impl Parse for AstInlineOrRefError {
     fn parse(input: ParseStream) -> Result<Self> {
-        let fork = input.fork();
-        if let Ok(inline_error) = fork.parse::<AstInlineError>() {
-            input.advance_to(&fork);
-            return Ok(AstInlineOrRefError::Inline(inline_error));
+        if input.peek(token::Brace) {
+            return match input.parse::<AstInlineError>() {
+                Ok(inline_error) => Ok(AstInlineOrRefError::Inline(inline_error)),
+                Err(err) => Err(err)
+            };
         }
         match input.parse::<RefError>() {
             Ok(ref_error) => Ok(AstInlineOrRefError::Ref(ref_error)),
@@ -89,11 +113,18 @@ pub(crate) struct AstInlineError {
 impl Parse for AstInlineError {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
+        let save_position = input.fork();
         let _brace_token = braced!(content in input);
         let error_variants = content.parse_terminated(
             |input: ParseStream| input.parse::<AstErrorEnumVariant>(),
             token::Comma,
         )?;
+        if error_variants.is_empty() {
+            return Err(syn::parse::Error::new(
+                save_position.span(),
+                "Inline error variants cannot be empty",
+            ));
+        }
         return Ok(AstInlineError { error_variants });
     }
 }

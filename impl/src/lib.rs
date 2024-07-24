@@ -12,6 +12,9 @@ use validate::validate;
 
 #[proc_macro]
 pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Dev Note: If the macro is not updating when macro changes, uncomment below, rust-analyzer may be stuck and you need to restart teh shttps://github.com/rust-lang/rust-analyzer/issues/10027
+    // let token_stream: proc_macro2::TokenStream = syn::parse_str("const int: i32 = 1;").unwrap();
+    // return proc_macro::TokenStream::from(token_stream);
     let error_set = syn::parse_macro_input!(tokens as AstErrorSet);
     let error_enums = match construct_error_enums(error_set) {
         Ok(ok) => ok,
@@ -100,7 +103,7 @@ fn resolve_helper<'a>(
             let ref_error_enum_index = match ref_error_enum_index {
                 Some(e) => e,
                 None => {
-                    return Err(syn::parse::Error::new_spanned(&ref_part, format!("")));
+                    return Err(syn::parse::Error::new_spanned(&ref_part, format!("Not a declared error set.")));
                 }
             };
             if !error_enum_builders[ref_error_enum_index]
