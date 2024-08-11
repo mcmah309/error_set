@@ -5,6 +5,8 @@
 mod record;
 #[cfg(any(feature = "tracing", feature = "log"))]
 pub use record::*;
+#[cfg(all(feature = "tracing", feature = "log"))]
+compile_error!("Features 'tracing' and 'log' cannot be enabled at the same time.");
 
 pub use error_set_impl::*;
 
