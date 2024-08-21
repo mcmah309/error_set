@@ -30,6 +30,29 @@ pub trait RecordContextSwallow<T, E>
 where
     E: Debug,
 {
+    /// Comsumes the [Err] of a Result. if [Err], logging as an "error".
+    fn consume_error(self) -> Option<T>;
+    /// Comsumes the [Err] of a Result. if [Err], logging as an "warn".
+    fn consume_warn(self) -> Option<T>;
+    /// Comsumes the [Err] of a Result. if [Err], logging as an "info".
+    fn consume_info(self) -> Option<T>;
+    /// Comsumes the [Err] of a Result. if [Err], logging as an "debug".
+    fn consume_debug(self) -> Option<T>;
+    /// Comsumes the [Err] of a Result. if [Err], logging as an "trace".
+    fn consume_trace(self) -> Option<T>;
+
+    /// Consumes the [Err] of a Result. if [Err], logging as an "error" with the result of [f].
+    fn consume_with_error<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "warn" with the result of [f].
+    fn consume_with_warn<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "info" with the result of [f].
+    fn consume_with_info<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "debug" with the result of [f].
+    fn consume_with_debug<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "trace" with the result of [f].
+    fn consume_with_trace<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
+
+
     /// Swallows the Result. if [Err], logging as an "error".
     fn swallow_error(self);
     /// Swallows the Result. if [Err], logging as an "warn".
@@ -171,6 +194,150 @@ impl<T, E> RecordContextSwallow<T, E> for Result<T, E>
 where
     E: Debug,
 {
+    #[inline]
+    fn consume_error(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::error!("{:?}", err);
+                #[cfg(feature = "log")]
+                log::error!("{:?}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_warn(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::warn!("{:?}", err);
+                #[cfg(feature = "log")]
+                log::warn!("{:?}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_info(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::info!("{:?}", err);
+                #[cfg(feature = "log")]
+                log::info!("{:?}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_debug(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::debug!("{:?}", err);
+                #[cfg(feature = "log")]
+                log::debug!("{:?}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_trace(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::trace!("{:?}", err);
+                #[cfg(feature = "log")]
+                log::trace!("{:?}", err);
+                None
+            }
+        }
+    }
+
+    //************************************************************************//
+
+    #[inline]
+    fn consume_with_error<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::error!("{}", f(err));
+                #[cfg(feature = "log")]
+                log::error!("{}", f(err));
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_with_warn<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::warn!("{}", f(err));
+                #[cfg(feature = "log")]
+                log::warn!("{}", f(err));
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_with_info<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::info!("{}", f(err));
+                #[cfg(feature = "log")]
+                log::info!("{}", f(err));
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_with_debug<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::debug!("{}", f(err));
+                #[cfg(feature = "log")]
+                log::debug!("{}", f(err));
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_with_trace<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::trace!("{}", f(err));
+                #[cfg(feature = "log")]
+                log::trace!("{}", f(err));
+                None
+            }
+        }
+    }
+
+    //************************************************************************//
+
     #[inline]
     fn swallow_error(self) {
         if let Err(err) = self {
