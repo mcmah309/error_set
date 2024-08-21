@@ -494,25 +494,12 @@ Enables support for the `tracing` or `log` crates. Methods are added to `Result`
 ```rust
 let result: Result<(), &str> = Err("operation failed");
 
-// Log as a warning if `Err`
-let value = result.warn("This is a warning logged via tracing/log if `Err`")?;
-
-// Log as an error if `Err`
-let value = result.error("This is an error logged via tracing/log if `Err`")?;
-
-// Log a custom message based on the error content
-let value = result.with_trace(|err| format!("Operation failed due to: {}", err))?;
-
-// Log and swallow the error, returning `None` if `Err`
+let value: Result<(), &str> = result.warn("This is a warning logged via tracing/log if `Err`");
+let value: () = result.error("This is an error logged via tracing/log if `Err`")?;
+let value: Result<(), &str> = result.with_trace(|err| format!("Operation failed due to: {}", err));
 let value: Option<()> = result.consume_warn();
-
-// Log a custom message and swallow the error
-let value: Option<()> = result.consume_with_error(|err| format!("Swallowed error: {}", err));
-
-// Swallow the error without returning a value, just log
+let value: Option<()> = result.consume_with_error(|err| format!("Operation failed due to: {}", err));
 result.swallow_info();
-
-// Log a custom message and swallow the error silently
 result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 ```
 
