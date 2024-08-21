@@ -268,8 +268,6 @@ error_set! {
 Any above subset can be converted into a superset with `.into()` or `?`. 
 This makes correctly scoping and passing around errors a breeze.
 Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
-The typical project approach is to have one `errors.rs` file with a single `error_set`. This keeps
-all the errors in one place and allows your IDE to autocomplete `crate::errors::` with of all errors.
 
 <details>
 
@@ -312,6 +310,81 @@ fn main() {
     let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
     let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
     assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+}
+```
+</details>
+
+
+The typical project approach is to have one `errors.rs` file with a single `error_set`. This keeps
+all the errors in one place and allows your IDE to autocomplete `crate::errors::` with of all errors.
+But `error_set!` can also be used for quick errors "unions", no longer requiring users to 
+hand write `From<..>` or use `.map_err(..)` for these simple cases.
+e.g.
+```rust
+impl FirebaseJwtVerifier {
+    pub async fn new(project_id: String) -> Result<Self, FirebaseJwtVerifierCreationError> {
+        let public_keys = Self::fetch_public_keys().await?;
+        let decoding_keys: Result<HashMap<String, DecodingKey>, _> = public_keys
+            .into_iter()
+            .map(|(key, value)| {
+                DecodingKey::from_rsa_pem(value.as_bytes()).map(|decoding_key| (key, decoding_key))
+            })
+            .collect();
+
+        let decoding_keys = decoding_keys?;
+        ...
+    }
+}
+```rust
+error_set! {
+    FirebaseJwtVerifierCreationError = {
+        Reqwest(reqwest::Error),
+        Jwt(jsonwebtoken::errors::Error),
+    };
+}
+```
+<details>
+
+  <summary>Cargo Expand</summary>
+
+```rust
+#[derive(Debug)]
+pub enum FirebaseJwtVerifierCreationError {
+    Reqwest(reqwest::Error),
+    Jwt(jsonwebtoken::errors::Error),
+}
+#[allow(unused_qualifications)]
+impl std::error::Error for FirebaseJwtVerifierCreationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match *self {
+            FirebaseJwtVerifierCreationError::Reqwest(ref source) => source.source(),
+            FirebaseJwtVerifierCreationError::Jwt(ref source) => source.source(),
+            #[allow(unreachable_patterns)]
+            _ => None,
+        }
+    }
+}
+impl core::fmt::Display for FirebaseJwtVerifierCreationError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let variant_name = match *self {
+            FirebaseJwtVerifierCreationError::Reqwest(_) => {
+                "FirebaseJwtVerifierCreationError::Reqwest"
+            }
+            FirebaseJwtVerifierCreationError::Jwt(_) => "FirebaseJwtVerifierCreationError::Jwt",
+        };
+        f.write_fmt($crate::format_args!("{}", variant_name))
+    }
+}
+impl From<reqwest::Error> for FirebaseJwtVerifierCreationError {
+    fn from(error: reqwest::Error) -> Self {
+        FirebaseJwtVerifierCreationError::Reqwest(error)
+    }
+}
+impl From<jsonwebtoken::errors::Error> for FirebaseJwtVerifierCreationError {
+    fn from(error: jsonwebtoken::errors::Error) -> Self {
+        FirebaseJwtVerifierCreationError::Jwt(error)
+    }
 }
 ```
 </details>
