@@ -321,6 +321,13 @@ But `error_set!` can also be used for quick errors "unions", no longer requiring
 hand write `From<..>` or use `.map_err(..)` for these simple cases.
 e.g.
 ```rust
+error_set! {
+    FirebaseJwtVerifierCreationError = {
+        Reqwest(reqwest::Error),
+        Jwt(jsonwebtoken::errors::Error),
+    };
+}
+
 impl FirebaseJwtVerifier {
     pub async fn new(project_id: String) -> Result<Self, FirebaseJwtVerifierCreationError> {
         let public_keys = Self::fetch_public_keys().await?;
@@ -334,13 +341,6 @@ impl FirebaseJwtVerifier {
         let decoding_keys = decoding_keys?;
         ...
     }
-}
-
-error_set! {
-    FirebaseJwtVerifierCreationError = {
-        Reqwest(reqwest::Error),
-        Jwt(jsonwebtoken::errors::Error),
-    };
 }
 ```
 <details>
@@ -489,13 +489,31 @@ Given:
  With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
 </details>
 
-**tracing:** Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err`. Similar to anyhow's `.context(..)`.
+**tracing** / **log:**  
+Enables support for the `tracing` or `log` crates. Methods are added to `Result` and are executed when the `Result` is an `Err`. They work similarly to `anyhow`'s `.context(..)` method. e.g.
 ```rust
-let value = result.warn("This a warning that will be passed to tracing if `Err`")?;
-```
-**log:** Enables support for the log crate. Adds methods to `Result` that are applied on `Err`. Similar to anyhow's `.context(..)`.
-```rust
-let value = result.warn("This a warning that will be passed to log if `Err`")?;
+let result: Result<(), &str> = Err("operation failed");
+
+// Log as a warning if `Err`
+let value = result.warn("This is a warning logged via tracing/log if `Err`")?;
+
+// Log as an error if `Err`
+let value = result.error("This is an error logged via tracing/log if `Err`")?;
+
+// Log a custom message based on the error content
+let value = result.with_trace(|err| format!("Operation failed due to: {}", err))?;
+
+// Log and swallow the error, returning `None` if `Err`
+let value: Option<()> = result.consume_warn();
+
+// Log a custom message and swallow the error
+let value: Option<()> = result.consume_with_error(|err| format!("Swallowed error: {}", err));
+
+// Swallow the error without returning a value, just log
+result.swallow_info();
+
+// Log a custom message and swallow the error silently
+result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 ```
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
