@@ -335,7 +335,7 @@ impl FirebaseJwtVerifier {
         ...
     }
 }
-```rust
+
 error_set! {
     FirebaseJwtVerifierCreationError = {
         Reqwest(reqwest::Error),
