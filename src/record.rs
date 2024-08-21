@@ -30,15 +30,15 @@ pub trait RecordContextSwallow<T, E>
 where
     E: Debug,
 {
-    /// Comsumes the [Err] of a Result. if [Err], logging as an "error".
+    /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
-    /// Comsumes the [Err] of a Result. if [Err], logging as an "warn".
+    /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
     fn consume_warn(self) -> Option<T>;
-    /// Comsumes the [Err] of a Result. if [Err], logging as an "info".
+    /// Consumes the [Err] of a Result. if [Err], logging as an "info".
     fn consume_info(self) -> Option<T>;
-    /// Comsumes the [Err] of a Result. if [Err], logging as an "debug".
+    /// Consumes the [Err] of a Result. if [Err], logging as an "debug".
     fn consume_debug(self) -> Option<T>;
-    /// Comsumes the [Err] of a Result. if [Err], logging as an "trace".
+    /// Consumes the [Err] of a Result. if [Err], logging as an "trace".
     fn consume_trace(self) -> Option<T>;
 
     /// Consumes the [Err] of a Result. if [Err], logging as an "error" with the result of [f].
