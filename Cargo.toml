@@ -3,14 +3,14 @@ name = "error_set"
 description = "An error set macro that simplifies error management by providing a streamlined method for defining errors and easily converting between them. Inspired by Zig's error set type."
 categories = ["rust-patterns"]
 keywords = ["error", "error-handling", "macro", "error-set"]
-version = "0.4.4"
+version = "0.4.5"
 edition = "2021"
 license = "Apache-2.0"
 documentation = "https://docs.rs/error_set"
 repository = "https://github.com/mcmah309/error_set"
 
 [dependencies]
-error_set_impl = { version = "=0.4.4", path = "impl" }
+error_set_impl = { version = "=0.4.5", path = "impl" }
 
 # features
 tracing = { version = "0.1", optional = true }
