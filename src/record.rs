@@ -52,7 +52,6 @@ where
     /// Consumes the [Err] of a Result. if [Err], logging as an "trace" with the result of [f].
     fn consume_with_trace<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
 
-
     /// Swallows the Result. if [Err], logging as an "error".
     fn swallow_error(self);
     /// Swallows the Result. if [Err], logging as an "warn".
@@ -74,6 +73,30 @@ where
     fn swallow_with_debug<F: FnOnce(E) -> D, D: Display>(self, f: F);
     /// Swallows the Result. if [Err], logging as an "trace" with the result of [f].
     fn swallow_with_trace<F: FnOnce(E) -> D, D: Display>(self, f: F);
+}
+
+pub trait RecordOptionContext<T> {
+    /// Log the context as an "error" if the Option is [None].
+    fn error(self, context: impl Display) -> Option<T>;
+    /// Log the context as an "warn" if the Option is [None].
+    fn warn(self, context: impl Display) -> Option<T>;
+    /// Log the context as an "info" if the Option is [None].
+    fn info(self, context: impl Display) -> Option<T>;
+    /// Log the context as an "debug" if the Option is [None].
+    fn debug(self, context: impl Display) -> Option<T>;
+    /// Log the context as an "trace" if the Option is [None].
+    fn trace(self, context: impl Display) -> Option<T>;
+
+    /// Lazily call [f] if the Option is [None] and log as an "error".
+    fn with_error<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Lazily call [f] if the Option is [None] and log as an "warn".
+    fn with_warn<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Lazily call [f] if the Option is [None] and log as an "info".
+    fn with_info<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Lazily call [f] if the Option is [None] and log as an "debug".
+    fn with_debug<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Lazily call [f] if the Option is [None] and log as an "trace".
+    fn with_trace<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
 }
 
 impl<T, E> RecordContext<T, E> for Result<T, E> {
@@ -438,5 +461,121 @@ where
             #[cfg(feature = "log")]
             log::trace!("{}", f(err));
         }
+    }
+}
+
+//************************************************************************//
+
+impl<T> RecordOptionContext<T> for Option<T> {
+    #[inline]
+    fn error(self, context: impl Display) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::error!("{}", context);
+            #[cfg(feature = "log")]
+            log::error!("{}", context);
+        }
+        self
+    }
+
+    #[inline]
+    fn warn(self, context: impl Display) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::warn!("{}", context);
+            #[cfg(feature = "log")]
+            log::warn!("{}", context);
+        }
+        self
+    }
+
+    #[inline]
+    fn info(self, context: impl Display) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::info!("{}", context);
+            #[cfg(feature = "log")]
+            log::info!("{}", context);
+        }
+        self
+    }
+
+    #[inline]
+    fn debug(self, context: impl Display) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::debug!("{}", context);
+            #[cfg(feature = "log")]
+            log::debug!("{}", context);
+        }
+        self
+    }
+
+    #[inline]
+    fn trace(self, context: impl Display) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::trace!("{}", context);
+            #[cfg(feature = "log")]
+            log::trace!("{}", context);
+        }
+        self
+    }
+
+    //************************************************************************//
+
+    #[inline]
+    fn with_error<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::error!("{}", f());
+            #[cfg(feature = "log")]
+            log::error!("{}", f());
+        }
+        self
+    }
+
+    #[inline]
+    fn with_warn<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::warn!("{}", f());
+            #[cfg(feature = "log")]
+            log::warn!("{}", f());
+        }
+        self
+    }
+
+    #[inline]
+    fn with_info<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::info!("{}", f());
+            #[cfg(feature = "log")]
+            log::info!("{}", f());
+        }
+        self
+    }
+
+    #[inline]
+    fn with_debug<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::debug!("{}", f());
+            #[cfg(feature = "log")]
+            log::debug!("{}", f());
+        }
+        self
+    }
+
+    #[inline]
+    fn with_trace<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
+        if self.is_none() {
+            #[cfg(feature = "tracing")]
+            tracing::trace!("{}", f());
+            #[cfg(feature = "log")]
+            log::trace!("{}", f());
+        }
+        self
     }
 }
