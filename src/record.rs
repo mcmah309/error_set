@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use std::fmt::Debug;
 use std::fmt::Display;
 

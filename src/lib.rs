@@ -1,9 +1,9 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-#[cfg(any(feature = "tracing", feature = "log"))]
+#[cfg(any(feature = "tracing", feature = "log", feature = "record_stub"))]
 mod record;
-#[cfg(any(feature = "tracing", feature = "log"))]
+#[cfg(any(feature = "tracing", feature = "log", feature = "record_stub"))]
 pub use record::*;
 #[cfg(all(feature = "tracing", feature = "log"))]
 compile_error!("Features 'tracing' and 'log' cannot be enabled at the same time.");
