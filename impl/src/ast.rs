@@ -144,10 +144,14 @@ impl Parse for AstErrorEnumVariant {
         }
         match input.parse::<AstInlineErrorVariant>() {
             Ok(error_variant) => Ok(AstErrorEnumVariant::InlineVariant(error_variant)),
-            Err(err) => Err( syn::parse::Error::new(
-                err.span(),
-                "Expected the error enum variant to be an error variant wrapping another error or an inline error variant with optional fields.",
-            )),
+            Err(mut err) => {
+                let high_level_error = syn::parse::Error::new(
+                    err.span(),
+                    "Expected the error enum variant to be an error variant wrapping another error or an inline error variant with optional fields.",
+                );
+                err.combine(high_level_error);
+                Err(err)
+            }
         }
     }
 }
