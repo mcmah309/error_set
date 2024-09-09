@@ -36,5 +36,6 @@ log = ["dep:log"]
 record_stub = []
 
 [package.metadata.docs.rs]
-all-features = true
+all-features = false
+features = ["tracing"]
 rustdoc-args = ["--cfg", "docsrs"]
