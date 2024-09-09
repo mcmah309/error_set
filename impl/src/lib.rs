@@ -1,5 +1,3 @@
-extern crate proc_macro;
-
 mod ast;
 mod expand;
 mod validate;
@@ -80,10 +78,15 @@ fn resolve_helper<'a>(
     visited: &mut Vec<Ident>,
 ) -> syn::Result<Vec<AstErrorEnumVariant>> {
     //println!("visited `{}`", visited.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" - "));
-    if visited.contains(&error_enum_builders[index].error_name) {
-        visited.push(error_enum_builders[index].error_name.clone());
+    let error_enum_builder = &error_enum_builders[index];
+    let error_name = &error_enum_builder.error_name;
+    if visited.contains(error_name) {
+        visited.push(error_name.clone());
+        if let Some(pos) = visited.iter().position(|e| e == error_name) {
+            visited.drain(0..pos);
+        }
         return Err(syn::parse::Error::new_spanned(
-            error_enum_builders[index].error_name.clone(),
+            error_name.clone(),
             format!(
                 "Cycle Detected: {}",
                 visited
@@ -94,7 +97,7 @@ fn resolve_helper<'a>(
             ),
         ));
     }
-    let ref_parts_to_resolve = error_enum_builders[index].ref_parts_to_resolve.clone();
+    let ref_parts_to_resolve = error_enum_builder.ref_parts_to_resolve.clone();
     if !ref_parts_to_resolve.is_empty() {
         for ref_part in ref_parts_to_resolve {
             let ref_error_enum_index = error_enum_builders

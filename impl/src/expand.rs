@@ -66,7 +66,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     let mut error_variant_tokens = TokenStream::new();
     for error_variant in error_variants {
         match error_variant {
-            AstErrorEnumVariant::SourceErrorVariant(variant) => {
+            AstErrorEnumVariant::WrappedVariant(variant) => {
                 let name = &variant.name;
                 let source = &variant.source;
                 let attributes = &variant.attributes;
@@ -75,7 +75,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                     #name(#source),
                 });
             }
-            AstErrorEnumVariant::Variant(variant) => {
+            AstErrorEnumVariant::InlineVariant(variant) => {
                 let name = &variant.name;
                 let attributes = &variant.attributes;
                 error_variant_tokens.append_all(quote::quote! {
@@ -105,7 +105,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     let mut source_match_branches = TokenStream::new();
     let mut has_source_match_branches = false;
     for variant in &error_enum.error_variants {
-        if let AstErrorEnumVariant::SourceErrorVariant(variant) = variant {
+        if let AstErrorEnumVariant::WrappedVariant(variant) = variant {
             has_source_match_branches = true;
             let name = &variant.name;
             source_match_branches.append_all(quote::quote! {
@@ -149,13 +149,13 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
     let mut error_variant_tokens = TokenStream::new();
     for error_variant in error_variants {
         match error_variant {
-            AstErrorEnumVariant::SourceErrorVariant(variant) => {
+            AstErrorEnumVariant::WrappedVariant(variant) => {
                 let name = &variant.name;
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
                 });
             }
-            AstErrorEnumVariant::Variant(variant) => {
+            AstErrorEnumVariant::InlineVariant(variant) => {
                 let name = &variant.name;
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
@@ -195,11 +195,11 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         for sub_error_variant in sub_error_variants {
             match sub_error_variant {
                 // If sub error enum has a source variant, it must also exist in this error enum, but it may go by a different name.
-                AstErrorEnumVariant::SourceErrorVariant(sub_error_variant) => {
+                AstErrorEnumVariant::WrappedVariant(sub_error_variant) => {
                     let sub_error_variant_name = &sub_error_variant.name;
                     let error_variant_with_source_matching_sub_error_variant = error_enum.error_variants.iter().filter_map(|error_variant| {
                         match error_variant {
-                            AstErrorEnumVariant::SourceErrorVariant(source_error_variant) => {
+                            AstErrorEnumVariant::WrappedVariant(source_error_variant) => {
                                 if is_type_path_equal(&source_error_variant.source, &sub_error_variant.source) {
                                     return Some(source_error_variant);
                                 }
@@ -216,7 +216,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                         #sub_error_enum_name::#sub_error_variant_name(source) =>  #error_enum_name::#error_variant_name(source),
                     });
                 }
-                AstErrorEnumVariant::Variant(sub_error_variant) => {
+                AstErrorEnumVariant::InlineVariant(sub_error_variant) => {
                     let sub_error_variant_name = &sub_error_variant.name;
                     error_branch_tokens.append_all(quote::quote! {
                         #sub_error_enum_name::#sub_error_variant_name =>  #error_enum_name::#sub_error_variant_name,
@@ -236,7 +236,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     }
     for source in error_enum.error_variants.iter().filter_map(|e| {
         return match e {
-            AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
+            AstErrorEnumVariant::WrappedVariant(source_variant) => {
                 return Some(source_variant);
             }
             _ => None,
@@ -412,7 +412,7 @@ mod coerce_macro {
             let mut match_arms = TokenStream::new();
             for variant in intersection {
                 match variant {
-                    AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
+                    AstErrorEnumVariant::WrappedVariant(source_variant) => {
                         let variant = source_variant.name;
                         match_arms_return_err.append_all(quote::quote! {
                         Err(#enum1_name::#variant(source)) => { return Err(#enum2_name::#variant(source)); },
@@ -427,7 +427,7 @@ mod coerce_macro {
                             #enum1_name::#variant(source) => { #enum2_name::#variant(source) },
                         });
                     }
-                    AstErrorEnumVariant::Variant(variant) => {
+                    AstErrorEnumVariant::InlineVariant(variant) => {
                         let variant = variant.name;
                         match_arms_return_err.append_all(quote::quote! {
                             Err(#enum1_name::#variant) => { return Err(#enum2_name::#variant); },

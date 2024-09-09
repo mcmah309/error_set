@@ -34,7 +34,7 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
     for error_enum in error_enums {
         for variant in &error_enum.error_variants {
             match variant {
-                AstErrorEnumVariant::SourceErrorVariant(source_variant) => {
+                AstErrorEnumVariant::WrappedVariant(source_variant) => {
                     let source_variant_name = &source_variant.name;
                     if unique_variants.contains(source_variant_name) {
                         return Err(syn::parse::Error::new_spanned(
@@ -65,7 +65,7 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
                     }
                     unique_sources.insert(source_variant_source);
                 }
-                AstErrorEnumVariant::Variant(variant) => {
+                AstErrorEnumVariant::InlineVariant(variant) => {
                     if unique_variants.contains(&variant.name) {
                         return Err(syn::parse::Error::new_spanned(
                             quote::quote! {variant},
