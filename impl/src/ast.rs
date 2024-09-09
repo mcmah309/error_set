@@ -92,7 +92,7 @@ impl Parse for AstInlineOrRefError {
         if input.peek(token::Brace) {
             return match input.parse::<AstInlineError>() {
                 Ok(inline_error) => Ok(AstInlineOrRefError::Inline(inline_error)),
-                Err(err) => Err(err)
+                Err(err) => Err(err),
             };
         }
         match input.parse::<RefError>() {
@@ -131,22 +131,22 @@ impl Parse for AstInlineError {
 
 #[derive(Clone, Debug)]
 pub(crate) enum AstErrorEnumVariant {
-    SourceErrorVariant(AstSourceErrorVariant),
-    Variant(AstErrorVariant),
+    WrappedVariant(AstWrappedErrorVariant),
+    InlineVariant(AstInlineErrorVariant),
 }
 
 impl Parse for AstErrorEnumVariant {
     fn parse(input: ParseStream) -> Result<Self> {
         let fork = input.fork();
-        if let Ok(path) = fork.parse::<AstSourceErrorVariant>() {
+        if let Ok(variant) = fork.parse::<AstWrappedErrorVariant>() {
             input.advance_to(&fork);
-            return Ok(AstErrorEnumVariant::SourceErrorVariant(path));
+            return Ok(AstErrorEnumVariant::WrappedVariant(variant));
         }
-        match input.parse::<AstErrorVariant>() {
-            Ok(error_variant) => Ok(AstErrorEnumVariant::Variant(error_variant)),
-            Err(err) => Err(syn::parse::Error::new(
+        match input.parse::<AstInlineErrorVariant>() {
+            Ok(error_variant) => Ok(AstErrorEnumVariant::InlineVariant(error_variant)),
+            Err(err) => Err( syn::parse::Error::new(
                 err.span(),
-                "Expected the error enum item to be a source error or error variant.",
+                "Expected the error enum variant to be an error variant wrapping another error or an inline error variant with optional fields.",
             )),
         }
     }
@@ -156,15 +156,16 @@ impl PartialEq for AstErrorEnumVariant {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (
-                AstErrorEnumVariant::SourceErrorVariant(var1),
-                AstErrorEnumVariant::SourceErrorVariant(var2),
+                AstErrorEnumVariant::WrappedVariant(var1),
+                AstErrorEnumVariant::WrappedVariant(var2),
             ) => {
-                // Does not include name, becuase we only care about the type, since each set can only have one of a type
+                // Does not include name, because we only care about the type, since each set can only have one of a type
                 return is_type_path_equal(&var1.source, &var2.source);
             }
-            (AstErrorEnumVariant::Variant(variant1), AstErrorEnumVariant::Variant(variant2)) => {
-                variant1 == variant2
-            }
+            (
+                AstErrorEnumVariant::InlineVariant(variant1),
+                AstErrorEnumVariant::InlineVariant(variant2),
+            ) => variant1 == variant2,
             _ => false,
         }
     }
@@ -175,11 +176,11 @@ impl Eq for AstErrorEnumVariant {}
 impl std::hash::Hash for AstErrorEnumVariant {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         match self {
-            AstErrorEnumVariant::SourceErrorVariant(source_error_variant) => {
+            AstErrorEnumVariant::WrappedVariant(source_error_variant) => {
                 source_error_variant.name.hash(state);
             }
-            AstErrorEnumVariant::Variant(variant) => {
-                variant.hash(state);
+            AstErrorEnumVariant::InlineVariant(named_variant) => {
+                named_variant.hash(state);
             }
         }
     }
@@ -197,50 +198,15 @@ pub(crate) fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -
         .all(|(seg1, seg2)| seg1.ident == seg2.ident);
 }
 
+/// Wrapper around another error type
 #[derive(Clone)]
-pub(crate) struct AstErrorVariant {
-    pub(crate) attributes: Vec<Attribute>,
-    pub(crate) name: Ident,
-}
-
-impl Parse for AstErrorVariant {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let attributes = input.call(Attribute::parse_outer)?;
-        let name = input.parse::<Ident>()?;
-        Ok(AstErrorVariant { attributes, name })
-    }
-}
-
-impl std::hash::Hash for AstErrorVariant {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-    }
-}
-
-impl PartialEq for AstErrorVariant {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
-impl Eq for AstErrorVariant {}
-
-impl std::fmt::Debug for AstErrorVariant {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AstErrorVariant")
-            .field("name", &self.name)
-            .finish()
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct AstSourceErrorVariant {
+pub(crate) struct AstWrappedErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) name: Ident,
     pub(crate) source: syn::TypePath,
 }
 
-impl Parse for AstSourceErrorVariant {
+impl Parse for AstWrappedErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
         let attributes = input.call(Attribute::parse_outer)?;
         let name = input.parse::<Ident>()?;
@@ -248,7 +214,7 @@ impl Parse for AstSourceErrorVariant {
         parenthesized!(content in input);
         let source = content.parse()?;
         //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
-        Ok(AstSourceErrorVariant {
+        Ok(AstWrappedErrorVariant {
             attributes,
             name,
             source,
@@ -256,7 +222,7 @@ impl Parse for AstSourceErrorVariant {
     }
 }
 
-impl std::fmt::Debug for AstSourceErrorVariant {
+impl std::fmt::Debug for AstWrappedErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let source = &self
             .source
@@ -266,9 +232,82 @@ impl std::fmt::Debug for AstSourceErrorVariant {
             .map(|e| e.ident.to_string())
             .collect::<Vec<_>>()
             .join("::");
-        f.debug_struct("AstSourceErrorVariant")
+        f.debug_struct("AstWrappedErrorVariant")
             .field("name", &self.name)
             .field("source", source)
             .finish()
+    }
+}
+
+/// A regular named variant
+#[derive(Clone)]
+pub(crate) struct AstInlineErrorVariant {
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) name: Ident,
+    pub(crate) fields: Punctuated<AstInlineErrorVariantField, token::Comma>,
+}
+
+impl Parse for AstInlineErrorVariant {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let attributes = input.call(Attribute::parse_outer)?;
+        let name = input.parse::<Ident>()?;
+        let content: syn::Result<_> = (|| {
+            let content;
+            syn::braced!(content in input);
+            return Ok(content);
+        })();
+        let content = match content {
+            Err(_) => {
+                return Ok(AstInlineErrorVariant {
+                    attributes,
+                    name,
+                    fields: Punctuated::new(),
+                });
+            }
+            Ok(content) => content
+        };
+        let fields = content.parse_terminated(AstInlineErrorVariantField::parse, syn::Token![,])?;
+        Ok(AstInlineErrorVariant {
+            attributes,
+            name,
+            fields,
+        })
+    }
+}
+
+impl std::hash::Hash for AstInlineErrorVariant {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl PartialEq for AstInlineErrorVariant {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for AstInlineErrorVariant {}
+
+impl std::fmt::Debug for AstInlineErrorVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AstInlineErrorVariant")
+            .field("name", &self.name)
+            .finish()
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct AstInlineErrorVariantField {
+    name: Ident,
+    r#type: syn::TypePath,
+}
+
+impl Parse for AstInlineErrorVariantField {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name: Ident = input.parse()?;
+        let _: syn::Token![:] = input.parse()?;
+        let r#type: syn::TypePath = input.parse()?;
+        Ok(AstInlineErrorVariantField { name, r#type })
     }
 }
