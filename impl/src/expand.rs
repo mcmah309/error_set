@@ -218,7 +218,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         error_enum,
         subsets,
     } = error_enum_node;
-    
+
     let error_enum_name = &error_enum.error_name;
     // Add all `From`'s for the enums that are a subset of this one
     for subset in (*subsets).iter() {
@@ -478,19 +478,36 @@ mod coerce_macro {
                         });
                     }
                     AstErrorEnumVariant::InlineVariant(variant) => {
-                        let variant = variant.name;
-                        match_arms_return_err.append_all(quote::quote! {
-                            Err(#enum1_name::#variant) => { return Err(#enum2_name::#variant); },
-                        });
-                        match_arms_err.append_all(quote::quote! {
-                            Err(#enum1_name::#variant) => { Err(#enum2_name::#variant) },
-                        });
-                        match_arms_return.append_all(quote::quote! {
-                            #enum1_name::#variant => { return #enum2_name::#variant; },
-                        });
-                        match_arms.append_all(quote::quote! {
-                            #enum1_name::#variant => { #enum2_name::#variant },
-                        });
+                        let name = variant.name;
+                        let fields = variant.fields;
+                        if fields.is_empty() {
+                            match_arms_return_err.append_all(quote::quote! {
+                                Err(#enum1_name::#name) => { return Err(#enum2_name::#name); },
+                            });
+                            match_arms_err.append_all(quote::quote! {
+                                Err(#enum1_name::#name) => { Err(#enum2_name::#name) },
+                            });
+                            match_arms_return.append_all(quote::quote! {
+                                #enum1_name::#name => { return #enum2_name::#name; },
+                            });
+                            match_arms.append_all(quote::quote! {
+                                #enum1_name::#name => { #enum2_name::#name },
+                            });
+                        } else {
+                            let field_names = fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                            match_arms_return_err.append_all(quote::quote! {
+                                Err(#enum1_name::#name { #(#field_names),*  }) => { return Err(#enum2_name::#name { #(#field_names),*  }); },
+                            });
+                            match_arms_err.append_all(quote::quote! {
+                                Err(#enum1_name::#name { #(#field_names),*  }) => { Err(#enum2_name::#name { #(#field_names),*  }) },
+                            });
+                            match_arms_return.append_all(quote::quote! {
+                                #enum1_name::#name { #(#field_names),*  } => { return #enum2_name::#name { #(#field_names),*  }; },
+                            });
+                            match_arms.append_all(quote::quote! {
+                                #enum1_name::#name { #(#field_names),*  } => { #enum2_name::#name { #(#field_names),*  } },
+                            });
+                        }
                     }
                 }
             }
