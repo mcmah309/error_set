@@ -403,12 +403,29 @@ error_set! {
             B,
             IoError(std::io::Error),
         };
-        Y = {
+        SetY = {
             C,
-        } || X;
+        } || SetX;
 }
 ```
+<details>
+
+<summary>Usage</summary>
+
+```rust
+fn main() {
+    let x = SetX::A {
+        name: "john".to_string(),
+        age: 32,
+    };
+    assert_eq!(x.to_string(), "My name is john and my age is 32".to_string());
+}
+```
+
+</details>
+
 > Note: You can redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
+
 
 ### Feature Flags
 
