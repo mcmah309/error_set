@@ -427,7 +427,7 @@ fn main() {
 
 </details>
 
-> Note: You can even redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
+You can even redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
 
 
 ### Feature Flags
