@@ -8,6 +8,7 @@ use syn::{Attribute, Ident};
 
 use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
+/// Expand the [ErrorEnum]s into code.
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
     let mut token_stream = TokenStream::new();
     #[cfg(feature = "coerce_macro")]
@@ -16,6 +17,7 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
         .into_iter()
         .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
         .collect();
+    // build a graph of sub-sets and sets based on if all the variants of one are included in another
     for building_node in error_enum_nodes.iter() {
         for checking_node in error_enum_nodes.iter() {
             if (*(**checking_node).borrow()).error_enum != (*(**building_node).borrow()).error_enum
@@ -216,8 +218,9 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         error_enum,
         subsets,
     } = error_enum_node;
-
+    
     let error_enum_name = &error_enum.error_name;
+    // Add all `From`'s for the enums that are a subset of this one
     for subset in (*subsets).iter() {
         let sub_error_enum = &(&*(**subset).borrow()).error_enum;
         let sub_error_variants = &sub_error_enum.error_variants;
@@ -229,7 +232,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         let mut error_branch_tokens = TokenStream::new();
         for sub_error_variant in sub_error_variants {
             match sub_error_variant {
-                // If sub error enum has a source variant, it must also exist in this error enum, but it may go by a different name.
+                // If sub error enum has a source variant, it must also exist in this error enum (otherwise it would not be a sub), but it may go by a different name.
                 AstErrorEnumVariant::WrappedVariant(sub_error_variant) => {
                     let sub_error_variant_name = &sub_error_variant.name;
                     let error_variant_with_source_matching_sub_error_variant = error_enum.error_variants.iter().filter_map(|error_variant| {
@@ -253,9 +256,20 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                 }
                 AstErrorEnumVariant::InlineVariant(sub_error_variant) => {
                     let sub_error_variant_name = &sub_error_variant.name;
-                    error_branch_tokens.append_all(quote::quote! {
+                    if sub_error_variant.fields.is_empty() {
+                        error_branch_tokens.append_all(quote::quote! {
                         #sub_error_enum_name::#sub_error_variant_name =>  #error_enum_name::#sub_error_variant_name,
-                    })
+                    });
+                    } else {
+                        let field_names = &sub_error_variant
+                            .fields
+                            .iter()
+                            .map(|e| &e.name)
+                            .collect::<Vec<_>>();
+                        error_branch_tokens.append_all(quote::quote! {
+                        #sub_error_enum_name::#sub_error_variant_name { #(#field_names),*  } =>  #error_enum_name::#sub_error_variant_name { #(#field_names),*  },
+                        });
+                    }
                 }
             }
         }
@@ -269,6 +283,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             }
         });
     }
+    // Add all `From`'s for variants that are wrappers around source errors.
     for source in error_enum.error_variants.iter().filter_map(|e| {
         return match e {
             AstErrorEnumVariant::WrappedVariant(source_variant) => {

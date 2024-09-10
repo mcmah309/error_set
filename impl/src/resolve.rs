@@ -3,7 +3,8 @@ use crate::expand::ErrorEnum;
 
 use syn::{Attribute, Ident};
 
-/// Constructs [ErrorEnum]s from the ast
+/// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
+/// all error sets with the full expansion.
 pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
@@ -37,7 +38,7 @@ pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
 
 fn resolve_builders(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<ErrorEnum>> {
     for index in 0..error_enum_builders.len() {
-        if !error_enum_builders[index].ref_parts.is_empty() {
+        if !error_enum_builders[index].ref_parts_to_resolve.is_empty() {
             resolve_builders_helper(index, &mut *error_enum_builders, &mut Vec::new())?;
         }
     }
@@ -74,6 +75,7 @@ fn resolve_builders_helper<'a>(
         ));
     }
     let ref_parts_to_resolve = error_enum_builder.ref_parts_to_resolve.clone();
+    // If this enums ref parts have not been resolved, resolve them.
     if !ref_parts_to_resolve.is_empty() {
         for ref_part in ref_parts_to_resolve {
             let ref_error_enum_index = error_enum_builders
@@ -104,16 +106,15 @@ fn resolve_builders_helper<'a>(
         }
         error_enum_builders[index].ref_parts_to_resolve.clear();
     }
-    // Now that are refs are solved and included in this's error_variants, return them.
+    // Now that are refs are solved and included in this error_enum_builder's error_variants, return them.
     Ok(error_enum_builders[index].error_variants.clone())
 }
 
-// #[derive(Debug)]
+
 struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
     pub error_name: Ident,
     pub error_variants: Vec<AstErrorEnumVariant>,
-    pub ref_parts: Vec<RefError>,
     /// Once this is empty, all [ref_parts] have been resolved and [error_variants] is complete.
     pub ref_parts_to_resolve: Vec<RefError>,
 }
@@ -124,13 +125,11 @@ impl ErrorEnumBuilder {
             attributes,
             error_name,
             error_variants: Vec::new(),
-            ref_parts: Vec::new(),
             ref_parts_to_resolve: Vec::new(),
         }
     }
 
     fn add_ref_part(&mut self, ref_part: RefError) {
-        self.ref_parts.push(ref_part.clone());
         self.ref_parts_to_resolve.push(ref_part);
     }
 }

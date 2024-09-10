@@ -174,7 +174,12 @@ impl PartialEq for AstErrorEnumVariant {
                 AstErrorEnumVariant::InlineVariant(variant1),
                 AstErrorEnumVariant::InlineVariant(variant2),
             ) => variant1 == variant2,
-            _ => false,
+            (AstErrorEnumVariant::WrappedVariant(_), AstErrorEnumVariant::InlineVariant(_)) => {
+                false
+            }
+            (AstErrorEnumVariant::InlineVariant(_), AstErrorEnumVariant::WrappedVariant(_)) => {
+                false
+            }
         }
     }
 }
@@ -253,7 +258,7 @@ pub(crate) struct AstInlineErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
-    pub(crate) fields: Punctuated<AstInlineErrorVariantField, token::Comma>,
+    pub(crate) fields: Vec<AstInlineErrorVariantField>,
 }
 
 impl Parse for AstInlineErrorVariant {
@@ -272,12 +277,15 @@ impl Parse for AstInlineErrorVariant {
                     attributes,
                     display,
                     name,
-                    fields: Punctuated::new(),
+                    fields: Vec::new(),
                 });
             }
             Ok(content) => content,
         };
-        let fields = content.parse_terminated(AstInlineErrorVariantField::parse, syn::Token![,])?;
+        let fields = content
+            .parse_terminated(AstInlineErrorVariantField::parse, syn::Token![,])?
+            .into_iter()
+            .collect::<Vec<_>>();
         Ok(AstInlineErrorVariant {
             attributes,
             display,
@@ -293,10 +301,10 @@ impl std::hash::Hash for AstInlineErrorVariant {
     }
 }
 
-// todo add a note that an inline variant with fields cannot be declared twice, otherwise they will be treated as seperate
+// todo add a note that an inline variant with fields can be compared but attributes and display are not used for equality
 impl PartialEq for AstInlineErrorVariant {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.fields.is_empty() && other.fields.is_empty()
+        self.name == other.name && self.fields == other.fields
     }
 }
 
@@ -310,12 +318,19 @@ impl std::fmt::Debug for AstInlineErrorVariant {
     }
 }
 
-
 /// The format string to use for display
 #[derive(Clone)]
 pub(crate) struct DisplayAttribute {
     pub(crate) tokens: TokenStream,
 }
+
+// impl PartialEq for DisplayAttribute {
+//     fn eq(&self, other: &Self) -> bool {
+//         self.tokens.to_string() == other.tokens.to_string()
+//     }
+// }
+
+// impl Eq for DisplayAttribute {}
 
 fn extract_display_attribute(
     attributes: &mut Vec<Attribute>,
@@ -382,3 +397,25 @@ impl Parse for AstInlineErrorVariantField {
         Ok(AstInlineErrorVariantField { name, r#type })
     }
 }
+
+impl PartialEq for AstInlineErrorVariantField {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self
+                .r#type
+                .path
+                .segments
+                .iter()
+                .map(|e| &e.ident)
+                .collect::<Vec<_>>()
+                == other
+                    .r#type
+                    .path
+                    .segments
+                    .iter()
+                    .map(|e| &e.ident)
+                    .collect::<Vec<_>>()
+    }
+}
+
+impl Eq for AstInlineErrorVariantField {}
