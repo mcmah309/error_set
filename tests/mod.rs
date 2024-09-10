@@ -396,7 +396,6 @@ pub mod value_variants {
     error_set! {
         X = {
             IoError(std::io::Error),
-            // #[derive(Clone)]
             #[display("My name is {}", name)]
             B {
                 name: String
@@ -404,10 +403,25 @@ pub mod value_variants {
         };
         Y = {
             A,
-        } || X;
+        } || X || Z;
         Z = {
             C {
                 val: i32
+            },
+            #[display("This is some new display")]
+            D
+        };
+        XX = {
+            #[display("This message is different {}", name)]
+            B {
+                name: String
+            }
+        };
+        W = {
+            #[display("error `{}` happened because `{}`", error, reason)]
+            B {
+                error: usize,
+                reason: String
             }
         };
     }
@@ -425,6 +439,25 @@ pub mod value_variants {
         assert_eq!(x.to_string(), "My name is john".to_string());
         let y: Y = x.into();
         assert_eq!(y.to_string(), "My name is john".to_string());
+        let z = Z::D;
+        assert_eq!(z.to_string(), "This is some new display".to_string());
+        let y: Y = z.into();
+        assert_eq!(y.to_string(), "This is some new display".to_string());
+        let z = Z::C { val: 1 };
+        assert_eq!(z.to_string(), "Z::C".to_string());
+        let y: Y = z.into();
+        assert_eq!(y.to_string(), "Y::C".to_string());
+        let xx = XX::B {
+            name: "john".to_string(),
+        };
+        assert_eq!(xx.to_string(), "This message is different john".to_string());
+        let x: X = xx.into();
+        assert_eq!(x.to_string(), "My name is john".to_string());
+        let w: W = W::B {
+            error: 3,
+            reason: "oops".to_string(),
+        };
+        assert_eq!(w.to_string(), "error `3` happened because `oops`".to_string());
     }
 }
 
