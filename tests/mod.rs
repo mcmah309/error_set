@@ -523,11 +523,6 @@ pub mod value_variants {
         };
     }
 
-    pub enum Test {
-        A,
-        B { name: String },
-    }
-
     #[test]
     fn test() {
         let x = X::B {

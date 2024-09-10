@@ -389,7 +389,7 @@ impl From<jsonwebtoken::errors::Error> for FirebaseJwtVerifierCreationError {
 ```
 </details>
 
-Error sets also supports inline structs and custom display messages. Similiar to `thiserror`. Just
+Error sets also supports inline structs and custom display messages. Similar to `thiserror`. Just
 add the `#[display(...)]` attribute to the variant.
 ```rust
 error_set! {
