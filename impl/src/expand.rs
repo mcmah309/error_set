@@ -92,7 +92,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                         #(#attributes)*
                         #name {
                             #(#field_names : #field_types),*
-                        }
+                        },
                     });
                 }
             }
