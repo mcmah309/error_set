@@ -393,19 +393,18 @@ Error sets also supports inline structs and custom display messages. Similar to 
 add the `#[display(...)]` attribute to the variant.
 ```rust
 error_set! {
-        SetX = {
-            #[display("My name is {} and my age is {}", name, age)]
-            A {
-                name: String,
-                age: u32,
-            },
-            #[display("This is the display message for B")]
-            B,
-            IoError(std::io::Error),
-        };
-        SetY = {
-            C,
-        } || SetX;
+    AuthError = {
+        #[display("User `{}` with role `{}` does not exist", name, role)]
+        UserDoesNotExist {
+            name: String,
+            role: u32,
+        },
+        #[display("The provided credentials are invalid")]
+        InvalidCredentials
+    };
+    LoginError = {
+        IoError(std::io::Error),
+    } || AuthError;
 }
 ```
 <details>
@@ -414,11 +413,15 @@ error_set! {
 
 ```rust
 fn main() {
-    let x = SetX::A {
+    let x: AuthError = AuthError::UserDoesNotExist {
         name: "john".to_string(),
-        age: 32,
+        role: 30,
     };
-    assert_eq!(x.to_string(), "My name is john and my age is 32".to_string());
+    assert_eq!(x.to_string(), "User `john` with role `30` does not exist".to_string());
+    let y: LoginError = x.into();
+    assert_eq!(y.to_string(), "User `john` with role `30` does not exist".to_string());
+    let x = AuthError::InvalidCredentials;
+    assert_eq!(x.to_string(), "The provided credentials are invalid".to_string());
 }
 ```
 

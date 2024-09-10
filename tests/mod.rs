@@ -554,6 +554,34 @@ pub mod value_variants {
             "error `3` happened because `oops`".to_string()
         );
     }
+
+    error_set! {
+        AuthError = {
+            #[display("User `{}` with role `{}` does not exist", name, role)]
+            UserDoesNotExist {
+                name: String,
+                role: u32,
+            },
+            #[display("The provided credentials are invalid")]
+            InvalidCredentials
+        };
+        LoginError = {
+            IoError(std::io::Error),
+        } || AuthError;
+    }
+    
+    #[test]
+    fn from_readme() {
+        let x: AuthError = AuthError::UserDoesNotExist {
+            name: "john".to_string(),
+            role: 30,
+        };
+        assert_eq!(x.to_string(), "User `john` with role `30` does not exist".to_string());
+        let y: LoginError = x.into();
+        assert_eq!(y.to_string(), "User `john` with role `30` does not exist".to_string());
+        let x = AuthError::InvalidCredentials;
+        assert_eq!(x.to_string(), "The provided credentials are invalid".to_string());
+    }
 }
 
 #[cfg(test)]
