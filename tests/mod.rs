@@ -226,7 +226,7 @@ pub mod readme_example_aggregation {
 
 #[cfg(feature = "coerce_macro")]
 #[cfg(test)]
-pub mod coerce_macro {
+pub mod coerce_macro_simple {
     use error_set::error_set;
 
     error_set! {
@@ -314,6 +314,103 @@ pub mod coerce_macro {
             }
             Err(SetX::H) => {
                 return Err(SetY::H);
+            }
+        };
+        Ok(())
+    }
+
+    #[test]
+    fn test() {
+        assert_eq!(
+            setx_result_to_sety_result_coerce_return().unwrap_err(),
+            SetY::A
+        );
+        assert_eq!(setx_result_to_sety_result_coerce().unwrap_err(), SetY::A);
+        assert_eq!(setx_to_sety_coerce(), SetY::A);
+        assert_eq!(setx_to_sety_coerce_return(), SetY::A);
+
+        assert_eq!(setx_result_to_sety_result().unwrap_err(), SetY::A);
+    }
+}
+
+#[cfg(feature = "coerce_macro")]
+#[cfg(test)]
+pub mod coerce_macro_complex {
+    use error_set::error_set;
+
+    error_set! {
+        SetX = {
+            X
+        } || Common;
+        SetY = {
+            Y
+        } || Common;
+        Common = {
+            A,
+            B {
+                val1: String,
+                val2: i32,
+            },
+            C(std::io::Error)
+        };
+    }
+
+    impl PartialEq for SetY {
+        fn eq(&self, other: &Self) -> bool {
+            core::mem::discriminant(self) == core::mem::discriminant(other)
+        }
+    }
+
+    fn setx_result() -> Result<(), SetX> {
+        Err(SetX::A)
+    }
+    fn setx() -> SetX {
+        SetX::A
+    }
+
+    fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
+        let _ok = coerce!(setx_result() => {
+            Ok(ok) => ok,
+            Err(SetX::X) => (), // handle
+            { Err(SetX) => return Err(SetY) }
+        });
+        Ok(())
+    }
+    fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
+        let result: Result<(), SetY> = coerce!(setx_result() => {
+            Ok(_) => Err(SetY::A),
+            Err(SetX::X) => Err(SetY::A), // handle
+            { Err(SetX) => Err(SetY) }
+        });
+        result
+    }
+    fn setx_to_sety_coerce() -> SetY {
+        let sety = coerce!(setx() => {
+            SetX::X => SetY::A, // handle
+            {SetX => SetY}
+        });
+        sety
+    }
+    fn setx_to_sety_coerce_return() -> SetY {
+        let sety = coerce!(setx() => {
+            SetX::X => SetY::A, // handle
+            {SetX => return SetY}
+        });
+        sety
+    }
+
+    fn setx_result_to_sety_result() -> Result<(), SetY> {
+        let _ok = match setx_result() {
+            Ok(ok) => ok,
+            Err(SetX::X) => {}
+            Err(SetX::A) => {
+                return Err(SetY::A);
+            }
+            Err(SetX::B { val1, val2 }) => {
+                return Err(SetY::B { val1, val2 });
+            }
+            Err(SetX::C(e)) => {
+                return Err(SetY::C(e));
             }
         };
         Ok(())
@@ -457,7 +554,10 @@ pub mod value_variants {
             error: 3,
             reason: "oops".to_string(),
         };
-        assert_eq!(w.to_string(), "error `3` happened because `oops`".to_string());
+        assert_eq!(
+            w.to_string(),
+            "error `3` happened because `oops`".to_string()
+        );
     }
 }
 
