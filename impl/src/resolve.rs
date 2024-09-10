@@ -1,9 +1,10 @@
 use crate::ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
-use crate::expand::{expand, ErrorEnum};
+use crate::expand::ErrorEnum;
 
 use syn::{Attribute, Ident};
 
-pub(crate) fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
+/// Constructs [ErrorEnum]s from the ast
+pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
     for declaration in error_set.set_items.into_iter() {
@@ -29,15 +30,15 @@ pub(crate) fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<E
         }
         error_enum_builders.push(error_enum_builder);
     }
-    let error_enums = resolve(error_enum_builders)?;
+    let error_enums = resolve_builders(error_enum_builders)?;
 
     Ok(error_enums)
 }
 
-fn resolve(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<ErrorEnum>> {
+fn resolve_builders(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<ErrorEnum>> {
     for index in 0..error_enum_builders.len() {
         if !error_enum_builders[index].ref_parts.is_empty() {
-            resolve_helper(index, &mut *error_enum_builders, &mut Vec::new())?;
+            resolve_builders_helper(index, &mut *error_enum_builders, &mut Vec::new())?;
         }
     }
     let error_enums = error_enum_builders
@@ -47,7 +48,7 @@ fn resolve(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<Er
     Ok(error_enums)
 }
 
-fn resolve_helper<'a>(
+fn resolve_builders_helper<'a>(
     index: usize,
     error_enum_builders: &'a mut [ErrorEnumBuilder],
     visited: &mut Vec<Ident>,
@@ -89,7 +90,7 @@ fn resolve_helper<'a>(
                 .is_empty()
             {
                 visited.push(error_enum_builders[index].error_name.clone());
-                resolve_helper(ref_error_enum_index, error_enum_builders, visited)?;
+                resolve_builders_helper(ref_error_enum_index, error_enum_builders, visited)?;
                 visited.pop();
             }
             let (this_error_enum_builder, ref_error_enum_builder) =
