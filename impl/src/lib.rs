@@ -33,12 +33,12 @@ fn construct_error_enums(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> 
 
     for declaration in error_set.set_items.into_iter() {
         let AstErrorDeclaration {
-            attributes: attribute,
+            attributes,
             error_name,
             parts,
         } = declaration;
 
-        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attribute);
+        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attributes);
 
         for part in parts.into_iter() {
             match part {

@@ -78,10 +78,21 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
             AstErrorEnumVariant::InlineVariant(variant) => {
                 let name = &variant.name;
                 let attributes = &variant.attributes;
-                error_variant_tokens.append_all(quote::quote! {
-                    #(#attributes)*
-                    #name,
-                })
+                if variant.fields.is_empty() {
+                    error_variant_tokens.append_all(quote::quote! {
+                        #(#attributes)*
+                        #name,
+                    });
+                } else {
+                    let field_names = &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                    let field_types = &variant.fields.iter().map(|e| &e.r#type).collect::<Vec<_>>();
+                    error_variant_tokens.append_all(quote::quote! {
+                        #(#attributes)*
+                        #name {
+                            #(#field_names : #field_types),*
+                        }
+                    });
+                }
             }
         }
     }
@@ -152,14 +163,38 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
             AstErrorEnumVariant::WrappedVariant(variant) => {
                 let name = &variant.name;
                 error_variant_tokens.append_all(quote::quote! {
-                    #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
-                });
+                #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+            });
             }
             AstErrorEnumVariant::InlineVariant(variant) => {
                 let name = &variant.name;
-                error_variant_tokens.append_all(quote::quote! {
-                    #enum_name::#name =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
-                })
+                if let Some(display) = &variant.display {
+                    if variant.fields.is_empty() {
+                        let tokens = &display.tokens;
+                        error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name =>  &*format!(#tokens),
+                        });
+                    } else {
+                        let field_names =
+                            &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                        let tokens = &display.tokens;
+                        error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name { #(ref #field_names),*  } =>  &*format!(#tokens),
+                        });
+                    }
+                } else {
+                    if variant.fields.is_empty() {
+                        error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                            });
+                    } else {
+                        let field_names =
+                            &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                        error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name { #(ref #field_names),*  } =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                        });
+                    }
+                }
             }
         }
     }

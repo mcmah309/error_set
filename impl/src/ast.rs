@@ -1,9 +1,13 @@
+use proc_macro2::TokenStream;
 use syn::{
     braced, parenthesized,
     parse::{discouraged::Speculative, Parse, ParseStream},
     punctuated::Punctuated,
+    spanned::Spanned,
     token, Attribute, Ident, Result,
 };
+
+const DISPLAY_ATTRIBUTE_NAME: &str = "display";
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {
@@ -247,13 +251,15 @@ impl std::fmt::Debug for AstWrappedErrorVariant {
 #[derive(Clone)]
 pub(crate) struct AstInlineErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
     pub(crate) fields: Punctuated<AstInlineErrorVariantField, token::Comma>,
 }
 
 impl Parse for AstInlineErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
-        let attributes = input.call(Attribute::parse_outer)?;
+        let mut attributes = input.call(Attribute::parse_outer)?;
+        let display = extract_display_attribute(&mut attributes)?;
         let name = input.parse::<Ident>()?;
         let content: syn::Result<_> = (|| {
             let content;
@@ -264,15 +270,17 @@ impl Parse for AstInlineErrorVariant {
             Err(_) => {
                 return Ok(AstInlineErrorVariant {
                     attributes,
+                    display,
                     name,
                     fields: Punctuated::new(),
                 });
             }
-            Ok(content) => content
+            Ok(content) => content,
         };
         let fields = content.parse_terminated(AstInlineErrorVariantField::parse, syn::Token![,])?;
         Ok(AstInlineErrorVariant {
             attributes,
+            display,
             name,
             fields,
         })
@@ -285,9 +293,10 @@ impl std::hash::Hash for AstInlineErrorVariant {
     }
 }
 
+// todo add a note that an inline variant with fields cannot be declared twice, otherwise they will be treated as seperate
 impl PartialEq for AstInlineErrorVariant {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
+        self.name == other.name && self.fields.is_empty() && other.fields.is_empty()
     }
 }
 
@@ -301,10 +310,68 @@ impl std::fmt::Debug for AstInlineErrorVariant {
     }
 }
 
+
+/// The format string to use for display
+#[derive(Clone)]
+pub(crate) struct DisplayAttribute {
+    pub(crate) tokens: TokenStream,
+}
+
+fn extract_display_attribute(
+    attributes: &mut Vec<Attribute>,
+) -> syn::Result<Option<DisplayAttribute>> {
+    let mut display_indices = Vec::new();
+    let mut displays = Vec::new();
+    for (i, e) in attributes.iter().enumerate() {
+        if let Some(display_tokens) = display_tokens(e) {
+            displays.push(display_tokens);
+            display_indices.push(i);
+        }
+    }
+    if display_indices.is_empty() {
+        return Ok(None);
+    }
+    let display = displays.remove(0);
+    if display_indices.len() > 1 {
+        return Err(syn::parse::Error::new(
+            display.tokens.span(),
+            format!("More than one `{}` attribute found", DISPLAY_ATTRIBUTE_NAME),
+        ));
+    }
+
+    let mut index = 0;
+    attributes.retain(|_| {
+        let retain = !&display_indices.contains(&index);
+        index += 1;
+        return retain;
+    });
+    Ok(Some(display))
+}
+
+fn display_tokens(attribute: &Attribute) -> Option<DisplayAttribute> {
+    return match &attribute.meta {
+        syn::Meta::Path(_) => None,
+        syn::Meta::NameValue(_) => None,
+        syn::Meta::List(list) => {
+            let ident = list.path.get_ident();
+            let Some(ident) = ident else {
+                return None;
+            };
+            let ident = ident.to_string();
+            if &*ident == DISPLAY_ATTRIBUTE_NAME {
+                return Some(DisplayAttribute {
+                    tokens: list.tokens.clone(),
+                });
+            }
+            return None;
+        }
+    };
+}
+
 #[derive(Clone)]
 pub(crate) struct AstInlineErrorVariantField {
-    name: Ident,
-    r#type: syn::TypePath,
+    pub(crate) name: Ident,
+    pub(crate) r#type: syn::TypePath,
 }
 
 impl Parse for AstInlineErrorVariantField {
