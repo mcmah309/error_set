@@ -389,6 +389,27 @@ impl From<jsonwebtoken::errors::Error> for FirebaseJwtVerifierCreationError {
 ```
 </details>
 
+Error sets also supports inline structs and custom display messages. Similiar to `thiserror`. Just
+add the `#[display(...)]` attribute to the variant.
+```rust
+error_set! {
+        SetX = {
+            #[display("My name is {} and my age is {}", name, age)]
+            A {
+                name: String,
+                age: u32,
+            },
+            #[display("This is the display message for B")]
+            B,
+            IoError(std::io::Error),
+        };
+        Y = {
+            C,
+        } || X;
+}
+```
+> Note: You can redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
+
 ### Feature Flags
 
 **coerce_macro:** Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
@@ -489,7 +510,7 @@ Given:
  With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
 </details>
 
-**tracing** / **log:**  
+**tracing** / **log**:
 Enables support for the `tracing` or `log` crates. Methods are added to `Result` and are executed when the `Result` is an `Err`. They work similarly to `anyhow`'s `.context(..)` method. e.g.
 ```rust
 let result: Result<(), &str> = Err("operation failed");
@@ -502,12 +523,19 @@ let value: Option<()> = result.consume_with_error(|err| format!("Operation faile
 result.swallow_info();
 result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 ```
+> Note: a `record_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
+> while a downstream binrary will ultimately decide the implementation.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
-If your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
+`error_set` can be thought of as a hybrid approach of `thiserror` and `anyhow` that solves a few more problems.
 
-However, for libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially if "mega enums" arise. 
+Like `thiserror`, `error_set` allows you define errors and their display messages concisely.
+
+Like `anyhow`, `error_set` attempts to capture the context around errors. To accomplish this, it uses the help of `tracing`/`log` crate. See the
+feature flags section for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
+
+For libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially if "mega enums" arise. `error_set` can help here where others can't.
 
 **What is a Mega Enum?**
 
@@ -529,5 +557,6 @@ If `func3` does not handle the errors from `func1` and `func2`, it must return a
 
 `error_set` allows you to define errors quickly and precisely. Correctly scoping errors is easy and no wrapping of
 various error enum types is necessary, just use `.into()` or `?` (or `coerce!` macro).
-This approach ensures that each function only deals with relevant error variants, avoiding the clutter and inefficiency of mega enums. 
+This approach ensures that each function only deals with relevant error variants, avoiding the clutter and inefficiency of mega enums.
+`error_set` also makes display messages and tracking context easy.
 By using `error_set`, your project can maintain clear and precise error definitions, enhancing code readability and maintainability without the tedious process of manually defining and managing error relations.

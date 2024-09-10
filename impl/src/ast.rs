@@ -301,7 +301,6 @@ impl std::hash::Hash for AstInlineErrorVariant {
     }
 }
 
-// todo add a note that an inline variant with fields can be compared but attributes and display are not used for equality
 impl PartialEq for AstInlineErrorVariant {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.fields == other.fields
