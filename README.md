@@ -389,8 +389,8 @@ impl From<jsonwebtoken::errors::Error> for FirebaseJwtVerifierCreationError {
 ```
 </details>
 
-Error sets also supports inline structs and custom display messages. Similar to `thiserror`. Just
-add the `#[display(...)]` attribute to the variant.
+Error sets also supports inline structs for passing error related data and custom display messages. 
+Just add the `#[display(...)]` attribute to the variant.
 ```rust
 error_set! {
     AuthError = {
@@ -427,7 +427,7 @@ fn main() {
 
 </details>
 
-> Note: You can redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
+> Note: You can even redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
 
 
 ### Feature Flags
