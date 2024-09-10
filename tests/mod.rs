@@ -390,6 +390,45 @@ pub mod documentation {
 }
 
 #[cfg(test)]
+pub mod value_variants {
+    use error_set::error_set;
+
+    error_set! {
+        X = {
+            IoError(std::io::Error),
+            // #[derive(Clone)]
+            #[display("My name is {}", name)]
+            B {
+                name: String
+            }
+        };
+        Y = {
+            A,
+        } || X;
+        Z = {
+            C {
+                val: i32
+            }
+        };
+    }
+
+    pub enum Test {
+        A,
+        B { name: String },
+    }
+
+    #[test]
+    fn test() {
+        let x = X::B {
+            name: "john".to_string(),
+        };
+        assert_eq!(x.to_string(), "My name is john".to_string());
+        let y: Y = x.into();
+        assert_eq!(y.to_string(), "My name is john".to_string());
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]
