@@ -487,7 +487,7 @@ pub mod documentation {
 }
 
 #[cfg(test)]
-pub mod value_variants {
+pub mod value_variants1 {
     use error_set::error_set;
 
     error_set! {
@@ -554,6 +554,11 @@ pub mod value_variants {
             "error `3` happened because `oops`".to_string()
         );
     }
+}
+
+    #[cfg(test)]
+pub mod value_variants2 {
+    use error_set::error_set;
 
     error_set! {
         AuthError = {
@@ -571,7 +576,7 @@ pub mod value_variants {
     }
     
     #[test]
-    fn from_readme() {
+    fn test() {
         let x: AuthError = AuthError::UserDoesNotExist {
             name: "john".to_string(),
             role: 30,
