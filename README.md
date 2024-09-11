@@ -548,14 +548,67 @@ result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
-`error_set` can be thought of as a hybrid approach of `thiserror` and `anyhow` that solves a few more problems.
+`error_set` is a unique approach with some of the same features of `thiserror` and `anyhow`, while solving a few more problems
+common to Rust developers.
 
-Like `thiserror`, `error_set` allows you define errors and their display messages concisely.
+Like `thiserror`, `error_set` allows you define errors, their display messages, and conversions between errors. However `error_set`
+is approximately 50% more concise more maintainable:
+
+<details>
+
+<summary>example</summary>
+
+```rust
+// thiserror
+#[derive(Error)]
+enum Error1 {
+    a,
+    b,
+}
+#[derive(Error)]
+enum Error2 {
+    c,
+    d,
+}
+#[derive(Error)]
+enum Error3 {
+    Error1(#[from] Error1),
+    Error2(#[from] Error2),
+}
+
+// error_set
+error_set! {
+    Error1 = {
+        a,
+        b
+    };
+    Error2 = {
+        c,
+        d
+    };
+  Error3 = Error1 || Error2;
+  // `Error3` above is equivalent to writing
+  // ```
+  // Error3 = {
+  //    a,
+  //    b,
+  //    c,
+  //    d
+  // };
+  // ```
+}
+```
+
+</details>
+
+With `error_set` there is no need to maintain a web of nested wrapped enums (with `#[from]`). With `error_set` there is no
+nesting and all the `From` implementations are automatically generated in one error type is a subset of another.
 
 Like `anyhow`, `error_set` attempts to capture the context around errors. To accomplish this, it uses the help of `tracing`/`log` crate. See the
 feature flags section for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
 
-For libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy, especially if "mega enums" arise. `error_set` can help here where others can't.
+For libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy
+as projects grow. This may even result in "mega enums". `error_set` can help here where others can't.
 
 **What is a Mega Enum?**
 
@@ -576,7 +629,6 @@ If `func3` does not handle the errors from `func1` and `func2`, it must return a
 **How `error_set` Simplifies Error Management:**
 
 `error_set` allows you to define errors quickly and precisely. Correctly scoping errors is easy and no wrapping of
-various error enum types is necessary, just use `.into()` or `?` (or `coerce!` macro).
-This approach ensures that each function only deals with relevant error variants, avoiding the clutter and inefficiency of mega enums.
+various error enum types is necessary. Conversions/Propagation up the stack are as simple as `.into()` or `?` (or `coerce!` macro).
 `error_set` also makes display messages and tracking context easy.
 By using `error_set`, your project can maintain clear and precise error definitions, enhancing code readability and maintainability without the tedious process of manually defining and managing error relations.
