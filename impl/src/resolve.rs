@@ -84,7 +84,10 @@ fn resolve_builders_helper<'a>(
             let ref_error_enum_index = match ref_error_enum_index {
                 Some(e) => e,
                 None => {
-                    return Err(syn::parse::Error::new_spanned(&ref_part, format!("Not a declared error set.")));
+                    return Err(syn::parse::Error::new_spanned(
+                        &ref_part,
+                        format!("Not a declared error set."),
+                    ));
                 }
             };
             if !error_enum_builders[ref_error_enum_index]
@@ -109,7 +112,6 @@ fn resolve_builders_helper<'a>(
     // Now that are refs are solved and included in this error_enum_builder's error_variants, return them.
     Ok(error_enum_builders[index].error_variants.clone())
 }
-
 
 struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
