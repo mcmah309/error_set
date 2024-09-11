@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 use coerce_macro::add_coerce_macro;
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
-use syn::{Attribute, Ident};
+use syn::{Attribute, Ident, Lit};
 
 use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
 
@@ -173,16 +173,29 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 if let Some(display) = &variant.display {
                     if variant.fields.is_empty() {
                         let tokens = &display.tokens;
-                        error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name =>  &*format!(#tokens),
-                        });
+                        if is_str_literal(tokens.clone()) {
+                            error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name =>  #tokens,
+                            });
+                        }
+                        else {
+                            error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name =>  &*format!(#tokens),
+                            });
+                        }
                     } else {
                         let field_names =
                             &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
                         let tokens = &display.tokens;
-                        error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name { #(ref #field_names),*  } =>  &*format!(#tokens),
-                        });
+                        if is_str_literal(tokens.clone()) {
+                            error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name { #(ref #field_names),*  } =>  #tokens,
+                            });
+                        } else {
+                            error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name { #(ref #field_names),*  } =>  &*format!(#tokens),
+                            });
+                        }
                     }
                 } else {
                     if variant.fields.is_empty() {
@@ -345,6 +358,17 @@ impl PartialEq for ErrorEnum {
     fn eq(&self, other: &Self) -> bool {
         self.error_name == other.error_name
     }
+}
+
+//************************************************************************//
+
+fn is_str_literal(input: TokenStream) -> bool {
+    if let Ok(expr) = syn::parse2::<Lit>(input) {
+        if let Lit::Str(_) = expr {
+            return true;
+        }
+    }
+    false
 }
 
 //************************************************************************//
