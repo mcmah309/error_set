@@ -552,7 +552,7 @@ result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 common to Rust developers.
 
 Like `thiserror`, `error_set` allows you define errors, their display messages, and conversions between errors. However `error_set`
-is approximately 50% more concise more maintainable:
+is approximately 50% more concise and maintainable:
 
 <details>
 
@@ -601,8 +601,7 @@ error_set! {
 
 </details>
 
-With `error_set` there is no need to maintain a web of nested wrapped enums (with `#[from]`). With `error_set` there is no
-nesting and all the `From` implementations are automatically generated in one error type is a subset of another.
+With `error_set` there is no need to maintain a web of nested wrapped enums (with `#[from]`), since there is no nesting, and all the `From` implementations are automatically generated if one error type is a subset of another.
 
 Like `anyhow`, `error_set` attempts to capture the context around errors. To accomplish this, it uses the help of `tracing`/`log` crate. See the
 feature flags section for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
