@@ -631,3 +631,8 @@ If `func3` does not handle the errors from `func1` and `func2`, it must return a
 various error enum types is necessary. Conversions/Propagation up the stack are as simple as `.into()` or `?` (or `coerce!` macro).
 `error_set` also makes display messages and tracking context easy.
 By using `error_set`, your project can maintain clear and precise error definitions, enhancing code readability and maintainability without the tedious process of manually defining and managing error relations.
+
+### no_std
+
+This crate supports `#![no_std]`. All code generated from `error_set!` supports  `#![no_std]` except if using custom `#![display(...)]`
+messages.
