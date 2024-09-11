@@ -1,7 +1,7 @@
 [package]
 name = "error_set"
 description = "An error set macro that simplifies error management by providing a streamlined method for defining errors and easily converting between them. Inspired by Zig's error set type."
-categories = ["rust-patterns"]
+categories = ["rust-patterns", "no-std"]
 keywords = ["error", "error-handling", "macro", "error-set"]
 version = "0.5.0"
 edition = "2021"
@@ -26,14 +26,15 @@ members = ["impl"]
 
 [features]
 default = []
+std = []
 # Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
 coerce_macro = ["error_set_impl/coerce_macro"]
 # Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
-tracing = ["dep:tracing"]
+tracing = ["std", "dep:tracing"]
 # Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
-log = ["dep:log"]
+log = ["std", "dep:log"]
 # Enables support for the log/tracing api, without pulling in either crate. Allowing a downstream to choose the appropriate crate.
-record_stub = []
+record_stub = ["std"]
 
 [package.metadata.docs.rs]
 all-features = false
