@@ -1,3 +1,4 @@
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
@@ -33,6 +34,7 @@ pub mod regular {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod empty_set {
     use error_set::error_set;
@@ -57,6 +59,7 @@ pub mod empty_set {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod only_empty_set {
     use error_set::error_set;
@@ -75,6 +78,7 @@ pub mod only_empty_set {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod error_sources_of_same_name {
     use error_set::error_set;
@@ -102,6 +106,7 @@ pub mod error_sources_of_same_name {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod error_sources_of_different_names {
     use error_set::error_set;
@@ -130,6 +135,7 @@ pub mod error_sources_of_different_names {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod readme_example {
     use error_set::{error_set, CoerceResult};
@@ -182,6 +188,7 @@ pub mod readme_example {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 pub mod readme_example_aggregation {
     use error_set::error_set;
@@ -223,6 +230,363 @@ pub mod readme_example_aggregation {
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
 }
+
+#[cfg(feature = "std")]
+#[cfg(test)]
+pub mod documentation {
+    use error_set::{error_set, CoerceResult};
+
+    error_set! {
+        /// This is a MediaError doc
+        MediaError = {
+            /// This is a variant IoError doc
+            IoError(std::io::Error)
+            } || BookParsingError || DownloadError || UploadError;
+        /// This is a BookParsingError doc
+        BookParsingError = {
+            /// This is a variant MissingDescriptionArg doc
+            MissingDescriptionArg
+        } || BookSectionParsingError;
+        /// This is a BookSectionParsingError doc
+        /// on two lines.
+        #[derive(Clone)]
+        BookSectionParsingError = {
+            /// This is a variant MissingNameArg doc
+            MissingNameArg,
+            /// This is a variant NoContents doc
+            /// on two lines.
+            NoContents,
+        };
+        /// This is a DownloadError doc
+        DownloadError = {
+            /// This is a variant CouldNotConnect doc
+            CouldNotConnect,
+            /// This is a variant OutOfMemory doc
+            OutOfMemory(std::io::Error),
+        };
+        /// This is a UploadError doc
+        UploadError = {
+            NoConnection(std::io::Error),
+        };
+    }
+
+    #[test]
+    fn test() {
+        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
+        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingNameArg
+        ));
+        let media_error: MediaError = book_parsing_error.into();
+        assert!(matches!(media_error, MediaError::MissingNameArg));
+
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
+        let result_media_error: Result<(), MediaError> = result_download_error.coerce();
+        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg(test)]
+pub mod value_variants1 {
+    use error_set::error_set;
+
+    error_set! {
+        X = {
+            IoError(std::io::Error),
+            #[display("My name is {}", name)]
+            B {
+                name: String
+            }
+        };
+        Y = {
+            A,
+        } || X || Z;
+        Z = {
+            C {
+                val: i32
+            },
+            #[display("This is some new display")]
+            D
+        };
+        XX = {
+            #[display("This message is different {}", name)]
+            B {
+                name: String
+            }
+        };
+        W = {
+            #[display("error `{}` happened because `{}`", error, reason)]
+            B {
+                error: usize,
+                reason: String
+            }
+        };
+    }
+
+    #[test]
+    fn test() {
+        let x = X::B {
+            name: "john".to_string(),
+        };
+        assert_eq!(x.to_string(), "My name is john".to_string());
+        let y: Y = x.into();
+        assert_eq!(y.to_string(), "My name is john".to_string());
+        let z = Z::D;
+        assert_eq!(z.to_string(), "This is some new display".to_string());
+        let y: Y = z.into();
+        assert_eq!(y.to_string(), "This is some new display".to_string());
+        let z = Z::C { val: 1 };
+        assert_eq!(z.to_string(), "Z::C".to_string());
+        let y: Y = z.into();
+        assert_eq!(y.to_string(), "Y::C".to_string());
+        let xx = XX::B {
+            name: "john".to_string(),
+        };
+        assert_eq!(xx.to_string(), "This message is different john".to_string());
+        let x: X = xx.into();
+        assert_eq!(x.to_string(), "My name is john".to_string());
+        let w: W = W::B {
+            error: 3,
+            reason: "oops".to_string(),
+        };
+        assert_eq!(
+            w.to_string(),
+            "error `3` happened because `oops`".to_string()
+        );
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg(test)]
+pub mod value_variants2 {
+    use error_set::error_set;
+
+    error_set! {
+        AuthError = {
+            #[display("User `{}` with role `{}` does not exist", name, role)]
+            UserDoesNotExist {
+                name: String,
+                role: u32,
+            },
+            #[display("The provided credentials are invalid")]
+            InvalidCredentials
+        };
+        LoginError = {
+            IoError(std::io::Error),
+        } || AuthError;
+    }
+    
+    #[test]
+    fn test() {
+        let x: AuthError = AuthError::UserDoesNotExist {
+            name: "john".to_string(),
+            role: 30,
+        };
+        assert_eq!(x.to_string(), "User `john` with role `30` does not exist".to_string());
+        let y: LoginError = x.into();
+        assert_eq!(y.to_string(), "User `john` with role `30` does not exist".to_string());
+        let x = AuthError::InvalidCredentials;
+        assert_eq!(x.to_string(), "The provided credentials are invalid".to_string());
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg(test)]
+pub mod should_not_compile_tests {
+
+    #[test]
+    fn depends_on_self() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/depends_on_itself.rs");
+    }
+
+    #[test]
+    fn multiple_same_sources() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/multiple_same_sources.rs");
+    }
+
+    #[test]
+    fn two_enums_same_name() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/two_enums_same_name.rs");
+    }
+
+    #[test]
+    fn recursive_dependency() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/recursive_dependency.rs");
+    }
+}
+
+#[cfg(feature = "tracing")]
+#[cfg(test)]
+mod tracing {
+    use error_set::RecordContext;
+    use tracing_test::traced_test;
+
+    #[traced_test]
+    #[test]
+    fn test_log_error() {
+        let result: Result<(), &str> = Err("error");
+        let _ = result.error("An error occurred");
+
+        assert!(logs_contain("An error occurred"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_warn() {
+        let result: Result<(), &str> = Err("warning");
+        let _ = result.warn("A warning occurred");
+
+        assert!(logs_contain("A warning occurred"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_info() {
+        let result: Result<(), &str> = Err("info");
+        let _ = result.info("An info message");
+
+        assert!(logs_contain("An info message"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_debug() {
+        let result: Result<(), &str> = Err("debug");
+        let _ = result.debug("A debug message");
+
+        assert!(logs_contain("A debug message"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_trace() {
+        let result: Result<(), &str> = Err("trace");
+        let _ = result.trace("A trace message");
+
+        assert!(logs_contain("A trace message"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_success() {
+        let result: Result<(), &str> = Ok(());
+        let _ = result.error("This should not log an error");
+
+        assert!(!logs_contain("This should not log an error"));
+    }
+}
+
+#[cfg(feature = "log")]
+#[cfg(test)]
+mod log {
+    use error_set::RecordContext;
+    use lazy_static::lazy_static;
+    use log::{Level, Metadata, Record};
+    use std::sync::{Arc, Mutex};
+
+    struct TestLogger {
+        logs: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl log::Log for TestLogger {
+        fn enabled(&self, metadata: &Metadata) -> bool {
+            metadata.level() <= Level::Trace
+        }
+
+        fn log(&self, record: &Record) {
+            if self.enabled(record.metadata()) {
+                let mut logs = self.logs.lock().unwrap();
+                logs.push(format!("{}", record.args()));
+            }
+        }
+
+        fn flush(&self) {}
+    }
+
+    lazy_static! {
+        static ref LOGS: Arc<Mutex<Vec<String>>> = {
+            let logs = Arc::new(Mutex::new(Vec::new()));
+            let test_logger = TestLogger { logs: logs.clone() };
+
+            log::set_boxed_logger(Box::new(test_logger)).unwrap();
+            log::set_max_level(log::LevelFilter::Trace);
+
+            logs
+        };
+    }
+
+    fn logs_contain(expected: &str) -> bool {
+        let logs = LOGS.lock().unwrap();
+        logs.iter().any(|log| log.contains(expected))
+    }
+
+    fn clear_logs() {
+        let mut logs = LOGS.lock().unwrap();
+        logs.clear();
+    }
+
+    #[test]
+    fn test_log_error() {
+        clear_logs();
+        let result: Result<(), &str> = Err("error");
+        let _ = result.error("An error occurred");
+
+        assert!(logs_contain("An error occurred"));
+    }
+
+    #[test]
+    fn test_log_warn() {
+        clear_logs();
+        let result: Result<(), &str> = Err("warning");
+        let _ = result.warn("A warning occurred");
+
+        assert!(logs_contain("A warning occurred"));
+    }
+
+    #[test]
+    fn test_log_info() {
+        clear_logs();
+        let result: Result<(), &str> = Err("info");
+        let _ = result.info("An info message");
+
+        assert!(logs_contain("An info message"));
+    }
+
+    #[test]
+    fn test_log_debug() {
+        clear_logs();
+        let result: Result<(), &str> = Err("debug");
+        let _ = result.debug("A debug message");
+
+        assert!(logs_contain("A debug message"));
+    }
+
+    #[test]
+    fn test_log_trace() {
+        clear_logs();
+        let result: Result<(), &str> = Err("trace");
+        let _ = result.trace("A trace message");
+
+        assert!(logs_contain("A trace message"));
+    }
+
+    #[test]
+    fn test_log_success() {
+        clear_logs();
+        let result: Result<(), &str> = Ok(());
+        let _ = result.error("This should not log an error");
+
+        assert!(!logs_contain("This should not log an error"));
+    }
+}
+
 
 #[cfg(feature = "coerce_macro")]
 #[cfg(test)]
@@ -427,357 +791,5 @@ pub mod coerce_macro_complex {
         assert_eq!(setx_to_sety_coerce_return(), SetY::A);
 
         assert_eq!(setx_result_to_sety_result().unwrap_err(), SetY::A);
-    }
-}
-
-#[cfg(test)]
-pub mod documentation {
-    use error_set::{error_set, CoerceResult};
-
-    error_set! {
-        /// This is a MediaError doc
-        MediaError = {
-            /// This is a variant IoError doc
-            IoError(std::io::Error)
-            } || BookParsingError || DownloadError || UploadError;
-        /// This is a BookParsingError doc
-        BookParsingError = {
-            /// This is a variant MissingDescriptionArg doc
-            MissingDescriptionArg
-        } || BookSectionParsingError;
-        /// This is a BookSectionParsingError doc
-        /// on two lines.
-        #[derive(Clone)]
-        BookSectionParsingError = {
-            /// This is a variant MissingNameArg doc
-            MissingNameArg,
-            /// This is a variant NoContents doc
-            /// on two lines.
-            NoContents,
-        };
-        /// This is a DownloadError doc
-        DownloadError = {
-            /// This is a variant CouldNotConnect doc
-            CouldNotConnect,
-            /// This is a variant OutOfMemory doc
-            OutOfMemory(std::io::Error),
-        };
-        /// This is a UploadError doc
-        UploadError = {
-            NoConnection(std::io::Error),
-        };
-    }
-
-    #[test]
-    fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingNameArg;
-        let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(
-            book_parsing_error,
-            BookParsingError::MissingNameArg
-        ));
-        let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingNameArg));
-
-        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
-        let result_media_error: Result<(), MediaError> = result_download_error.coerce();
-        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
-    }
-}
-
-#[cfg(test)]
-pub mod value_variants1 {
-    use error_set::error_set;
-
-    error_set! {
-        X = {
-            IoError(std::io::Error),
-            #[display("My name is {}", name)]
-            B {
-                name: String
-            }
-        };
-        Y = {
-            A,
-        } || X || Z;
-        Z = {
-            C {
-                val: i32
-            },
-            #[display("This is some new display")]
-            D
-        };
-        XX = {
-            #[display("This message is different {}", name)]
-            B {
-                name: String
-            }
-        };
-        W = {
-            #[display("error `{}` happened because `{}`", error, reason)]
-            B {
-                error: usize,
-                reason: String
-            }
-        };
-    }
-
-    #[test]
-    fn test() {
-        let x = X::B {
-            name: "john".to_string(),
-        };
-        assert_eq!(x.to_string(), "My name is john".to_string());
-        let y: Y = x.into();
-        assert_eq!(y.to_string(), "My name is john".to_string());
-        let z = Z::D;
-        assert_eq!(z.to_string(), "This is some new display".to_string());
-        let y: Y = z.into();
-        assert_eq!(y.to_string(), "This is some new display".to_string());
-        let z = Z::C { val: 1 };
-        assert_eq!(z.to_string(), "Z::C".to_string());
-        let y: Y = z.into();
-        assert_eq!(y.to_string(), "Y::C".to_string());
-        let xx = XX::B {
-            name: "john".to_string(),
-        };
-        assert_eq!(xx.to_string(), "This message is different john".to_string());
-        let x: X = xx.into();
-        assert_eq!(x.to_string(), "My name is john".to_string());
-        let w: W = W::B {
-            error: 3,
-            reason: "oops".to_string(),
-        };
-        assert_eq!(
-            w.to_string(),
-            "error `3` happened because `oops`".to_string()
-        );
-    }
-}
-
-    #[cfg(test)]
-pub mod value_variants2 {
-    use error_set::error_set;
-
-    error_set! {
-        AuthError = {
-            #[display("User `{}` with role `{}` does not exist", name, role)]
-            UserDoesNotExist {
-                name: String,
-                role: u32,
-            },
-            #[display("The provided credentials are invalid")]
-            InvalidCredentials
-        };
-        LoginError = {
-            IoError(std::io::Error),
-        } || AuthError;
-    }
-    
-    #[test]
-    fn test() {
-        let x: AuthError = AuthError::UserDoesNotExist {
-            name: "john".to_string(),
-            role: 30,
-        };
-        assert_eq!(x.to_string(), "User `john` with role `30` does not exist".to_string());
-        let y: LoginError = x.into();
-        assert_eq!(y.to_string(), "User `john` with role `30` does not exist".to_string());
-        let x = AuthError::InvalidCredentials;
-        assert_eq!(x.to_string(), "The provided credentials are invalid".to_string());
-    }
-}
-
-#[cfg(test)]
-pub mod should_not_compile_tests {
-
-    #[test]
-    fn depends_on_self() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/depends_on_itself.rs");
-    }
-
-    #[test]
-    fn multiple_same_sources() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/multiple_same_sources.rs");
-    }
-
-    #[test]
-    fn two_enums_same_name() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/two_enums_same_name.rs");
-    }
-
-    #[test]
-    fn recursive_dependency() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/recursive_dependency.rs");
-    }
-}
-
-#[cfg(feature = "tracing")]
-#[cfg(test)]
-mod tracing {
-    use error_set::RecordContext;
-    use tracing_test::traced_test;
-
-    #[traced_test]
-    #[test]
-    fn test_log_error() {
-        let result: Result<(), &str> = Err("error");
-        let _ = result.error("An error occurred");
-
-        assert!(logs_contain("An error occurred"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_warn() {
-        let result: Result<(), &str> = Err("warning");
-        let _ = result.warn("A warning occurred");
-
-        assert!(logs_contain("A warning occurred"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_info() {
-        let result: Result<(), &str> = Err("info");
-        let _ = result.info("An info message");
-
-        assert!(logs_contain("An info message"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_debug() {
-        let result: Result<(), &str> = Err("debug");
-        let _ = result.debug("A debug message");
-
-        assert!(logs_contain("A debug message"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_trace() {
-        let result: Result<(), &str> = Err("trace");
-        let _ = result.trace("A trace message");
-
-        assert!(logs_contain("A trace message"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_success() {
-        let result: Result<(), &str> = Ok(());
-        let _ = result.error("This should not log an error");
-
-        assert!(!logs_contain("This should not log an error"));
-    }
-}
-
-#[cfg(feature = "log")]
-#[cfg(test)]
-mod log {
-    use error_set::RecordContext;
-    use lazy_static::lazy_static;
-    use log::{Level, Metadata, Record};
-    use std::sync::{Arc, Mutex};
-
-    struct TestLogger {
-        logs: Arc<Mutex<Vec<String>>>,
-    }
-
-    impl log::Log for TestLogger {
-        fn enabled(&self, metadata: &Metadata) -> bool {
-            metadata.level() <= Level::Trace
-        }
-
-        fn log(&self, record: &Record) {
-            if self.enabled(record.metadata()) {
-                let mut logs = self.logs.lock().unwrap();
-                logs.push(format!("{}", record.args()));
-            }
-        }
-
-        fn flush(&self) {}
-    }
-
-    lazy_static! {
-        static ref LOGS: Arc<Mutex<Vec<String>>> = {
-            let logs = Arc::new(Mutex::new(Vec::new()));
-            let test_logger = TestLogger { logs: logs.clone() };
-
-            log::set_boxed_logger(Box::new(test_logger)).unwrap();
-            log::set_max_level(log::LevelFilter::Trace);
-
-            logs
-        };
-    }
-
-    fn logs_contain(expected: &str) -> bool {
-        let logs = LOGS.lock().unwrap();
-        logs.iter().any(|log| log.contains(expected))
-    }
-
-    fn clear_logs() {
-        let mut logs = LOGS.lock().unwrap();
-        logs.clear();
-    }
-
-    #[test]
-    fn test_log_error() {
-        clear_logs();
-        let result: Result<(), &str> = Err("error");
-        let _ = result.error("An error occurred");
-
-        assert!(logs_contain("An error occurred"));
-    }
-
-    #[test]
-    fn test_log_warn() {
-        clear_logs();
-        let result: Result<(), &str> = Err("warning");
-        let _ = result.warn("A warning occurred");
-
-        assert!(logs_contain("A warning occurred"));
-    }
-
-    #[test]
-    fn test_log_info() {
-        clear_logs();
-        let result: Result<(), &str> = Err("info");
-        let _ = result.info("An info message");
-
-        assert!(logs_contain("An info message"));
-    }
-
-    #[test]
-    fn test_log_debug() {
-        clear_logs();
-        let result: Result<(), &str> = Err("debug");
-        let _ = result.debug("A debug message");
-
-        assert!(logs_contain("A debug message"));
-    }
-
-    #[test]
-    fn test_log_trace() {
-        clear_logs();
-        let result: Result<(), &str> = Err("trace");
-        let _ = result.trace("A trace message");
-
-        assert!(logs_contain("A trace message"));
-    }
-
-    #[test]
-    fn test_log_success() {
-        clear_logs();
-        let result: Result<(), &str> = Ok(());
-        let _ = result.error("This should not log an error");
-
-        assert!(!logs_contain("This should not log an error"));
     }
 }

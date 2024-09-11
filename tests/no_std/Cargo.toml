@@ -1,0 +1,11 @@
+[package]
+name = "no_std"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+error_set = { path = "../.." }
+
+[[bin]]
+name = "no_std"
+path = "main.rs"
