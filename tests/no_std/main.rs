@@ -1,9 +1,29 @@
 #![no_std]
+#![no_main]
 
 use error_set::{error_set, CoerceResult};
 
-fn main() {
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
     readme_example();
+    exit(0);
+}
+
+fn exit(code: i32) -> ! {
+    unsafe {
+        core::arch::asm!(
+            "mov rax, 60",  // Syscall number for exit
+            "mov rdi, {0}", // Exit code
+            "syscall",      // Trigger the syscall
+            in(reg) code,
+            options(noreturn)
+        );
+    }
+}
+
+#[panic_handler]
+fn panic(_info: &core::panic::PanicInfo) -> ! {
+    exit(1);
 }
 
 //************************************************************************//
@@ -40,7 +60,7 @@ error_set! {
     };
 }
 
-struct TestError(u32);
+pub struct TestError(u32);
 
 impl TestError {
     pub fn new(code: u32) -> Self {

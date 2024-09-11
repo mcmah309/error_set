@@ -10,6 +10,7 @@ error_set = { path = "../.." }
 name = "no_std"
 path = "main.rs"
 
+
 [profile.dev]
 panic = "abort"
 
