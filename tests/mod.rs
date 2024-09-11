@@ -1,4 +1,4 @@
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
@@ -34,7 +34,7 @@ pub mod regular {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod empty_set {
     use error_set::error_set;
@@ -59,7 +59,7 @@ pub mod empty_set {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod only_empty_set {
     use error_set::error_set;
@@ -78,7 +78,7 @@ pub mod only_empty_set {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod error_sources_of_same_name {
     use error_set::error_set;
@@ -106,7 +106,7 @@ pub mod error_sources_of_same_name {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod error_sources_of_different_names {
     use error_set::error_set;
@@ -135,7 +135,7 @@ pub mod error_sources_of_different_names {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod readme_example {
     use error_set::{error_set, CoerceResult};
@@ -188,7 +188,7 @@ pub mod readme_example {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod readme_example_aggregation {
     use error_set::error_set;
@@ -231,7 +231,7 @@ pub mod readme_example_aggregation {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod documentation {
     use error_set::{error_set, CoerceResult};
@@ -288,7 +288,7 @@ pub mod documentation {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod value_variants1 {
     use error_set::error_set;
@@ -359,7 +359,7 @@ pub mod value_variants1 {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod value_variants2 {
     use error_set::error_set;
@@ -393,7 +393,7 @@ pub mod value_variants2 {
     }
 }
 
-#[cfg(feature = "std")]
+
 #[cfg(test)]
 pub mod should_not_compile_tests {
 

@@ -25,8 +25,7 @@ lazy_static = "1"
 members = ["impl", "tests/no_std"]
 
 [features]
-default = ["std"]
-std = []
+default = []
 # Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
 coerce_macro = ["error_set_impl/coerce_macro"]
 # Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
