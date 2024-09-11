@@ -552,7 +552,7 @@ result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 common to Rust developers.
 
 Like `thiserror`, `error_set` allows you define errors, their display messages, and conversions between errors. However `error_set`
-is approximately 50% more concise and maintainable:
+is more maintainable and approximately 50% more concise:
 
 <details>
 
