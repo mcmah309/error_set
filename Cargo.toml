@@ -23,7 +23,7 @@ lazy_static = "1"
 
 [workspace]
 members = ["impl"]
-exclude = ["tests/no_std"]
+exclude = ["test_no_std"]
 
 [features]
 default = []
