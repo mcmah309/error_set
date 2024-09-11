@@ -22,10 +22,10 @@ tracing-test = { version = "0.2", features = ["no-env-filter"] }
 lazy_static = "1"
 
 [workspace]
-members = ["impl"]
+members = ["impl", "tests/no_std"]
 
 [features]
-default = []
+default = ["std"]
 std = []
 # Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
 coerce_macro = ["error_set_impl/coerce_macro"]

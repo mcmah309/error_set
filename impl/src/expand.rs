@@ -129,8 +129,8 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     if has_source_match_branches {
         token_stream.append_all(quote::quote! {
             #[allow(unused_qualifications)]
-            impl std::error::Error for #enum_name {
-                fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            impl core::error::Error for #enum_name {
+                fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
                     match *self {
                         #source_match_branches
                         #[allow(unreachable_patterns)]
@@ -142,7 +142,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     } else {
         token_stream.append_all(quote::quote! {
             #[allow(unused_qualifications)]
-            impl std::error::Error for #enum_name {}
+            impl core::error::Error for #enum_name {}
         });
     }
 }
@@ -333,8 +333,8 @@ pub(crate) struct ErrorEnum {
     pub(crate) error_variants: Vec<AstErrorEnumVariant>,
 }
 
-impl std::hash::Hash for ErrorEnum {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl core::hash::Hash for ErrorEnum {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.error_name.hash(state);
     }
 }
