@@ -124,7 +124,9 @@ error_set! {
 
 
 fn display() {
-    // Seems to always seg fault for some reason
+    // `heapless` and/or `write!` Seems to always seg fault for some reason. e.g.
+    // let mut buf: heapless::String<300> = heapless::String::new();
+    // write!(buf, "this").unwrap();
 
     // let x: AuthError2 = AuthError2::UserDoesNotExist {
     //     name: 1,
