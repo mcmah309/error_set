@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 error_set = { path = "../" }
+heapless = "0.8"
 
 [[bin]]
 name = "no_std"

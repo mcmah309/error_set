@@ -22,8 +22,8 @@ tracing-test = { version = "0.2", features = ["no-env-filter"] }
 lazy_static = "1"
 
 [workspace]
-members = ["impl"]
-exclude = ["test_no_std"]
+members = ["impl", "test_no_std"]
+
 
 [features]
 default = []
