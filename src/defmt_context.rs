@@ -43,7 +43,7 @@ pub trait ResultContext<T, E>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Debug] format when an [Err] is encountered.
-pub trait ConsumeDebug<T, E>: sealed::Sealed {
+pub trait ConsumeDebug<T>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
@@ -57,7 +57,7 @@ pub trait ConsumeDebug<T, E>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
-pub trait ConsumeDisplay<T, E>: sealed::Sealed {
+pub trait ConsumeDisplay<T>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
@@ -242,7 +242,7 @@ impl<T, E> ResultContext<T, E> for Result<T, E> {
     }
 }
 
-impl<T, E> ConsumeDebug<T, E> for Result<T, E>
+impl<T, E> ConsumeDebug<T> for Result<T, E>
 where
     E: Format,
 {
@@ -307,7 +307,7 @@ where
     }
 }
 
-impl<T, E> ConsumeDisplay<T, E> for Result<T, E>
+impl<T, E> ConsumeDisplay<T> for Result<T, E>
 where
     E: Format,
 {
