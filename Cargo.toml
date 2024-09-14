@@ -34,7 +34,7 @@ tracing = ["dep:tracing"]
 # Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
 log = ["dep:log"]
 # Enables support for the log/tracing api, without pulling in either crate. Allowing a downstream to choose the appropriate crate.
-record_stub = []
+context_stub = []
 
 [package.metadata.docs.rs]
 all-features = false

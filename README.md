@@ -543,7 +543,7 @@ let value: Option<()> = result.consume_with_error(|err| format!("Operation faile
 result.swallow_info();
 result.swallow_with_debug(|err| format!("Debug info: {:?}", err));
 ```
-> Note: a `record_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
+> Note: a `context_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
 > while a downstream binrary will ultimately decide the implementation.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`

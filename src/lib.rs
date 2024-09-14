@@ -1,11 +1,11 @@
-#![cfg_attr(not(any(test, feature = "tracing", feature = "log", feature = "record_stub")), no_std)]
+#![cfg_attr(not(any(test, feature = "tracing", feature = "log", feature = "context_stub")), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
-#[cfg(any(feature = "tracing", feature = "log", feature = "record_stub"))]
-mod record;
-#[cfg(any(feature = "tracing", feature = "log", feature = "record_stub"))]
-pub use record::*;
+#[cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))]
+mod context;
+#[cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))]
+pub use context::*;
 #[cfg(all(feature = "tracing", feature = "log"))]
 compile_error!("Features 'tracing' and 'log' cannot be enabled at the same time.");
 
