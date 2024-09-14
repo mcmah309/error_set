@@ -36,17 +36,6 @@ pub trait ResultContext<T, E> {
     fn consume_with_debug<F: FnOnce(E) -> D, D: Format>(self, f: F) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "trace" with the result of [f].
     fn consume_with_trace<F: FnOnce(E) -> D, D: Format>(self, f: F) -> Option<T>;
-
-    /// Swallows the Result. if [Err], logging as an "error" with the result of [f].
-    fn swallow_with_error<F: FnOnce(E) -> D, D: Format>(self, f: F);
-    /// Swallows the Result. if [Err], logging as an "warn" with the result of [f].
-    fn swallow_with_warn<F: FnOnce(E) -> D, D: Format>(self, f: F);
-    /// Swallows the Result. if [Err], logging as an "info" with the result of [f].
-    fn swallow_with_info<F: FnOnce(E) -> D, D: Format>(self, f: F);
-    /// Swallows the Result. if [Err], logging as an "debug" with the result of [f].
-    fn swallow_with_debug<F: FnOnce(E) -> D, D: Format>(self, f: F);
-    /// Swallows the Result. if [Err], logging as an "trace" with the result of [f].
-    fn swallow_with_trace<F: FnOnce(E) -> D, D: Format>(self, f: F);
 }
 
 /// For logging a [Result] when an [Err] is encountered and [Result] implements [Debug].
@@ -61,17 +50,6 @@ pub trait ResultContextDebug<T, E>: ResultContext<T, E> {
     fn consume_debug(self) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "trace".
     fn consume_trace(self) -> Option<T>;
-
-    /// Swallows the Result. if [Err], logging as an "error".
-    fn swallow_error(self);
-    /// Swallows the Result. if [Err], logging as an "warn".
-    fn swallow_warn(self);
-    /// Swallows the Result. if [Err], logging as an "info".
-    fn swallow_info(self);
-    /// Swallows the Result. if [Err], logging as an "debug".
-    fn swallow_debug(self);
-    /// Swallows the Result. if [Err], logging as an "trace".
-    fn swallow_trace(self);
 }
 
 /// For logging when a [None] is encountered.
@@ -243,43 +221,6 @@ impl<T, E> ResultContext<T, E> for Result<T, E> {
             }
         }
     }
-
-    //************************************************************************//
-
-    #[inline]
-    fn swallow_with_error<F: FnOnce(E) -> D, D: Format>(self, f: F) {
-        if let Err(err) = self {
-            defmt::error!("{}", f(err));
-        }
-    }
-
-    #[inline]
-    fn swallow_with_warn<F: FnOnce(E) -> D, D: Format>(self, f: F) {
-        if let Err(err) = self {
-            defmt::warn!("{}", f(err));
-        }
-    }
-
-    #[inline]
-    fn swallow_with_info<F: FnOnce(E) -> D, D: Format>(self, f: F) {
-        if let Err(err) = self {
-            defmt::info!("{}", f(err));
-        }
-    }
-
-    #[inline]
-    fn swallow_with_debug<F: FnOnce(E) -> D, D: Format>(self, f: F) {
-        if let Err(err) = self {
-            defmt::debug!("{}", f(err));
-        }
-    }
-
-    #[inline]
-    fn swallow_with_trace<F: FnOnce(E) -> D, D: Format>(self, f: F) {
-        if let Err(err) = self {
-            defmt::trace!("{}", f(err));
-        }
-    }
 }
 
 impl<T, E> ResultContextDebug<T, E> for Result<T, E>
@@ -343,43 +284,6 @@ where
 
                 None
             }
-        }
-    }
-
-    //************************************************************************//
-
-    #[inline]
-    fn swallow_error(self) {
-        if let Err(err) = self {
-            defmt::error!("{:?}", err);
-        }
-    }
-
-    #[inline]
-    fn swallow_warn(self) {
-        if let Err(err) = self {
-            defmt::warn!("{:?}", err);
-        }
-    }
-
-    #[inline]
-    fn swallow_info(self) {
-        if let Err(err) = self {
-            defmt::info!("{:?}", err);
-        }
-    }
-
-    #[inline]
-    fn swallow_debug(self) {
-        if let Err(err) = self {
-            defmt::debug!("{:?}", err);
-        }
-    }
-
-    #[inline]
-    fn swallow_trace(self) {
-        if let Err(err) = self {
-            defmt::trace!("{:?}", err);
         }
     }
 }

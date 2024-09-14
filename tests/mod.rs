@@ -540,8 +540,6 @@ mod tracing {
 
     // todo implement consume_with tests
 
-    // todo implement swallow_with tests
-
     //************************************************************************//
 
     #[traced_test]
@@ -587,53 +585,6 @@ mod tracing {
         let _ = result.consume_trace();
 
         assert!(logs_contain("trace consumed"));
-    }
-
-    //************************************************************************//
-
-    #[traced_test]
-    #[test]
-    fn test_log_swallow_error() {
-        let result: Result<(), &str> = Err("error swallowed");
-        let _ = result.swallow_error();
-
-        assert!(logs_contain("error swallowed"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_swallow_warn() {
-        let result: Result<(), &str> = Err("warning swallowed");
-        let _ = result.swallow_warn();
-
-        assert!(logs_contain("warning swallowed"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_swallow_info() {
-        let result: Result<(), &str> = Err("info swallowed");
-        let _ = result.swallow_info();
-
-        assert!(logs_contain("info swallowed"));
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_swallow_debug() {
-        let result: Result<(), &str> = Err("debug swallowed");
-        let _ = result.swallow_debug();
-
-        assert!(logs_contain("debug swallowed"));   
-    }
-
-    #[traced_test]
-    #[test]
-    fn test_log_swallow_trace() {
-        let result: Result<(), &str> = Err("trace swallowed");
-        let _ = result.swallow_trace();
-
-        assert!(logs_contain("trace swallowed"));
     }
 }
 
