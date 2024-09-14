@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 pub mod regular {
     use error_set::error_set;
@@ -34,7 +33,6 @@ pub mod regular {
     }
 }
 
-
 #[cfg(test)]
 pub mod empty_set {
     use error_set::error_set;
@@ -59,7 +57,6 @@ pub mod empty_set {
     }
 }
 
-
 #[cfg(test)]
 pub mod only_empty_set {
     use error_set::error_set;
@@ -77,7 +74,6 @@ pub mod only_empty_set {
         let _empty2 = SetLevelError::EmptySet2;
     }
 }
-
 
 #[cfg(test)]
 pub mod error_sources_of_same_name {
@@ -106,7 +102,6 @@ pub mod error_sources_of_same_name {
     }
 }
 
-
 #[cfg(test)]
 pub mod error_sources_of_different_names {
     use error_set::error_set;
@@ -134,7 +129,6 @@ pub mod error_sources_of_different_names {
         let _set: SetLevelError = y.into();
     }
 }
-
 
 #[cfg(test)]
 pub mod readme_example {
@@ -188,7 +182,6 @@ pub mod readme_example {
     }
 }
 
-
 #[cfg(test)]
 pub mod readme_example_aggregation {
     use error_set::error_set;
@@ -230,7 +223,6 @@ pub mod readme_example_aggregation {
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
 }
-
 
 #[cfg(test)]
 pub mod documentation {
@@ -287,7 +279,6 @@ pub mod documentation {
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
 }
-
 
 #[cfg(test)]
 pub mod value_variants1 {
@@ -359,7 +350,6 @@ pub mod value_variants1 {
     }
 }
 
-
 #[cfg(test)]
 pub mod value_variants2 {
     use error_set::error_set;
@@ -378,21 +368,29 @@ pub mod value_variants2 {
             IoError(std::io::Error),
         } || AuthError;
     }
-    
+
     #[test]
     fn test() {
         let x: AuthError = AuthError::UserDoesNotExist {
             name: "john".to_string(),
             role: 30,
         };
-        assert_eq!(x.to_string(), "User `john` with role `30` does not exist".to_string());
+        assert_eq!(
+            x.to_string(),
+            "User `john` with role `30` does not exist".to_string()
+        );
         let y: LoginError = x.into();
-        assert_eq!(y.to_string(), "User `john` with role `30` does not exist".to_string());
+        assert_eq!(
+            y.to_string(),
+            "User `john` with role `30` does not exist".to_string()
+        );
         let x = AuthError::InvalidCredentials;
-        assert_eq!(x.to_string(), "The provided credentials are invalid".to_string());
+        assert_eq!(
+            x.to_string(),
+            "The provided credentials are invalid".to_string()
+        );
     }
 }
-
 
 #[cfg(test)]
 pub mod should_not_compile_tests {
@@ -425,7 +423,7 @@ pub mod should_not_compile_tests {
 #[cfg(feature = "tracing")]
 #[cfg(test)]
 mod tracing {
-    use error_set::RecordContext;
+    use error_set::{ResultContext, ResultContextDebug};
     use tracing_test::traced_test;
 
     #[traced_test]
@@ -480,6 +478,162 @@ mod tracing {
         let _ = result.error("This should not log an error");
 
         assert!(!logs_contain("This should not log an error"));
+    }
+
+    //************************************************************************//
+
+    #[traced_test]
+    #[test]
+    fn test_log_with_error() {
+        let result: Result<(), &str> = Err("error");
+        let _ = result.with_error(|e| format!("An error occurred `{}`", e));
+
+        assert!(logs_contain("An error occurred `error`"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_with_warn() {
+        let result: Result<(), u32> = Err(10);
+        let _ = result.with_warn(|e| format!("A warning occurred `{}`", e));
+
+        assert!(logs_contain("A warning occurred `10`"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_with_info() {
+        let result: Result<(), &str> = Err("info");
+        let _ = result.with_info(|e| format!("An info message `{}`", e));
+
+        assert!(logs_contain("An info message `info`"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_with_debug() {
+        let result: Result<(), &str> = Err("debug");
+        let _ = result.with_debug(|e| format!("A debug message `{}`", e));
+
+        assert!(logs_contain("A debug message `debug`"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_with_trace() {
+        let result: Result<(), &str> = Err("trace");
+        let _ = result.with_trace(|e| format!("A trace message `{}`", e));
+
+        assert!(logs_contain("A trace message `trace`"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_with_success() {
+        let result: Result<(), &str> = Ok(());
+        let _ = result.with_error(|_| "This should not log an error");
+
+        assert!(!logs_contain("This should not log an error"));
+    }
+
+    //************************************************************************//
+
+    // todo implement consume_with tests
+
+    // todo implement swallow_with tests
+
+    //************************************************************************//
+
+    #[traced_test]
+    #[test]
+    fn test_log_consume_error() {
+        let result: Result<(), &str> = Err("error consumed");
+        let _ = result.consume_error();
+
+        assert!(logs_contain("error consumed"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_consume_warn() {
+        let result: Result<(), &str> = Err("warning consumed");
+        let _ = result.consume_warn();
+
+        assert!(logs_contain("warning consumed"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_consume_info() {
+        let result: Result<(), &str> = Err("info consumed");
+        let _ = result.consume_info();
+
+        assert!(logs_contain("info consumed"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_consume_debug() {
+        let result: Result<(), &str> = Err("debug consumed");
+        let _ = result.consume_debug();
+
+        assert!(logs_contain("debug consumed"));   
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_consume_trace() {
+        let result: Result<(), &str> = Err("trace consumed");
+        let _ = result.consume_trace();
+
+        assert!(logs_contain("trace consumed"));
+    }
+
+    //************************************************************************//
+
+    #[traced_test]
+    #[test]
+    fn test_log_swallow_error() {
+        let result: Result<(), &str> = Err("error swallowed");
+        let _ = result.swallow_error();
+
+        assert!(logs_contain("error swallowed"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_swallow_warn() {
+        let result: Result<(), &str> = Err("warning swallowed");
+        let _ = result.swallow_warn();
+
+        assert!(logs_contain("warning swallowed"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_swallow_info() {
+        let result: Result<(), &str> = Err("info swallowed");
+        let _ = result.swallow_info();
+
+        assert!(logs_contain("info swallowed"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_swallow_debug() {
+        let result: Result<(), &str> = Err("debug swallowed");
+        let _ = result.swallow_debug();
+
+        assert!(logs_contain("debug swallowed"));   
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_log_swallow_trace() {
+        let result: Result<(), &str> = Err("trace swallowed");
+        let _ = result.swallow_trace();
+
+        assert!(logs_contain("trace swallowed"));
     }
 }
 
@@ -586,7 +740,6 @@ mod log {
         assert!(!logs_contain("This should not log an error"));
     }
 }
-
 
 #[cfg(feature = "coerce_macro")]
 #[cfg(test)]
