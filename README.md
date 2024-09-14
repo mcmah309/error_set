@@ -530,8 +530,8 @@ Given:
  With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
 </details>
 
-**tracing** / **log**:
-Enables support for the `tracing` or `log` crates. Methods are added to `Result` and are executed when the `Result` is an `Err`. They work similarly to `anyhow`'s `.context(..)` method. e.g.
+**tracing** / **log** / **defmt** :
+Enables support for the `tracing` or `log` or `defmt` crates. Methods are added to `Result` and are executed when the `Result` is an `Err` for logging purposes. They work similarly to `anyhow`'s `.context(..)` method. e.g.
 ```rust
 let result: Result<(), &str> = Err("operation failed");
 
@@ -638,4 +638,4 @@ This crate supports `#![no_std]`.
 
 Cavets:
  - Custom `#![display(...)]` messages that include fields are not supported.
- - tracing/logging features are not supported.
+ - `tracing`/`log` features are not supported, but `defmt` is supported.
