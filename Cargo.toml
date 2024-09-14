@@ -15,6 +15,7 @@ error_set_impl = { version = "=0.5.4", path = "impl" }
 # features
 tracing = { version = "0.1", optional = true }
 log = { version = "0.4", optional = true }
+defmt = { version = "0.3", optional = true }
 
 [dev-dependencies]
 trybuild = "^1.0.91"
@@ -33,6 +34,8 @@ coerce_macro = ["error_set_impl/coerce_macro"]
 tracing = ["dep:tracing"]
 # Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
 log = ["dep:log"]
+# Enables support for the defmt crate, which works with no_std. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+defmt = ["dep:defmt"]
 # Enables support for the log/tracing api, without pulling in either crate. Allowing a downstream to choose the appropriate crate.
 context_stub = []
 

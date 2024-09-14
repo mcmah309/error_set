@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 
-use std::fmt::Debug;
-use std::fmt::Display;
+use core::fmt::Debug;
+use core::fmt::Display;
 
 /// For logging a [Result] when an [Err] is encountered.
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log"))))]

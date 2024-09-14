@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use error_set::{error_set, CoerceResult};
+use error_set::{error_set, CoerceResult, ResultContext};
 use core::fmt::Write;
 
 
@@ -9,6 +9,7 @@ use core::fmt::Write;
 pub extern "C" fn _start() -> ! {
     readme_example();
     display();
+    log();
     exit(0);
 }
 
@@ -143,4 +144,11 @@ fn display() {
     // let mut buf: heapless::String<300> = heapless::String::new();
     // write!(buf, "{}", x).unwrap();
     // assert_eq!(buf.as_str(), "The provided credentials are invalid");
+}
+
+//************************************************************************//
+
+fn log() {
+    // let x: Result<u32, &str> = Err("error value");
+    // x.error("context around");
 }

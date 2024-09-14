@@ -1,4 +1,4 @@
-#![cfg_attr(not(any(test, feature = "tracing", feature = "log", feature = "context_stub")), no_std)]
+#![cfg_attr(not(any(test, feature = "tracing", feature = "log")), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 
@@ -6,8 +6,24 @@
 mod context;
 #[cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))]
 pub use context::*;
+
+#[cfg(feature = "defmt")]
+mod defmt_context;
+#[cfg(feature = "defmt")]
+pub use defmt_context::*;
+
 #[cfg(all(feature = "tracing", feature = "log"))]
 compile_error!("Features 'tracing' and 'log' cannot be enabled at the same time.");
+#[cfg(all(feature = "tracing", feature = "defmt"))]
+compile_error!("Features 'tracing' and 'defmt' cannot be enabled at the same time.");
+#[cfg(all(feature = "log", feature = "defmt"))]
+compile_error!("Features 'log' and 'defmt' cannot be enabled at the same time.");
+#[cfg(all(feature = "tracing", feature = "context_stub"))]
+compile_error!("Features 'tracing' and 'context_stub' cannot be enabled at the same time.");
+#[cfg(all(feature = "log", feature = "context_stub"))]
+compile_error!("Features 'log' and 'context_stub' cannot be enabled at the same time.");
+#[cfg(all(feature = "defmt", feature = "context_stub"))]
+compile_error!("Features 'defmt' and 'context_stub' cannot be enabled at the same time.");
 
 pub use error_set_impl::*;
 
