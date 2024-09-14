@@ -640,7 +640,7 @@ mod tracing {
 #[cfg(feature = "log")]
 #[cfg(test)]
 mod log {
-    use error_set::RecordContext;
+    use error_set::ResultContext;
     use lazy_static::lazy_static;
     use log::{Level, Metadata, Record};
     use std::sync::{Arc, Mutex};
