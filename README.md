@@ -535,14 +535,14 @@ Enables support for the `tracing` or `log` or `defmt` crates. Methods are added 
 ```rust
 let result: Result<(), &str> = Err("operation failed");
 
-let value: Result<(), &str> = result.error("This is an error logged via tracing/log if `Err`");
-let value: Result<(), &str> = result.warn("This is a warning logged via tracing/log if `Err`");
+let value: Result<(), &str> = result.error("This is an error logged via tracing/log/defmt if `Err`");
+let value: Result<(), &str> = result.warn("This is a warning logged via tracing/log/defmt if `Err`");
 let value: Result<(), &str> = result.with_debug(|err| format!("Operation failed due to: {}", err));
 let value: Option<()> = result.consume_info();
 let value: Option<()> = result.consume_with_trace(|err| format!("Operation failed due to: {}", err));
 ```
 > Note: a `context_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
-> while a downstream binrary will ultimately decide the implementation.
+> while a downstream binrary can ultimately decide the implementation.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
