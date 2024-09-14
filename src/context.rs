@@ -3,9 +3,13 @@
 use core::fmt::Debug;
 use core::fmt::Display;
 
+mod sealed {
+    pub trait Sealed {}
+}
+
 /// For logging a [Result] when an [Err] is encountered.
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log"))))]
-pub trait ResultContext<T, E> {
+pub trait ResultContext<T, E>: sealed::Sealed {
     /// Log the context as an "error" if the Result is an [Err].
     fn error(self, context: impl Display) -> Result<T, E>;
     /// Log the context as an "warn" if the Result is an [Err].
@@ -40,9 +44,24 @@ pub trait ResultContext<T, E> {
     fn consume_with_trace<F: FnOnce(E) -> D, D: Display>(self, f: F) -> Option<T>;
 }
 
-/// For logging a [Result] when an [Err] is encountered and [Result] implements [Debug].
+/// For logging a [Result]'s [Err] in the [Debug] format when an [Err] is encountered.
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log"))))]
-pub trait ResultContextDebug<T, E>: ResultContext<T, E> {
+pub trait ConsumeDebug<T, E>: sealed::Sealed {
+    /// Consumes the [Err] of a Result. if [Err], logging as an "error".
+    fn consume_error(self) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
+    fn consume_warn(self) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "info".
+    fn consume_info(self) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "debug".
+    fn consume_debug(self) -> Option<T>;
+    /// Consumes the [Err] of a Result. if [Err], logging as an "trace".
+    fn consume_trace(self) -> Option<T>;
+}
+
+/// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
+#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log"))))]
+pub trait ConsumeDisplay<T, E>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
@@ -57,7 +76,7 @@ pub trait ResultContextDebug<T, E>: ResultContext<T, E> {
 
 /// For logging when a [None] is encountered.
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log"))))]
-pub trait OptionContext<T> {
+pub trait OptionContext<T>: sealed::Sealed {
     /// Log the context as an "error" if the Option is [None].
     fn error(self, context: impl Display) -> Option<T>;
     /// Log the context as an "warn" if the Option is [None].
@@ -81,7 +100,8 @@ pub trait OptionContext<T> {
     fn with_trace<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
 }
 
-impl<T, E> ResultContext<T,E> for Result<T, E> {
+impl<T, E> sealed::Sealed for Result<T, E> {}
+impl<T, E> ResultContext<T, E> for Result<T, E> {
     #[inline]
     fn error(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
@@ -267,7 +287,7 @@ impl<T, E> ResultContext<T,E> for Result<T, E> {
     }
 }
 
-impl<T, E> ResultContextDebug<T,E> for Result<T, E>
+impl<T, E> ConsumeDebug<T, E> for Result<T, E>
 where
     E: Debug,
 {
@@ -342,8 +362,84 @@ where
     }
 }
 
+impl<T, E> ConsumeDisplay<T, E> for Result<T, E>
+where
+    E: Display,
+{
+    #[inline]
+    fn consume_error(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::error!("{}", err);
+                #[cfg(feature = "log")]
+                log::error!("{}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_warn(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::warn!("{}", err);
+                #[cfg(feature = "log")]
+                log::warn!("{}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_info(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::info!("{}", err);
+                #[cfg(feature = "log")]
+                log::info!("{}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_debug(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::debug!("{}", err);
+                #[cfg(feature = "log")]
+                log::debug!("{}", err);
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_trace(self) -> Option<T> {
+        match self {
+            Ok(ok) => Some(ok),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::trace!("{}", err);
+                #[cfg(feature = "log")]
+                log::trace!("{}", err);
+                None
+            }
+        }
+    }
+}
+
 //************************************************************************//
 
+impl<T> sealed::Sealed for Option<T> {}
 impl<T> OptionContext<T> for Option<T> {
     #[inline]
     fn error(self, context: impl Display) -> Option<T> {

@@ -423,7 +423,7 @@ pub mod should_not_compile_tests {
 #[cfg(feature = "tracing")]
 #[cfg(test)]
 mod tracing {
-    use error_set::{ResultContext, ResultContextDebug};
+    use error_set::{ConsumeDebug, ResultContext};
     use tracing_test::traced_test;
 
     #[traced_test]
