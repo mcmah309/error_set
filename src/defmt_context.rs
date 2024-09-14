@@ -7,7 +7,7 @@ mod sealed {
 }
 
 /// For logging a [Result] when an [Err] is encountered.
-trait ResultContext<T, E>: sealed::Sealed {
+pub trait ResultContext<T, E>: sealed::Sealed {
     /// Log the context as an "error" if the Result is an [Err].
     fn error(self, context: impl Format) -> Result<T, E>;
     /// Log the context as an "warn" if the Result is an [Err].
@@ -43,7 +43,7 @@ trait ResultContext<T, E>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Debug] format when an [Err] is encountered.
-trait ConsumeDebug<T, E>: sealed::Sealed {
+pub trait ConsumeDebug<T, E>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
@@ -57,7 +57,7 @@ trait ConsumeDebug<T, E>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
-trait ConsumeDisplay<T, E>: sealed::Sealed {
+pub trait ConsumeDisplay<T, E>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
     /// Consumes the [Err] of a Result. if [Err], logging as an "warn".
@@ -71,7 +71,7 @@ trait ConsumeDisplay<T, E>: sealed::Sealed {
 }
 
 /// For logging when a [None] is encountered.
-trait OptionContext<T>: sealed::Sealed {
+pub trait OptionContext<T>: sealed::Sealed {
     /// Log the context as an "error" if the Option is [None].
     fn error(self, context: impl Format) -> Option<T>;
     /// Log the context as an "warn" if the Option is [None].
