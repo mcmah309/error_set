@@ -36,7 +36,7 @@ tracing = ["dep:tracing"]
 log = ["dep:log"]
 # Enables support for the defmt crate, which works with no_std. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
 defmt = ["dep:defmt"]
-# Enables support for the log/tracing api, without pulling in either crate. Allowing a downstream to choose the appropriate crate.
+# Enables support for the log/tracing/defmt api, without pulling in any crates. Allowing a downstream to choose the appropriate crate.
 context_stub = []
 
 [package.metadata.docs.rs]
