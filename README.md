@@ -535,11 +535,11 @@ Enables support for the `tracing` or `log` or `defmt` crates. Methods are added 
 ```rust
 let result: Result<(), &str> = Err("operation failed");
 
-let value: Result<(), &str> = result.error("This is an error logged via tracing/log/defmt if `Err`");
-let value: Result<(), &str> = result.warn("This is a warning logged via tracing/log/defmt if `Err`");
-let value: Result<(), &str> = result.with_debug(|err| format!("This is a debug logged via tracing/log/defmt if `Err`: {}", err));
-let value: Option<()> = result.consume_info(); // This is an info logged via tracing/log/defmt if `Err`
-let value: Option<()> = result.consume_with_trace(|err| format!("This is a trace logged via tracing/log/defmt if `Err`: {}", err));
+let value: Result<(), &str> = result.error("If `Err`, this message is logged as error via tracing/log/defmt");
+let value: Result<(), &str> = result.warn("If `Err`, this message is logged as warn via tracing/log/defmt");
+let value: Result<(), &str> = result.with_debug(|err| format!("If `Err`, this message is logged as debug via tracing/log/defmt: {}", err));
+let value: Option<()> = result.consume_info(); // If `Err`, the `Err` is logged as info via tracing/log/defmt
+let value: Option<()> = result.consume_with_trace(|err| format!("If `Err`, this message is logged as trace via tracing/log/defmt: {}", err));
 ```
 > Note: a `context_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
 > while a downstream binrary can ultimately decide the implementation.
