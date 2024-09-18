@@ -322,23 +322,21 @@ hand write `From<..>` or use `.map_err(..)` for these simple cases.
 e.g.
 ```rust
 error_set! {
-    FirebaseJwtVerifierCreationError = {
+    JwtVerifierCreationError = {
         Reqwest(reqwest::Error),
         Jwt(jsonwebtoken::errors::Error),
     };
 }
 
-impl FirebaseJwtVerifier {
-    pub async fn new(project_id: String) -> Result<Self, FirebaseJwtVerifierCreationError> {
-        let public_keys = Self::fetch_public_keys().await?;
-        let decoding_keys: Result<HashMap<String, DecodingKey>, _> = public_keys
+impl JwtVerifier {
+    pub async fn new(project_id: String) -> Result<Self, JwtVerifierCreationError> {
+        let public_keys = Self::fetch_public_keys().await?; // Err is `reqwest::Error`
+        let decoding_keys = public_keys
             .into_iter()
             .map(|(key, value)| {
                 DecodingKey::from_rsa_pem(value.as_bytes()).map(|decoding_key| (key, decoding_key))
             })
-            .collect();
-
-        let decoding_keys = decoding_keys?;
+            .collect()?; // Err is `jsonwebtoken::errors::Error`
         ...
     }
 }
