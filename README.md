@@ -435,11 +435,11 @@ You can even redeclare the same inline struct in a different set, change the dis
 **coerce_macro:** Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
 
 ```rust
-let val = coerce!(setx => {
-                    Ok(val) => val,
-                    Err(SetX::X) => {}, // handle disjointedness
-                    { Err(SetX) => return Err(SetY) } // terminal coercion
-                })?;
+let val = coerce!{ setx,
+            Ok(val) => val,
+            Err(SetX::X) => {}, // handle disjointedness
+            { Err(SetX) => return Err(SetY) } // terminal coercion
+        }?;
 ```
 
 <details>
@@ -508,11 +508,11 @@ Given:
 
  ```rust
  fn setx_result_to_sety_result() -> Result<(), SetY> {
-    let _ok = coerce!(setx_result() => {
+    let _ok = coerce!{ setx_result(),
         Ok(ok) => ok,
         Err(SetX::X) => {}, // handle disjointedness
         { Err(SetX) => return Err(SetY) } // terminal coercion
-    });
+    };
     Ok(())
  }
  ```
