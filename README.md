@@ -620,7 +620,7 @@ Consider the following functions and their respective error types:
 - `func2` can produce errors `c` and `d`, represented by `enum2`.
 - `func3` calls both `func1` and `func2`.
 
-If `func3` does not handle the errors from `func1` and `func2`, it must return an error enum that encompasses variants `a`, `b`, `c`, and `d`. Without a tool like `error_set`, developers might skip defining `enum1` and `enum2` due to the complexity and instead create a mega enum with all possible error variants (`a`, `b`, `c`, `d`). This means that any caller of `func1` or `func2` would have to handle all these cases, even those that are not possible in that specific context.
+If `func3` does not handle the errors from `func1` and `func2`, it must return an error enum that encompasses variants `a`, `b`, `c`, and `d`. Without a tool like `error_set`, developers might skip defining `enum1` and `enum2` due to the complexity and instead create a mega enum with all possible error variants (`a`, `b`, `c`, `d`). This means that any caller of `func1` or `func2` would have to handle all these cases, even those that are not possible in that specific context. `error_set` being so concise and simple, developers actually want to scope their errors to the correct context and join them when needed with a simple `||` operation. No need to ever think about a web of nested wrapped error types.
 
 **How `error_set` Simplifies Error Management:**
 
