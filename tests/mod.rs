@@ -725,33 +725,33 @@ pub mod coerce_macro_simple {
     }
 
     fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
-        let _ok = coerce!(setx_result() => {
+        let _ok = coerce!{ setx_result(),
             Ok(ok) => ok,
             Err(SetX::X) => (), // handle
             { Err(SetX) => return Err(SetY) }
-        });
+        };
         Ok(())
     }
     fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
-        let result: Result<(), SetY> = coerce!(setx_result() => {
+        let result: Result<(), SetY> = coerce!{ setx_result(),
             Ok(_) => Err(SetY::D),
             Err(SetX::X) => Err(SetY::F), // handle
             { Err(SetX) => Err(SetY) }
-        });
+        };
         result
     }
     fn setx_to_sety_coerce() -> SetY {
-        let sety = coerce!(setx() => {
+        let sety = coerce!{ setx(),
             SetX::X => SetY::C, // handle
             {SetX => SetY}
-        });
+        };
         sety
     }
     fn setx_to_sety_coerce_return() -> SetY {
-        let sety = coerce!(setx() => {
+        let sety = coerce! { setx(),
             SetX::X => SetY::G, // handle
             {SetX => return SetY}
-        });
+        };
         sety
     }
 
@@ -837,33 +837,33 @@ pub mod coerce_macro_complex {
     }
 
     fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
-        let _ok = coerce!(setx_result() => {
+        let _ok = coerce!{setx_result(),
             Ok(ok) => ok,
             Err(SetX::X) => (), // handle
             { Err(SetX) => return Err(SetY) }
-        });
+        };
         Ok(())
     }
     fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
-        let result: Result<(), SetY> = coerce!(setx_result() => {
+        let result: Result<(), SetY> = coerce!{setx_result(),
             Ok(_) => Err(SetY::A),
             Err(SetX::X) => Err(SetY::A), // handle
             { Err(SetX) => Err(SetY) }
-        });
+        };
         result
     }
     fn setx_to_sety_coerce() -> SetY {
-        let sety = coerce!(setx() => {
+        let sety = coerce!{ setx(),
             SetX::X => SetY::A, // handle
             {SetX => SetY}
-        });
+        };
         sety
     }
     fn setx_to_sety_coerce_return() -> SetY {
-        let sety = coerce!(setx() => {
+        let sety = coerce!{ setx(),
             SetX::X => SetY::A, // handle
             {SetX => return SetY}
-        });
+        };
         sety
     }
 

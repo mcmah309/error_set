@@ -535,25 +535,25 @@ mod coerce_macro {
                 }
             }
             macro_pattern_token_stream.append_all(quote::quote! {
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => return Err(#enum2_name)} }) => {
+                ($expr:expr, $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => return Err(#enum2_name)}) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms_return_err
                     }
                 };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => Err(#enum2_name)} }) => {
+                ($expr:expr, $($patterns:pat => $results:expr$(,)?)+, {Err(#enum1_name) => Err(#enum2_name)}) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms_err
                     }
                 };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => return #enum2_name} }) => {
+                ($expr:expr, $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => return #enum2_name}) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms_return
                     }
                 };
-                ($expr:expr => { $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => #enum2_name} }) => {
+                ($expr:expr, $($patterns:pat => $results:expr$(,)?)+, {#enum1_name => #enum2_name}) => {
                     match $expr {
                         $($patterns => $results,)+
                         #match_arms
