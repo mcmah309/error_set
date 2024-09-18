@@ -540,7 +540,8 @@ let value: Option<()> = result.consume_info(); // If `Err`, the `Err` is logged 
 let value: Option<()> = result.consume_with_trace(|err| format!("If `Err`, this message is logged as trace via tracing/log/defmt: {}", err));
 ```
 > Note: a `context_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
-> while a downstream binrary can ultimately decide the implementation.
+> while a downstream binrary can ultimately decide the implementation. If no implementations is selected, since all the above
+> methods are inlined, the code will be optimized away during compilation.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
