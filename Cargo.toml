@@ -8,6 +8,7 @@ edition = "2021"
 license = "Apache-2.0"
 documentation = "https://docs.rs/error_set"
 repository = "https://github.com/mcmah309/error_set"
+rust-version = "1.81"
 
 [dependencies]
 error_set_impl = { version = "=0.6.0", path = "impl" }
