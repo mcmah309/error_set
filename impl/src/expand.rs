@@ -169,29 +169,29 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                     // e.g. `opaque`
                     if is_opaque(tokens.clone()) {
                         error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                            #enum_name::#name(_) =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
                         });
                     } else if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
                         // e.g. `"{}"`
                         if is_format_str(&string) {
                             error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name(ref source) =>  &*format!(#tokens, source),
+                                #enum_name::#name(ref source) =>  write!(f, "{}", &*format!(#tokens, source)),
                             });
                         } else {
                             // e.g. `"literal str"`
                             error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name(_) =>  #tokens,
+                                #enum_name::#name(_) =>  write!(f, "{}", #tokens),
                             });
                         }
                     } else {
                         // e.g. `"field: {}", source.field`
                         error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name(ref source) =>  &*format!(#tokens),
+                            #enum_name::#name(ref source) =>  write!(f, "{}", &*format!(#tokens)),
                         });
                     }
                 } else {
                     error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name(ref source) =>  &source.to_string(),
+                        #enum_name::#name(ref source) =>  write!(f, "{}", source),
                     });
                 }
             }
@@ -202,11 +202,11 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                         let tokens = &display.tokens;
                         if is_str_literal(tokens.clone()) {
                             error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name =>  #tokens,
+                            #enum_name::#name =>  write!(f, "{}", #tokens),
                             });
                         } else {
                             error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name =>  &*format!(#tokens),
+                            #enum_name::#name => write!(f, "{}", &*format!(#tokens)),
                             });
                         }
                     } else {
@@ -215,24 +215,24 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                         let tokens = &display.tokens;
                         if is_str_literal(tokens.clone()) {
                             error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name { #(ref #field_names),*  } =>  #tokens,
+                            #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", #tokens),
                             });
                         } else {
                             error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name { #(ref #field_names),*  } =>  &*format!(#tokens),
+                            #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", &*format!(#tokens)),
                             });
                         }
                     }
                 } else {
                     if variant.fields.is_empty() {
                         error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                            #enum_name::#name =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
                             });
                     } else {
                         let field_names =
                             &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
                         error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name { #(ref #field_names),*  } =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                        #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
                         });
                     }
                 }
@@ -243,10 +243,9 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
         impl core::fmt::Display for #enum_name {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                let variant_name = match *self {
+                match *self {
                     #error_variant_tokens
-                };
-                write!(f, "{}", variant_name)
+                }
             }
         }
     });
