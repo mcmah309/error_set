@@ -413,6 +413,14 @@ pub mod display_ref_error {
             #[display("Z io error: {}")]
             IoError(std::io::Error),
         };
+
+        A = {
+            #[display(opaque)]
+            IoError(std::io::Error),
+        };
+        B = {
+            IoError(std::io::Error),
+        };
     }
 
     #[test]
@@ -450,6 +458,24 @@ pub mod display_ref_error {
         let y2_to_z: Z = y2.into();
         assert_eq!(z_to_y2.to_string(), "Y2 io error type: out of memory".to_string());
         assert_eq!(y2_to_z.to_string(), "Z io error: oops out of memory 3".to_string());
+
+
+        let a = A::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory 5",
+        ));
+        assert_eq!(a.to_string(), "A::IoError".to_string());
+
+        let b = B::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory 6",
+        ));
+        assert_eq!(b.to_string(), "oops out of memory 6".to_string());
+
+        let a_to_b: B = a.into();
+        let b_to_a: A = b.into();
+        assert_eq!(a_to_b.to_string(), "oops out of memory 5".to_string());
+        assert_eq!(b_to_a.to_string(), "A::IoError".to_string());
     }
 }
 

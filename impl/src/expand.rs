@@ -166,7 +166,12 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 let name = &variant.name;
                 if let Some(display) = &variant.display {
                     let tokens = &display.tokens;
-                    if let Some(string) = extract_string_from_str_literal(tokens.clone()) {
+                    // e.g. `opaque`
+                    if is_opaque(tokens.clone()) {
+                        error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                        });
+                    } else if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
                         // e.g. `"{}"`
                         if is_format_str(&string) {
                             error_variant_tokens.append_all(quote::quote! {
@@ -186,7 +191,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                     }
                 } else {
                     error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                        #enum_name::#name(ref source) =>  &*format!("{}", source),
                     });
                 }
             }
@@ -392,7 +397,7 @@ fn is_str_literal(input: TokenStream) -> bool {
     false
 }
 
-fn extract_string_from_str_literal(input: TokenStream) -> Option<String> {
+fn extract_string_if_str_literal(input: TokenStream) -> Option<String> {
     if let Ok(expr) = syn::parse2::<Lit>(input) {
         if let Lit::Str(lit) = expr {
             return Some(lit.value());
@@ -403,6 +408,15 @@ fn extract_string_from_str_literal(input: TokenStream) -> Option<String> {
 
 fn is_format_str(str: &str) -> bool {
     dyn_fmt::AsStrFormatExt::format(&str, ["t"]) != str
+}
+
+fn is_opaque(input: TokenStream) -> bool {
+    if let Ok(ident) = syn::parse2::<Ident>(input) {
+        // Compare the ident to "opaque"
+        ident == "opaque"
+    } else {
+        false
+    }
 }
 
 //************************************************************************//
