@@ -191,7 +191,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                     }
                 } else {
                     error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name(ref source) =>  &*format!("{}", source),
+                        #enum_name::#name(ref source) =>  &source.to_string(),
                     });
                 }
             }
