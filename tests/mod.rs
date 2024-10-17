@@ -411,17 +411,21 @@ pub mod display_ref_error {
     fn test() {
         let x = X::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
-            "oops out of memory",
+            "oops out of memory 1",
         ));
 
         assert_eq!(x.to_string(), "X io error".to_string());
 
         let y = Y::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
-            "oops out of memory",
+            "oops out of memory 2",
         ));
 
-        assert_eq!(y.to_string(), "Y io error: oops out of memory".to_string());
+        assert_eq!(y.to_string(), "Y io error: oops out of memory 2".to_string());
+        let y_to_x: X = y.into();
+        let x_to_y: Y = x.into();
+        assert_eq!(y_to_x.to_string(), "X io error".to_string());
+        assert_eq!(x_to_y.to_string(), "Y io error: oops out of memory 1".to_string());
     }
 }
 
