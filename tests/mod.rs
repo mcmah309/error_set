@@ -393,6 +393,39 @@ pub mod value_variants2 {
 }
 
 #[cfg(test)]
+pub mod display_ref_error {
+    use error_set::error_set;
+
+    error_set! {
+        X = {
+            #[display("X io error")]
+            IoError(std::io::Error),
+        };
+        Y = {
+            #[display("Y io error: {}", source)]
+            IoError(std::io::Error),
+        };
+    }
+
+    #[test]
+    fn test() {
+        let x = X::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory",
+        ));
+
+        assert_eq!(x.to_string(), "X io error".to_string());
+
+        let y = Y::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory",
+        ));
+
+        assert_eq!(y.to_string(), "Y io error: oops out of memory".to_string());
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]
@@ -575,7 +608,7 @@ mod tracing {
         let result: Result<(), &str> = Err("debug consumed");
         let _ = result.consume_debug();
 
-        assert!(logs_contain("debug consumed"));   
+        assert!(logs_contain("debug consumed"));
     }
 
     #[traced_test]
@@ -725,7 +758,7 @@ pub mod coerce_macro_simple {
     }
 
     fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
-        let _ok = coerce!{ setx_result(),
+        let _ok = coerce! { setx_result(),
             Ok(ok) => ok,
             Err(SetX::X) => (), // handle
             { Err(SetX) => return Err(SetY) }
@@ -733,7 +766,7 @@ pub mod coerce_macro_simple {
         Ok(())
     }
     fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
-        let result: Result<(), SetY> = coerce!{ setx_result(),
+        let result: Result<(), SetY> = coerce! { setx_result(),
             Ok(_) => Err(SetY::D),
             Err(SetX::X) => Err(SetY::F), // handle
             { Err(SetX) => Err(SetY) }
@@ -741,7 +774,7 @@ pub mod coerce_macro_simple {
         result
     }
     fn setx_to_sety_coerce() -> SetY {
-        let sety = coerce!{ setx(),
+        let sety = coerce! { setx(),
             SetX::X => SetY::C, // handle
             {SetX => SetY}
         };
@@ -837,7 +870,7 @@ pub mod coerce_macro_complex {
     }
 
     fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
-        let _ok = coerce!{setx_result(),
+        let _ok = coerce! {setx_result(),
             Ok(ok) => ok,
             Err(SetX::X) => (), // handle
             { Err(SetX) => return Err(SetY) }
@@ -845,7 +878,7 @@ pub mod coerce_macro_complex {
         Ok(())
     }
     fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
-        let result: Result<(), SetY> = coerce!{setx_result(),
+        let result: Result<(), SetY> = coerce! {setx_result(),
             Ok(_) => Err(SetY::A),
             Err(SetX::X) => Err(SetY::A), // handle
             { Err(SetX) => Err(SetY) }
@@ -853,14 +886,14 @@ pub mod coerce_macro_complex {
         result
     }
     fn setx_to_sety_coerce() -> SetY {
-        let sety = coerce!{ setx(),
+        let sety = coerce! { setx(),
             SetX::X => SetY::A, // handle
             {SetX => SetY}
         };
         sety
     }
     fn setx_to_sety_coerce_return() -> SetY {
-        let sety = coerce!{ setx(),
+        let sety = coerce! { setx(),
             SetX::X => SetY::A, // handle
             {SetX => return SetY}
         };

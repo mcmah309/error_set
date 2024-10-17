@@ -164,9 +164,22 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
         match error_variant {
             AstErrorEnumVariant::WrappedVariant(variant) => {
                 let name = &variant.name;
-                error_variant_tokens.append_all(quote::quote! {
-                #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
-            });
+                if let Some(display) = &variant.display {
+                    let tokens = &display.tokens;
+                    if is_str_literal(tokens.clone()) {
+                        error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name(ref source) =>  #tokens,
+                        });
+                    } else {
+                        error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name(ref source) =>  &*format!(#tokens),
+                        });
+                    }
+                } else {
+                    error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name(_) =>  concat!(stringify!(#enum_name), "::", stringify!(#name)),
+                    });
+                }
             }
             AstErrorEnumVariant::InlineVariant(variant) => {
                 let name = &variant.name;

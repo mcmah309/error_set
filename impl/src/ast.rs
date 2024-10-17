@@ -215,13 +215,15 @@ pub(crate) fn is_type_path_equal(path1: &syn::TypePath, path2: &syn::TypePath) -
 #[derive(Clone)]
 pub(crate) struct AstWrappedErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
     pub(crate) source: syn::TypePath,
 }
 
 impl Parse for AstWrappedErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
-        let attributes = input.call(Attribute::parse_outer)?;
+        let mut attributes = input.call(Attribute::parse_outer)?;
+        let display = extract_display_attribute(&mut attributes)?;
         let name = input.parse::<Ident>()?;
         let content;
         parenthesized!(content in input);
@@ -229,6 +231,7 @@ impl Parse for AstWrappedErrorVariant {
         //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
         Ok(AstWrappedErrorVariant {
             attributes,
+            display,
             name,
             source,
         })
