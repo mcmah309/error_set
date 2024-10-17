@@ -166,11 +166,20 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 let name = &variant.name;
                 if let Some(display) = &variant.display {
                     let tokens = &display.tokens;
-                    if is_str_literal(tokens.clone()) {
-                        error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name(ref source) =>  #tokens,
-                        });
+                    if let Some(string) = extract_string_from_str_literal(tokens.clone()) {
+                        // e.g. `"{}"`
+                        if is_format_str(&string) {
+                            error_variant_tokens.append_all(quote::quote! {
+                                #enum_name::#name(ref source) =>  &*format!(#tokens, source),
+                            });
+                        } else {
+                            // e.g. `"literal str"`
+                            error_variant_tokens.append_all(quote::quote! {
+                                #enum_name::#name(_) =>  #tokens,
+                            });
+                        }
                     } else {
+                        // e.g. `"field: {}", source.field`
                         error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name(ref source) =>  &*format!(#tokens),
                         });
@@ -381,6 +390,19 @@ fn is_str_literal(input: TokenStream) -> bool {
         }
     }
     false
+}
+
+fn extract_string_from_str_literal(input: TokenStream) -> Option<String> {
+    if let Ok(expr) = syn::parse2::<Lit>(input) {
+        if let Lit::Str(lit) = expr {
+            return Some(lit.value());
+        }
+    }
+    None
+}
+
+fn is_format_str(str: &str) -> bool {
+    dyn_fmt::AsStrFormatExt::format(&str, ["t"]) != str
 }
 
 //************************************************************************//

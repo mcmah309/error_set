@@ -401,6 +401,7 @@ error_set! {
         InvalidCredentials
     };
     LoginError = {
+        #[display("Io Error: {}")] // equivalent to `#[display("Io Error: {}", source)]`
         IoError(std::io::Error),
     } || AuthError;
 }

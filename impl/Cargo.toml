@@ -15,6 +15,7 @@ syn = { version = "2", default-features = false, features = ["parsing","derive",
 proc-macro2 = "1"
 quote = "1"
 indices = "0.3"
+dyn-fmt = "0.4.3"
 
 [features]
 default = []

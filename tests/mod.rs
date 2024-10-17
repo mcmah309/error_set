@@ -405,6 +405,14 @@ pub mod display_ref_error {
             #[display("Y io error: {}", source)]
             IoError(std::io::Error),
         };
+        Y2 = {
+            #[display("Y2 io error type: {}", source.kind())]
+            IoError(std::io::Error),
+        };
+        Z = {
+            #[display("Z io error: {}")]
+            IoError(std::io::Error),
+        };
     }
 
     #[test]
@@ -413,19 +421,35 @@ pub mod display_ref_error {
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 1",
         ));
-
         assert_eq!(x.to_string(), "X io error".to_string());
 
         let y = Y::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 2",
         ));
-
         assert_eq!(y.to_string(), "Y io error: oops out of memory 2".to_string());
+
+        let y2 = Y2::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory 3",
+        ));
+        assert_eq!(y2.to_string(), "Y2 io error type: out of memory".to_string());
+
+        let z = Z::IoError(std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory 4",
+        ));
+        assert_eq!(z.to_string(), "Z io error: oops out of memory 4".to_string());
+
         let y_to_x: X = y.into();
         let x_to_y: Y = x.into();
         assert_eq!(y_to_x.to_string(), "X io error".to_string());
         assert_eq!(x_to_y.to_string(), "Y io error: oops out of memory 1".to_string());
+
+        let z_to_y2: Y2 = z.into();
+        let y2_to_z: Z = y2.into();
+        assert_eq!(z_to_y2.to_string(), "Y2 io error type: out of memory".to_string());
+        assert_eq!(y2_to_z.to_string(), "Z io error: oops out of memory 3".to_string());
     }
 }
 
