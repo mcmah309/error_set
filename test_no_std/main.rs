@@ -106,7 +106,7 @@ fn readme_example() {
 error_set! {
     AuthError = {
         A,
-        // #[display("User `{}` with role `{}` does not exist", name, role)] // cannot use format
+        #[display("User `{}` with role `{}` does not exist", name, role)]
         UserDoesNotExist {
             name: u32,
             role: u32,

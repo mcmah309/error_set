@@ -726,5 +726,4 @@ By using `error_set`, your project can maintain clear and precise error definiti
 This crate supports `#![no_std]`. 
 
 Cavets:
- - Custom `#![display(...)]` messages that include fields are not supported.
  - `tracing`/`log` features are not supported, but `defmt` is supported.

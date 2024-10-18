@@ -175,7 +175,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                         // e.g. `"{}"`
                         if is_format_str(&string) {
                             error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name(ref source) =>  write!(f, "{}", &*format!(#tokens, source)),
+                                #enum_name::#name(ref source) =>  write!(f, #tokens, source),
                             });
                         } else {
                             // e.g. `"literal str"`
@@ -186,7 +186,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                     } else {
                         // e.g. `"field: {}", source.field`
                         error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name(ref source) =>  write!(f, "{}", &*format!(#tokens)),
+                            #enum_name::#name(ref source) =>  write!(f, #tokens),
                         });
                     }
                 } else {
@@ -206,7 +206,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                             });
                         } else {
                             error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name => write!(f, "{}", &*format!(#tokens)),
+                            #enum_name::#name => write!(f, #tokens),
                             });
                         }
                     } else {
@@ -219,7 +219,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                             });
                         } else {
                             error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", &*format!(#tokens)),
+                            #enum_name::#name { #(ref #field_names),*  } =>  write!(f, #tokens),
                             });
                         }
                     }
