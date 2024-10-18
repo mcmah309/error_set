@@ -473,51 +473,6 @@ impl JwtVerifier {
     }
 }
 ```
-<details>
-
-  <summary>Cargo Expand</summary>
-
-```rust
-#[derive(Debug)]
-pub enum FirebaseJwtVerifierCreationError {
-    Reqwest(reqwest::Error),
-    Jwt(jsonwebtoken::errors::Error),
-}
-#[allow(unused_qualifications)]
-impl std::error::Error for FirebaseJwtVerifierCreationError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            FirebaseJwtVerifierCreationError::Reqwest(ref source) => source.source(),
-            FirebaseJwtVerifierCreationError::Jwt(ref source) => source.source(),
-            #[allow(unreachable_patterns)]
-            _ => None,
-        }
-    }
-}
-impl core::fmt::Display for FirebaseJwtVerifierCreationError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        let variant_name = match *self {
-            FirebaseJwtVerifierCreationError::Reqwest(_) => {
-                "FirebaseJwtVerifierCreationError::Reqwest"
-            }
-            FirebaseJwtVerifierCreationError::Jwt(_) => "FirebaseJwtVerifierCreationError::Jwt",
-        };
-        f.write_fmt($crate::format_args!("{}", variant_name))
-    }
-}
-impl From<reqwest::Error> for FirebaseJwtVerifierCreationError {
-    fn from(error: reqwest::Error) -> Self {
-        FirebaseJwtVerifierCreationError::Reqwest(error)
-    }
-}
-impl From<jsonwebtoken::errors::Error> for FirebaseJwtVerifierCreationError {
-    fn from(error: jsonwebtoken::errors::Error) -> Self {
-        FirebaseJwtVerifierCreationError::Jwt(error)
-    }
-}
-```
-</details>
 
 Error sets also supports inline structs for passing error related data and custom display messages. 
 Just add the `#[display(...)]` attribute to the variant.
