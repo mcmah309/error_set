@@ -410,7 +410,7 @@ pub mod display_ref_error {
             IoError(std::io::Error),
         };
         Z = {
-            #[display("Z io error: {}")]
+            #[display("Z io error: {0}")]
             IoError(std::io::Error),
         };
 
