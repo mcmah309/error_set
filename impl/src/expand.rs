@@ -411,7 +411,6 @@ fn is_format_str(str: &str) -> bool {
 
 fn is_opaque(input: TokenStream) -> bool {
     if let Ok(ident) = syn::parse2::<Ident>(input) {
-        // Compare the ident to "opaque"
         ident == "opaque"
     } else {
         false
