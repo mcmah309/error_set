@@ -8,7 +8,7 @@ mod sealed {
 }
 
 /// For logging a [Result] when an [Err] is encountered.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait ResultContext<T, E>: sealed::Sealed {
     /// Log the context as an "error" if the Result is an [Err].
     fn error(self, context: impl Display) -> Result<T, E>;
@@ -45,7 +45,7 @@ pub trait ResultContext<T, E>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Debug] format when an [Err] is encountered.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait ConsumeDebug<T>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
@@ -60,7 +60,7 @@ pub trait ConsumeDebug<T>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait ConsumeDisplay<T>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
     fn consume_error(self) -> Option<T>;
@@ -75,7 +75,7 @@ pub trait ConsumeDisplay<T>: sealed::Sealed {
 }
 
 /// For logging when a [None] is encountered.
-#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait OptionContext<T>: sealed::Sealed {
     /// Log the context as an "error" if the Option is [None].
     fn error(self, context: impl Display) -> Option<T>;
