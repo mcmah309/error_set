@@ -1,19 +1,19 @@
 [package]
-name = "no_std"
+name = "test_no_std"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 error_set = { path = "../", features = ["defmt"] }
 heapless = "0.8"
+exit-no-std = "0.2.1"
 
 [[bin]]
-name = "no_std"
+name = "test_no_std"
 path = "main.rs"
 
+# [profile.dev]
+# panic = "abort"
 
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
+# [profile.release]
+# panic = "abort"

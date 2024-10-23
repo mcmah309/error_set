@@ -1,34 +1,27 @@
 #![no_std]
 #![no_main]
 
-use error_set::{error_set, CoerceResult, ResultContext};
+use error_set::{error_set, CoerceResult};
+use exit_no_std::exit;
 use core::fmt::Write;
 
-
 #[no_mangle]
-pub extern "C" fn _start() -> ! {
+fn main() -> i32 {
     readme_example();
     display();
     log();
     exit(0);
 }
 
-
-fn exit(code: i32) -> ! {
-    unsafe {
-        core::arch::asm!(
-            "mov rax, 60",
-            "mov rdi, {0}",
-            "syscall",
-            in(reg) code,
-            options(noreturn)
-        );
-    }
-}
-
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     exit(1);
+}
+
+#[no_mangle]
+pub extern "C" fn rust_eh_personality() {
+    exit(2);
 }
 
 //************************************************************************//
@@ -112,7 +105,8 @@ error_set! {
             role: u32,
         },
         #[display("The provided credentials are invalid")]
-        InvalidCredentials
+        InvalidCredentials,
+        TestError(TestError)
     };
     AuthError2 = {
         #[display("User does not exist")]
@@ -125,25 +119,29 @@ error_set! {
 
 
 fn display() {
-    // `heapless` and/or `write!` Seems to always seg fault for some reason. e.g.
-    // let mut buf: heapless::String<300> = heapless::String::new();
-    // write!(buf, "this").unwrap();
-
-    // let x: AuthError2 = AuthError2::UserDoesNotExist {
-    //     name: 1,
-    //     role: 30,
-    // };
-    // let mut buf: heapless::String<300> = heapless::String::new();
-    // write!(buf, "{}", x).unwrap();
-    // assert_eq!(buf.as_str(), "User does not exist");
-    // let x: AuthError = x.into();
-    // let mut buf: heapless::String<300> = heapless::String::new();
-    // write!(buf, "{}", x).unwrap();
-    // assert_eq!(buf.as_str(), "AuthError::UserDoesNotExist");
-    // let x: AuthError = AuthError::InvalidCredentials;
-    // let mut buf: heapless::String<300> = heapless::String::new();
-    // write!(buf, "{}", x).unwrap();
-    // assert_eq!(buf.as_str(), "The provided credentials are invalid");
+    let x: AuthError2 = AuthError2::UserDoesNotExist {
+        name: 1,
+        role: 30,
+    };
+    let mut buf: heapless::String<300> = heapless::String::new();
+    write!(buf, "{}", x).unwrap();
+    assert_eq!(buf.as_str(), "User does not exist");
+    let x: AuthError = x.into();
+    buf.clear();
+    write!(buf, "{}", x).unwrap();
+    assert_eq!(buf.as_str(), "User `1` with role `30` does not exist");
+    let x: AuthError = AuthError::InvalidCredentials;
+    buf.clear();
+    write!(buf, "{}", x).unwrap();
+    assert_eq!(buf.as_str(), "The provided credentials are invalid");
+    let x: AuthError = AuthError::A;
+    buf.clear();
+    write!(buf, "{}", x).unwrap();
+    assert_eq!(buf.as_str(), "AuthError::A");
+    let x: AuthError = AuthError::TestError(TestError::new(500));
+    buf.clear();
+    write!(buf, "{}", x).unwrap();
+    assert_eq!(buf.as_str(), "TestError: 500");
 }
 
 //************************************************************************//

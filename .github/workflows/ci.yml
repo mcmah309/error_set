@@ -21,6 +21,6 @@ jobs:
     - name: Run std tests
       run: cargo test --verbose --tests
     - name: Run no_std tests
-      run: rustup target add x86_64-unknown-none && cd test_no_std && cargo run
+      run: rustup target add x86_64-unknown-linux-gnu && cd test_no_std && cargo run
     - name: Run feature flags tests
       run: cargo test --tests --features coerce_macro && cargo test --tests --features tracing && cargo test --tests --features log
