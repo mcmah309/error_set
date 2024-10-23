@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use error_set::{error_set, CoerceResult};
+use error_set::{error_set, CoerceResult, ResultContext, ConsumeDebug, ConsumeDisplay};
 use exit_no_std::exit;
 use core::fmt::Write;
 
@@ -9,7 +9,6 @@ use core::fmt::Write;
 fn main() -> i32 {
     readme_example();
     display();
-    log();
     exit(0);
 }
 
@@ -146,7 +145,11 @@ fn display() {
 
 //************************************************************************//
 
+// Purposely not called since then we would have to set up the logger. Just making sure it compiles.
+#[allow(dead_code)]
 fn log() {
-    // let x: Result<u32, &str> = Err("error value");
-    // x.error("context around");
+    let x: Result<u32, &str> = Err("error value");
+    let _: Result<u32, &str> = x.error("context around");
+    let _: Option<u32> = ConsumeDebug::consume_info(x);
+    let _: Option<u32> = ConsumeDisplay::consume_trace(x);
 }
