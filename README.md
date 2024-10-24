@@ -493,8 +493,9 @@ error_set! {
     } || AuthError;
 }
 ```
-> Note: If a custom display is not provided for a wrapped error type like `IoError(std::io::Error)`, it will delegate its display
-> to the inner type (`std::io::Error`). If it is desired to prevent this, provide a custom display message, like in the above example, or add `#[display(opaque)]`.
+> Note: If a custom display is not provided for a wrapped error type like `IoError(std::io::Error)`, it will directly 
+> delegate its display to the inner type (`std::io::Error`). If it is desired to prevent this, provide a custom 
+> display message, like in the above example, or add `#[display(opaque)]`.
 
 <details>
 
