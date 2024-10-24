@@ -479,7 +479,7 @@ Just add the `#[display(...)]` attribute to the variant.
 ```rust
 error_set! {
     AuthError = {
-        #[display("User `{}` with role `{}` does not exist", name, role)]
+        #[display("User `{name}` with role `{role}` does not exist")] // Shorthand for `#[display("User `{}` with role `{}` does not exist", name, role)]`
         UserDoesNotExist {
             name: String,
             role: u32,

@@ -356,8 +356,13 @@ pub mod value_variants2 {
 
     error_set! {
         AuthError = {
-            #[display("User `{}` with role `{}` does not exist", name, role)]
-            UserDoesNotExist {
+            #[display("1 User `{name}` with role}} `{{{role}` does not exist")]
+            UserDoesNotExist1 {
+                name: String,
+                role: u32,
+            },
+            #[display("2 User `{}` with role}} `{{{}` does not exist", name, role)]
+            UserDoesNotExist2 {
                 name: String,
                 role: u32,
             },
@@ -371,19 +376,34 @@ pub mod value_variants2 {
 
     #[test]
     fn test() {
-        let x: AuthError = AuthError::UserDoesNotExist {
+        let x: AuthError = AuthError::UserDoesNotExist1 {
             name: "john".to_string(),
             role: 30,
         };
         assert_eq!(
             x.to_string(),
-            "User `john` with role `30` does not exist".to_string()
+            "1 User `john` with role} `{30` does not exist".to_string()
         );
         let y: LoginError = x.into();
         assert_eq!(
             y.to_string(),
-            "User `john` with role `30` does not exist".to_string()
+            "1 User `john` with role} `{30` does not exist".to_string()
         );
+
+        let x: AuthError = AuthError::UserDoesNotExist2 {
+            name: "john".to_string(),
+            role: 30,
+        };
+        assert_eq!(
+            x.to_string(),
+            "2 User `john` with role} `{30` does not exist".to_string()
+        );
+        let y: LoginError = x.into();
+        assert_eq!(
+            y.to_string(),
+            "2 User `john` with role} `{30` does not exist".to_string()
+        );
+
         let x = AuthError::InvalidCredentials;
         assert_eq!(
             x.to_string(),

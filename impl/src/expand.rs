@@ -184,7 +184,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                             });
                         }
                     } else {
-                        // e.g. `"field: {}", source.field`
+                        // e.g. `"field: {}", err.field`
                         error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name(ref err) =>  write!(f, #tokens),
                         });
@@ -200,10 +200,12 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 if let Some(display) = &variant.display {
                     if variant.fields.is_empty() {
                         let tokens = &display.tokens;
+                        // `"literal str"`
                         if is_str_literal(tokens.clone()) {
                             error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name =>  write!(f, "{}", #tokens),
                             });
+                        // `"My name is {}", func()`
                         } else {
                             error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name => write!(f, #tokens),
@@ -213,10 +215,19 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                         let field_names =
                             &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
                         let tokens = &display.tokens;
-                        if is_str_literal(tokens.clone()) {
-                            error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", #tokens),
-                            });
+                        if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
+                            // `"My name is {name}"`
+                            if is_format_str(&string) {
+                                error_variant_tokens.append_all(quote::quote! {
+                                #enum_name::#name { #(ref #field_names),*  } =>  write!(f, #tokens),
+                                });
+                            // `"literal str"`
+                            } else {
+                                error_variant_tokens.append_all(quote::quote! {
+                                #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", #tokens),
+                                });
+                            }
+                        // `"My name is {}", name`
                         } else {
                             error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name { #(ref #field_names),*  } =>  write!(f, #tokens),
@@ -405,8 +416,36 @@ fn extract_string_if_str_literal(input: TokenStream) -> Option<String> {
     None
 }
 
-fn is_format_str(str: &str) -> bool {
-    dyn_fmt::AsStrFormatExt::format(&str, ["t"]) != str
+// Dev Note: naive implementaion.
+fn is_format_str(input: &str) -> bool {
+    let mut interpolation_candidate_found = false;
+    let mut last_char = 'a';
+
+    let mut start_count = 0;
+    let mut end_count = 0;
+
+    for c in input.chars() {
+        if c == '{' {
+            if last_char == '{' {
+                last_char = 'a';
+                start_count -= 1;
+                continue;
+            }
+            start_count += 1;
+        } else if c == '}' {
+            if last_char == '}' {
+                last_char = 'a';
+                end_count -= 1;
+                continue;
+            }
+            end_count += 1;
+            if start_count == end_count {
+                interpolation_candidate_found = true;
+            }
+        }
+        last_char = c;
+    }
+    return interpolation_candidate_found && start_count == end_count;
 }
 
 fn is_opaque(input: TokenStream) -> bool {
@@ -538,11 +577,11 @@ mod coerce_macro {
                         Err(#enum1_name::#variant(err)) => { return Err(#enum2_name::#variant(err)); },
                     });
                         match_arms_err.append_all(quote::quote! {
-                        Err(#enum1_name::#variant(err)) => { Err(#enum2_name::#variant(err)) },
-                    });
+                            Err(#enum1_name::#variant(err)) => { Err(#enum2_name::#variant(err)) },
+                        });
                         match_arms_return.append_all(quote::quote! {
-                        #enum1_name::#variant(err) => { return #enum2_name::#variant(err); },
-                    });
+                            #enum1_name::#variant(err) => { return #enum2_name::#variant(err); },
+                        });
                         match_arms.append_all(quote::quote! {
                             #enum1_name::#variant(err) => { #enum2_name::#variant(err) },
                         });
