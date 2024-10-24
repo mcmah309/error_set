@@ -168,7 +168,7 @@ impl PartialEq for AstErrorEnumVariant {
                 AstErrorEnumVariant::WrappedVariant(var2),
             ) => {
                 // Does not include name, because we only care about the type, since each set can only have one of a type
-                return is_type_path_equal(&var1.source, &var2.source);
+                return is_type_path_equal(&var1.error_type, &var2.error_type);
             }
             (
                 AstErrorEnumVariant::InlineVariant(variant1),
@@ -217,7 +217,7 @@ pub(crate) struct AstWrappedErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
-    pub(crate) source: syn::TypePath,
+    pub(crate) error_type: syn::TypePath,
 }
 
 impl Parse for AstWrappedErrorVariant {
@@ -233,7 +233,7 @@ impl Parse for AstWrappedErrorVariant {
             attributes,
             display,
             name,
-            source,
+            error_type: source,
         })
     }
 }
@@ -241,7 +241,7 @@ impl Parse for AstWrappedErrorVariant {
 impl std::fmt::Debug for AstWrappedErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let source = &self
-            .source
+            .error_type
             .path
             .segments
             .iter()

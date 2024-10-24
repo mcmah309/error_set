@@ -402,11 +402,11 @@ pub mod display_ref_error {
             IoError(std::io::Error),
         };
         Y = {
-            #[display("Y io error: {}", source)]
+            #[display("Y io error: {}", err)]
             IoError(std::io::Error),
         };
         Y2 = {
-            #[display("Y2 io error type: {}", source.kind())]
+            #[display("Y2 io error type: {}", err.kind())]
             IoError(std::io::Error),
         };
         Z = {

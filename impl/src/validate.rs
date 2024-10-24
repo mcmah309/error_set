@@ -35,36 +35,36 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
     for error_enum in error_enums {
         for variant in &error_enum.error_variants {
             match variant {
-                AstErrorEnumVariant::WrappedVariant(source_variant) => {
-                    let source_variant_name = &source_variant.name;
-                    if unique_variants.contains(source_variant_name) {
+                AstErrorEnumVariant::WrappedVariant(error_variant) => {
+                    let error_variant_name = &error_variant.name;
+                    if unique_variants.contains(error_variant_name) {
                         return Err(syn::parse::Error::new_spanned(
-                            quote::quote! {source_variant},
+                            quote::quote! {error_variant},
                             &format!(
                                 "A variant with name '{0}' already exists in error enum '{1}'",
-                                source_variant_name, error_enum.error_name
+                                error_variant_name, error_enum.error_name
                             ),
                         ));
                     }
-                    unique_variants.insert(source_variant_name);
-                    let source_variant_source = source_variant
-                        .source
+                    unique_variants.insert(error_variant_name);
+                    let source_error_variant = error_variant
+                        .error_type
                         .path
                         .segments
                         .iter()
                         .map(|seg| seg.ident.to_string())
                         .collect::<Vec<_>>()
                         .join("::");
-                    if unique_sources.contains(&source_variant_source) {
+                    if unique_sources.contains(&source_error_variant) {
                         return Err(syn::parse::Error::new_spanned(
-                            &source_variant.source,
+                            &error_variant.error_type,
                             &format!(
                                 "A variant with source '{0}' already exists in error enum '{1}'",
-                                source_variant_source, error_enum.error_name
+                                source_error_variant, error_enum.error_name
                             ),
                         ));
                     }
-                    unique_sources.insert(source_variant_source);
+                    unique_sources.insert(source_error_variant);
                 }
                 AstErrorEnumVariant::InlineVariant(variant) => {
                     if unique_variants.contains(&variant.name) {
