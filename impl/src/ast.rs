@@ -168,7 +168,7 @@ impl PartialEq for AstErrorEnumVariant {
                 AstErrorEnumVariant::WrappedVariant(var2),
             ) => {
                 // Does not include name, because we only care about the type, since each set can only have one of a type
-                return is_type_path_equal(&var1.error_type, &var2.error_type);
+                return is_type_path_equal(&var1.source_type, &var2.source_type);
             }
             (
                 AstErrorEnumVariant::InlineVariant(variant1),
@@ -217,7 +217,7 @@ pub(crate) struct AstWrappedErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
-    pub(crate) error_type: syn::TypePath,
+    pub(crate) source_type: syn::TypePath,
 }
 
 impl Parse for AstWrappedErrorVariant {
@@ -227,13 +227,13 @@ impl Parse for AstWrappedErrorVariant {
         let name = input.parse::<Ident>()?;
         let content;
         parenthesized!(content in input);
-        let source = content.parse()?;
+        let source_type = content.parse()?;
         //println!("path is {}",path.path.segments.iter().map(|seg| seg.ident.to_string()).collect::<Vec<_>>().join("::"));
         Ok(AstWrappedErrorVariant {
             attributes,
             display,
             name,
-            error_type: source,
+            source_type,
         })
     }
 }
@@ -241,7 +241,7 @@ impl Parse for AstWrappedErrorVariant {
 impl std::fmt::Debug for AstWrappedErrorVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let source = &self
-            .error_type
+            .source_type
             .path
             .segments
             .iter()

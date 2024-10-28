@@ -48,7 +48,7 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
                     }
                     unique_variants.insert(error_variant_name);
                     let source_error_variant = error_variant
-                        .error_type
+                        .source_type
                         .path
                         .segments
                         .iter()
@@ -57,7 +57,7 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
                         .join("::");
                     if unique_sources.contains(&source_error_variant) {
                         return Err(syn::parse::Error::new_spanned(
-                            &error_variant.error_type,
+                            &error_variant.source_type,
                             &format!(
                                 "A variant with source '{0}' already exists in error enum '{1}'",
                                 source_error_variant, error_enum.error_name

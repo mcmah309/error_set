@@ -70,11 +70,11 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         match error_variant {
             AstErrorEnumVariant::WrappedVariant(variant) => {
                 let name = &variant.name;
-                let error_type = &variant.error_type;
+                let source_type = &variant.source_type;
                 let attributes = &variant.attributes;
                 error_variant_tokens.append_all(quote::quote! {
                     #(#attributes)*
-                    #name(#error_type),
+                    #name(#source_type),
                 });
             }
             AstErrorEnumVariant::InlineVariant(variant) => {
@@ -287,7 +287,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                     let error_variant_with_source_matching_sub_error_variant = error_enum.error_variants.iter().filter_map(|error_variant| {
                         match error_variant {
                             AstErrorEnumVariant::WrappedVariant(source_error_variant) => {
-                                if is_type_path_equal(&source_error_variant.error_type, &sub_error_variant.error_type) {
+                                if is_type_path_equal(&source_error_variant.source_type, &sub_error_variant.source_type) {
                                     return Some(source_error_variant);
                                 }
                                 else {
@@ -342,10 +342,10 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         };
     }) {
         let variant_name = &source.name;
-        let error_type = &source.error_type;
+        let source_type = &source.source_type;
         token_stream.append_all(quote::quote! {
-            impl From<#error_type> for #error_enum_name {
-                fn from(error: #error_type) -> Self {
+            impl From<#source_type> for #error_enum_name {
+                fn from(error: #source_type) -> Self {
                     #error_enum_name::#variant_name(error)
                 }
             }
