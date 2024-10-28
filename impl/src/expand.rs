@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::usize;
 
 #[cfg(feature = "coerce_macro")]
 use coerce_macro::add_coerce_macro;
@@ -6,53 +6,59 @@ use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::{Attribute, Ident, Lit};
 
-use crate::ast::{is_same_error_variant_defintion, is_type_path_equal, AstErrorEnumVariant};
+use crate::{
+    ast::AstErrorVariant, does_occupy_the_same_space, is_source_tuple_type,
+    is_this_a_subset_of_other,
+};
 
 /// Expand the [ErrorEnum]s into code.
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
     let mut token_stream = TokenStream::new();
     #[cfg(feature = "coerce_macro")]
     add_coerce_macro(&error_enums, &mut token_stream);
-    let error_enum_nodes: Vec<Rc<RefCell<ErrorEnumGraphNode>>> = error_enums
+    let mut graph: Vec<ErrorEnumGraphNode> = error_enums
         .into_iter()
-        .map(|e| Rc::new(RefCell::new(ErrorEnumGraphNode::new(e.into()))))
+        .map(|e| ErrorEnumGraphNode::new(e.into()))
         .collect();
+
     // build a graph of sub-sets and sets based on if all the variants of one are included in another
-    for building_node in error_enum_nodes.iter() {
-        for checking_node in error_enum_nodes.iter() {
-            if (*(**checking_node).borrow()).error_enum != (*(**building_node).borrow()).error_enum
-                && (*(**checking_node).borrow())
+    for building_index in 0..graph.len() {
+        'two: for checking_index in 0..graph.len() {
+            if checking_index == building_index {
+                continue;
+            }
+            // Each checking variant must be a subset of at least one building variant. Else move on.
+            for checking_variant in &graph[checking_index].error_enum.error_variants {
+                let is_subset = graph[building_index]
                     .error_enum
                     .error_variants
                     .iter()
-                    .all(|e| {
-                        (**building_node)
-                            .borrow()
-                            .error_enum
-                            .error_variants
-                            .iter()
-                            .any(|this| is_same_error_variant_defintion(this, e))
-                    })
-            {
-                building_node
-                    .borrow_mut()
-                    .subsets
-                    .push(checking_node.clone());
+                    .any(|building_node_variant| {
+                        is_this_a_subset_of_other(&checking_variant, &building_node_variant)
+                    });
+                if !is_subset {
+                    continue 'two;
+                }
             }
+            graph[building_index].subsets.push(checking_index);
         }
     }
 
-    for error_enum_node in error_enum_nodes.iter() {
-        add_code_for_node(&*(**error_enum_node).borrow(), &mut token_stream);
+    for error_enum_node in graph.iter() {
+        add_code_for_node(error_enum_node, &*graph, &mut token_stream);
     }
     token_stream
 }
 
-fn add_code_for_node(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+fn add_code_for_node(
+    error_enum_node: &ErrorEnumGraphNode,
+    graph: &[ErrorEnumGraphNode],
+    token_stream: &mut TokenStream,
+) {
     add_enum(error_enum_node, token_stream);
     impl_error(error_enum_node, token_stream);
     impl_display(error_enum_node, token_stream);
-    impl_froms(error_enum_node, token_stream);
+    impl_froms(error_enum_node, graph, token_stream);
 }
 
 fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
@@ -68,35 +74,30 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         "Error variants should not be empty"
     );
     let mut error_variant_tokens = TokenStream::new();
-    for error_variant in error_variants {
-        match error_variant {
-            AstErrorEnumVariant::WrappedVariant(variant) => {
-                let name = &variant.name;
-                let source_type = &variant.source_type;
-                let attributes = &variant.attributes;
+    for variant in error_variants {
+        let name = &variant.name;
+        let source_type = &variant.source_type;
+        let attributes = &variant.attributes;
+        if is_source_tuple_type(variant) {
+            error_variant_tokens.append_all(quote::quote! {
+                #(#attributes)*
+                #name(#source_type),
+            });
+        } else {
+            if variant.fields.is_empty() {
                 error_variant_tokens.append_all(quote::quote! {
                     #(#attributes)*
-                    #name(#source_type),
+                    #name,
                 });
-            }
-            AstErrorEnumVariant::InlineVariant(variant) => {
-                let name = &variant.name;
-                let attributes = &variant.attributes;
-                if variant.fields.is_empty() {
-                    error_variant_tokens.append_all(quote::quote! {
-                        #(#attributes)*
-                        #name,
-                    });
-                } else {
-                    let field_names = &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-                    let field_types = &variant.fields.iter().map(|e| &e.r#type).collect::<Vec<_>>();
-                    error_variant_tokens.append_all(quote::quote! {
-                        #(#attributes)*
-                        #name {
-                            #(#field_names : #field_types),*
-                        },
-                    });
-                }
+            } else {
+                let field_names = &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                let field_types = &variant.fields.iter().map(|e| &e.r#type).collect::<Vec<_>>();
+                error_variant_tokens.append_all(quote::quote! {
+                    #(#attributes)*
+                    #name {
+                        #(#field_names : #field_types),*
+                    },
+                });
             }
         }
     }
@@ -120,7 +121,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     let mut source_match_branches = TokenStream::new();
     let mut has_source_match_branches = false;
     for variant in &error_enum.error_variants {
-        if let AstErrorEnumVariant::WrappedVariant(variant) = variant {
+        if is_source_tuple_type(variant) {
             has_source_match_branches = true;
             let name = &variant.name;
             source_match_branches.append_all(quote::quote! {
@@ -162,92 +163,86 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
         "Error variants should not be empty"
     );
     let mut error_variant_tokens = TokenStream::new();
-    for error_variant in error_variants {
-        match error_variant {
-            AstErrorEnumVariant::WrappedVariant(variant) => {
-                let name = &variant.name;
-                if let Some(display) = &variant.display {
-                    let tokens = &display.tokens;
-                    // e.g. `opaque`
-                    if is_opaque(tokens.clone()) {
-                        error_variant_tokens.append_all(quote::quote! {
+    for variant in error_variants {
+        let name = &variant.name;
+        if is_source_tuple_type(variant) {
+            if let Some(display) = &variant.display {
+                let tokens = &display.tokens;
+                // e.g. `opaque`
+                if is_opaque(tokens.clone()) {
+                    error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name(_) =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
                         });
-                    } else if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
-                        // e.g. `"{}"`
-                        if is_format_str(&string) {
-                            error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name(ref source) =>  write!(f, #tokens, source),
-                            });
-                        } else {
-                            // e.g. `"literal str"`
-                            error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name(_) =>  write!(f, "{}", #tokens),
-                            });
-                        }
-                    } else {
-                        // e.g. `"field: {}", source.field`
+                } else if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
+                    // e.g. `"{}"`
+                    if is_format_str(&string) {
                         error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name(ref source) =>  write!(f, #tokens),
+                            #enum_name::#name(ref source) =>  write!(f, #tokens, source),
+                        });
+                    } else {
+                        // e.g. `"literal str"`
+                        error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name(_) =>  write!(f, "{}", #tokens),
                         });
                     }
                 } else {
+                    // e.g. `"field: {}", source.field`
                     error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name(ref source) =>  write!(f, "{}", source),
+                        #enum_name::#name(ref source) =>  write!(f, #tokens),
                     });
                 }
+            } else {
+                error_variant_tokens.append_all(quote::quote! {
+                    #enum_name::#name(ref source) =>  write!(f, "{}", source),
+                });
             }
-            AstErrorEnumVariant::InlineVariant(variant) => {
-                let name = &variant.name;
-                if let Some(display) = &variant.display {
-                    if variant.fields.is_empty() {
-                        let tokens = &display.tokens;
-                        // `"literal str"`
-                        if is_str_literal(tokens.clone()) {
-                            error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name =>  write!(f, "{}", #tokens),
-                            });
-                        // `"My name is {}", func()`
-                        } else {
-                            error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name => write!(f, #tokens),
-                            });
-                        }
+        } else {
+            if let Some(display) = &variant.display {
+                if variant.fields.is_empty() {
+                    let tokens = &display.tokens;
+                    // `"literal str"`
+                    if is_str_literal(tokens.clone()) {
+                        error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name =>  write!(f, "{}", #tokens),
+                        });
+                    // `"My name is {}", func()`
                     } else {
-                        let field_names =
-                            &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-                        let tokens = &display.tokens;
-                        if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
-                            // `"My name is {name}"`
-                            if is_format_str(&string) {
-                                error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name { #(ref #field_names),*  } =>  write!(f, #tokens),
-                                });
-                            // `"literal str"`
-                            } else {
-                                error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", #tokens),
-                                });
-                            }
-                        // `"My name is {}", name`
-                        } else {
+                        error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name => write!(f, #tokens),
+                        });
+                    }
+                } else {
+                    let field_names = &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                    let tokens = &display.tokens;
+                    if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
+                        // `"My name is {name}"`
+                        if is_format_str(&string) {
                             error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name { #(ref #field_names),*  } =>  write!(f, #tokens),
                             });
+                        // `"literal str"`
+                        } else {
+                            error_variant_tokens.append_all(quote::quote! {
+                                #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", #tokens),
+                                });
                         }
-                    }
-                } else {
-                    if variant.fields.is_empty() {
-                        error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
-                            });
+                    // `"My name is {}", name`
                     } else {
-                        let field_names =
-                            &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
                         error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
+                        #enum_name::#name { #(ref #field_names),*  } =>  write!(f, #tokens),
                         });
                     }
+                }
+            } else {
+                if variant.fields.is_empty() {
+                    error_variant_tokens.append_all(quote::quote! {
+                            #enum_name::#name =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
+                            });
+                } else {
+                    let field_names = &variant.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                    error_variant_tokens.append_all(quote::quote! {
+                        #enum_name::#name { #(ref #field_names),*  } =>  write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name))),
+                        });
                 }
             }
         }
@@ -264,69 +259,62 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
     });
 }
 
-fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
+fn impl_froms(
+    error_enum_node: &ErrorEnumGraphNode,
+    graph: &[ErrorEnumGraphNode],
+    token_stream: &mut TokenStream,
+) {
     let ErrorEnumGraphNode {
         error_enum,
-        subsets,
+        subsets: _,
     } = error_enum_node;
 
     let error_enum_name = &error_enum.error_name;
     // Add all `From`'s for the enums that are a subset of this one
-    for subset in (*subsets).iter() {
-        let sub_error_enum = &(&*(**subset).borrow()).error_enum;
-        let sub_error_variants = &sub_error_enum.error_variants;
-        let sub_error_enum_name = &sub_error_enum.error_name;
+    for subset_error_enum in error_enum_node.resolved_subsets(graph) {
+        let subset_error_enum = &subset_error_enum.error_enum;
+        let subset_error_variants = &subset_error_enum.error_variants;
+        let subset_error_enum_name = &subset_error_enum.error_name;
         assert!(
-            !sub_error_variants.is_empty(),
+            !subset_error_variants.is_empty(),
             "Error variants should not be empty"
         );
         let mut error_branch_tokens = TokenStream::new();
-        for sub_error_variant in sub_error_variants {
-            match sub_error_variant {
-                // If sub error enum has a source variant, it must also exist in this error enum (otherwise it would not be a sub), but it may go by a different name.
-                AstErrorEnumVariant::WrappedVariant(sub_error_variant) => {
-                    let sub_error_variant_name = &sub_error_variant.name;
-                    let error_variant_with_source_matching_sub_error_variant = error_enum.error_variants.iter().filter_map(|error_variant| {
-                        match error_variant {
-                            AstErrorEnumVariant::WrappedVariant(source_error_variant) => {
-                                if is_type_path_equal(&source_error_variant.source_type, &sub_error_variant.source_type) {
-                                    return Some(source_error_variant);
-                                }
-                                else {
-                                    return None;
-                                }
-                            },
-                            _ => None,
-                        }}).next()
-                    .expect("Logical error when creating the error enum graph. If one enum is a subset of another, any sources in the subset must exist in the super set.");
-                    let error_variant_name =
-                        &error_variant_with_source_matching_sub_error_variant.name;
-                    error_branch_tokens.append_all(quote::quote! {
-                        #sub_error_enum_name::#sub_error_variant_name(source) =>  #error_enum_name::#error_variant_name(source),
-                    });
-                }
-                AstErrorEnumVariant::InlineVariant(sub_error_variant) => {
-                    let sub_error_variant_name = &sub_error_variant.name;
-                    if sub_error_variant.fields.is_empty() {
-                        error_branch_tokens.append_all(quote::quote! {
-                        #sub_error_enum_name::#sub_error_variant_name =>  #error_enum_name::#sub_error_variant_name,
-                    });
-                    } else {
-                        let field_names = &sub_error_variant
-                            .fields
-                            .iter()
-                            .map(|e| &e.name)
-                            .collect::<Vec<_>>();
-                        error_branch_tokens.append_all(quote::quote! {
-                        #sub_error_enum_name::#sub_error_variant_name { #(#field_names),*  } =>  #error_enum_name::#sub_error_variant_name { #(#field_names),*  },
-                        });
+        for subset_error_variant in subset_error_variants {
+            let subset_error_variant_name = &subset_error_variant.name;
+            //If sub error enum has a source variant, it must also exist in this error enum (otherwise it would not be a sub), but it may go by a different name.
+            if is_source_tuple_type(subset_error_variant) {
+                let error_variant_with_source_matching_sub_error_variant = error_enum.error_variants.iter().filter_map(|error_variant| {
+                    if does_occupy_the_same_space(error_variant, subset_error_variant) {
+                            return Some(error_variant);
                     }
+                    None
+                }).next()
+                    .expect("Internal logical error when creating the error enum graph. If one enum is a subset of another, any sources in the subset must exist in the super set.");
+                let error_variant_name = &error_variant_with_source_matching_sub_error_variant.name;
+                error_branch_tokens.append_all(quote::quote! {
+                        #subset_error_enum_name::#subset_error_variant_name(source) =>  #error_enum_name::#error_variant_name(source),
+                    });
+            } else {
+                if subset_error_variant.fields.is_empty() {
+                    error_branch_tokens.append_all(quote::quote! {
+                        #subset_error_enum_name::#subset_error_variant_name =>  #error_enum_name::#subset_error_variant_name,
+                    });
+                } else {
+                    let field_names = &subset_error_variant
+                        .fields
+                        .iter()
+                        .map(|e| &e.name)
+                        .collect::<Vec<_>>();
+                    error_branch_tokens.append_all(quote::quote! {
+                        #subset_error_enum_name::#subset_error_variant_name { #(#field_names),*  } =>  #error_enum_name::#subset_error_variant_name { #(#field_names),*  },
+                        });
                 }
             }
         }
         token_stream.append_all(quote::quote! {
-            impl From<#sub_error_enum_name> for #error_enum_name {
-                fn from(error: #sub_error_enum_name) -> Self {
+            impl From<#subset_error_enum_name> for #error_enum_name {
+                fn from(error: #subset_error_enum_name) -> Self {
                     match error {
                         #error_branch_tokens
                     }
@@ -336,12 +324,10 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     }
     // Add all `From`'s for variants that are wrappers around source errors.
     for source in error_enum.error_variants.iter().filter_map(|e| {
-        return match e {
-            AstErrorEnumVariant::WrappedVariant(source_variant) => {
-                return Some(source_variant);
-            }
-            _ => None,
-        };
+        if is_source_tuple_type(e) {
+            return Some(e);
+        }
+        None
     }) {
         let variant_name = &source.name;
         let source_type = &source.source_type;
@@ -359,7 +345,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
 struct ErrorEnumGraphNode {
     pub(crate) error_enum: ErrorEnum,
     /// nodes where all error variants of the error enum are in this error enum's error variants.
-    pub(crate) subsets: Vec<Rc<RefCell<ErrorEnumGraphNode>>>,
+    pub(crate) subsets: Vec<usize>,
 }
 
 impl PartialEq for ErrorEnumGraphNode {
@@ -375,13 +361,20 @@ impl ErrorEnumGraphNode {
             subsets: Vec::new(),
         }
     }
+
+    pub(crate) fn resolved_subsets<'a>(
+        &'a self,
+        graph: &'a [ErrorEnumGraphNode],
+    ) -> impl Iterator<Item = &'a ErrorEnumGraphNode> {
+        self.subsets.iter().map(move |e| &graph[*e])
+    }
 }
 
 #[derive(Clone)]
 pub(crate) struct ErrorEnum {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
-    pub(crate) error_variants: Vec<AstErrorEnumVariant>,
+    pub(crate) error_variants: Vec<AstErrorVariant>,
 }
 
 impl core::hash::Hash for ErrorEnum {
