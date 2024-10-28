@@ -30,24 +30,24 @@ fn all_enums_have_unique_names(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::
 fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
     error_enums: &Vec<ErrorEnum>,
 ) -> Result<(), syn::Error> {
-    let mut unique_variants: HashSet<&Ident> = HashSet::new();
-    let mut unique_sources: HashSet<String> = HashSet::new();
+    let mut unique_variant_names: HashSet<&Ident> = HashSet::new();
+    let mut unique_source_types: HashSet<String> = HashSet::new();
     for error_enum in error_enums {
         for variant in &error_enum.error_variants {
             match variant {
-                AstErrorEnumVariant::WrappedVariant(error_variant) => {
-                    let error_variant_name = &error_variant.name;
-                    if unique_variants.contains(error_variant_name) {
+                AstErrorEnumVariant::WrappedVariant(source_variant) => {
+                    let source_variant_name = &source_variant.name;
+                    if unique_variant_names.contains(source_variant_name) {
                         return Err(syn::parse::Error::new_spanned(
-                            quote::quote! {error_variant},
+                            quote::quote! {source_variant},
                             &format!(
                                 "A variant with name '{0}' already exists in error enum '{1}'",
-                                error_variant_name, error_enum.error_name
+                                source_variant_name, error_enum.error_name
                             ),
                         ));
                     }
-                    unique_variants.insert(error_variant_name);
-                    let source_error_variant = error_variant
+                    unique_variant_names.insert(source_variant_name);
+                    let source_type = source_variant
                         .source_type
                         .path
                         .segments
@@ -55,19 +55,19 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
                         .map(|seg| seg.ident.to_string())
                         .collect::<Vec<_>>()
                         .join("::");
-                    if unique_sources.contains(&source_error_variant) {
+                    if unique_source_types.contains(&source_type) {
                         return Err(syn::parse::Error::new_spanned(
-                            &error_variant.source_type,
+                            &source_variant.source_type,
                             &format!(
                                 "A variant with source '{0}' already exists in error enum '{1}'",
-                                source_error_variant, error_enum.error_name
+                                source_type, error_enum.error_name
                             ),
                         ));
                     }
-                    unique_sources.insert(source_error_variant);
+                    unique_source_types.insert(source_type);
                 }
                 AstErrorEnumVariant::InlineVariant(variant) => {
-                    if unique_variants.contains(&variant.name) {
+                    if unique_variant_names.contains(&variant.name) {
                         return Err(syn::parse::Error::new_spanned(
                             quote::quote! {variant},
                             &format!(
@@ -79,8 +79,8 @@ fn only_one_source_of_each_type_per_enum_and_unique_variant_names_per_enum(
                 }
             }
         }
-        unique_variants.clear();
-        unique_sources.clear();
+        unique_variant_names.clear();
+        unique_source_types.clear();
     }
     Ok(())
 }
