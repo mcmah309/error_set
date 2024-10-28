@@ -184,7 +184,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                             });
                         }
                     } else {
-                        // e.g. `"field: {}", err.field`
+                        // e.g. `"field: {}", source.field`
                         error_variant_tokens.append_all(quote::quote! {
                             #enum_name::#name(ref source) =>  write!(f, #tokens),
                         });
