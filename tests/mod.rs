@@ -511,6 +511,47 @@ pub mod display_ref_error {
 }
 
 #[cfg(test)]
+pub mod fields_with_unique_types {
+    use error_set::error_set;
+
+    error_set! {
+        AuthError = {
+            #[display("User `{name}` with role `{}` does not exist", role.1)]
+            UserDoesNotExist1 {
+                name: &'static str,
+                role: (u32,String),
+            },
+            UserDoesNotExist2 {
+                name: String,
+                role: u32,
+            },
+            #[display("The provided credentials are invalid")]
+            InvalidCredentials
+        };
+        LoginError = {
+            IoError(std::io::Error),
+        } || AuthError;
+    }
+
+    #[test]
+    fn test() {
+        let x: AuthError = AuthError::UserDoesNotExist1 {
+            name: "john",
+            role: (30, "1".to_string()),
+        };
+        assert_eq!(
+            x.to_string(),
+            "User `john` with role `1` does not exist".to_string()
+        );
+        let y: LoginError = x.into();
+        assert_eq!(
+            y.to_string(),
+            "User `john` with role `1` does not exist".to_string()
+        );
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]

@@ -385,38 +385,18 @@ fn display_tokens(attribute: &Attribute) -> Option<DisplayAttribute> {
     };
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct AstInlineErrorVariantField {
     pub(crate) name: Ident,
-    pub(crate) r#type: syn::TypePath,
+    pub(crate) r#type: syn::Type,
 }
 
 impl Parse for AstInlineErrorVariantField {
     fn parse(input: ParseStream) -> Result<Self> {
         let name: Ident = input.parse()?;
         let _: syn::Token![:] = input.parse()?;
-        let r#type: syn::TypePath = input.parse()?;
+        let r#type: syn::Type = input.parse()?;
         Ok(AstInlineErrorVariantField { name, r#type })
-    }
-}
-
-impl PartialEq for AstInlineErrorVariantField {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-            && self
-                .r#type
-                .path
-                .segments
-                .iter()
-                .map(|e| &e.ident)
-                .collect::<Vec<_>>()
-                == other
-                    .r#type
-                    .path
-                    .segments
-                    .iter()
-                    .map(|e| &e.ident)
-                    .collect::<Vec<_>>()
     }
 }
 
