@@ -422,11 +422,11 @@ pub mod display_ref_error {
             IoError(std::io::Error),
         };
         Y = {
-            #[display("Y io error: {}", err)]
+            #[display("Y io error: {}", source)]
             IoError(std::io::Error),
         };
         Y2 = {
-            #[display("Y2 io error type: {}", err.kind())]
+            #[display("Y2 io error type: {}", source.kind())]
             IoError(std::io::Error),
         };
         Z = {
@@ -434,7 +434,7 @@ pub mod display_ref_error {
             IoError(std::io::Error),
         };
         YY = {
-            #[display("YY io error: {0}", err)]
+            #[display("YY io error: {0}", source)]
             IoError(std::io::Error),
         };
 

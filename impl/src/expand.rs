@@ -122,7 +122,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             has_source_match_branches = true;
             let name = &variant.name;
             source_match_branches.append_all(quote::quote! {
-                #enum_name::#name(ref err) => err.source(),
+                #enum_name::#name(ref source) => source.source(),
             });
         }
     }
@@ -175,7 +175,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                         // e.g. `"{}"`
                         if is_format_str(&string) {
                             error_variant_tokens.append_all(quote::quote! {
-                                #enum_name::#name(ref err) =>  write!(f, #tokens, err),
+                                #enum_name::#name(ref source) =>  write!(f, #tokens, source),
                             });
                         } else {
                             // e.g. `"literal str"`
@@ -186,12 +186,12 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                     } else {
                         // e.g. `"field: {}", err.field`
                         error_variant_tokens.append_all(quote::quote! {
-                            #enum_name::#name(ref err) =>  write!(f, #tokens),
+                            #enum_name::#name(ref source) =>  write!(f, #tokens),
                         });
                     }
                 } else {
                     error_variant_tokens.append_all(quote::quote! {
-                        #enum_name::#name(ref err) =>  write!(f, "{}", err),
+                        #enum_name::#name(ref source) =>  write!(f, "{}", source),
                     });
                 }
             }
@@ -300,7 +300,7 @@ fn impl_froms(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
                     let error_variant_name =
                         &error_variant_with_source_matching_sub_error_variant.name;
                     error_branch_tokens.append_all(quote::quote! {
-                        #sub_error_enum_name::#sub_error_variant_name(err) =>  #error_enum_name::#error_variant_name(err),
+                        #sub_error_enum_name::#sub_error_variant_name(source) =>  #error_enum_name::#error_variant_name(source),
                     });
                 }
                 AstErrorEnumVariant::InlineVariant(sub_error_variant) => {
@@ -574,16 +574,16 @@ mod coerce_macro {
                     AstErrorEnumVariant::WrappedVariant(source_variant) => {
                         let variant = source_variant.name;
                         match_arms_return_err.append_all(quote::quote! {
-                        Err(#enum1_name::#variant(err)) => { return Err(#enum2_name::#variant(err)); },
+                        Err(#enum1_name::#variant(source)) => { return Err(#enum2_name::#variant(source)); },
                     });
                         match_arms_err.append_all(quote::quote! {
-                            Err(#enum1_name::#variant(err)) => { Err(#enum2_name::#variant(err)) },
+                            Err(#enum1_name::#variant(source)) => { Err(#enum2_name::#variant(source)) },
                         });
                         match_arms_return.append_all(quote::quote! {
-                            #enum1_name::#variant(err) => { return #enum2_name::#variant(err); },
+                            #enum1_name::#variant(source) => { return #enum2_name::#variant(source); },
                         });
                         match_arms.append_all(quote::quote! {
-                            #enum1_name::#variant(err) => { #enum2_name::#variant(err) },
+                            #enum1_name::#variant(source) => { #enum2_name::#variant(source) },
                         });
                     }
                     AstErrorEnumVariant::InlineVariant(variant) => {
