@@ -6,7 +6,7 @@ use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::{Attribute, Ident, Lit};
 
-use crate::ast::{is_type_path_equal, AstErrorEnumVariant};
+use crate::ast::{is_same_error_variant_defintion, is_type_path_equal, AstErrorEnumVariant};
 
 /// Expand the [ErrorEnum]s into code.
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
@@ -26,10 +26,12 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
                     .error_variants
                     .iter()
                     .all(|e| {
-                        (*(**building_node).borrow())
+                        (**building_node)
+                            .borrow()
                             .error_enum
                             .error_variants
-                            .contains(e)
+                            .iter()
+                            .any(|this| is_same_error_variant_defintion(this, e))
                     })
             {
                 building_node
@@ -126,25 +128,25 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             });
         }
     }
+    let mut error_inner = TokenStream::new();
     if has_source_match_branches {
-        token_stream.append_all(quote::quote! {
-            #[allow(unused_qualifications)]
-            impl core::error::Error for #enum_name {
-                fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-                    match *self {
-                        #source_match_branches
-                        #[allow(unreachable_patterns)]
-                        _ => None,
-                    }
+        error_inner.append_all(quote::quote! {
+            fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+                match *self {
+                    #source_match_branches
+                    #[allow(unreachable_patterns)]
+                    _ => None,
                 }
             }
         });
-    } else {
-        token_stream.append_all(quote::quote! {
-            #[allow(unused_qualifications)]
-            impl core::error::Error for #enum_name {}
-        });
     }
+
+    token_stream.append_all(quote::quote! {
+        #[allow(unused_qualifications)]
+        impl core::error::Error for #enum_name {
+            #error_inner
+        }
+    });
 }
 
 fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
@@ -416,7 +418,7 @@ fn extract_string_if_str_literal(input: TokenStream) -> Option<String> {
     None
 }
 
-// Dev Note: naive implementaion.
+// Dev Note: naive implementation.
 fn is_format_str(input: &str) -> bool {
     let mut interpolation_candidate_found = false;
     let mut last_char = 'a';

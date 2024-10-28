@@ -1,4 +1,6 @@
-use crate::ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
+use crate::ast::{
+    is_same_error_variant_defintion, AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError,
+};
 use crate::expand::ErrorEnum;
 
 use syn::{Attribute, Ident};
@@ -102,7 +104,10 @@ fn resolve_builders_helper<'a>(
                 indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
             for variant in ref_error_enum_builder.error_variants.iter() {
                 let this_error_variants = &mut this_error_enum_builder.error_variants;
-                if !this_error_variants.contains(&variant) {
+                if !this_error_variants
+                    .iter()
+                    .any(|e| is_same_error_variant_defintion(e, &variant))
+                {
                     this_error_variants.push(variant.clone());
                 }
             }

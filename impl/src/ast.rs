@@ -160,42 +160,19 @@ impl Parse for AstErrorEnumVariant {
     }
 }
 
-impl PartialEq for AstErrorEnumVariant {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (
-                AstErrorEnumVariant::WrappedVariant(var1),
-                AstErrorEnumVariant::WrappedVariant(var2),
-            ) => {
-                // Does not include name, because we only care about the type, since each set can only have one of a type
-                return is_type_path_equal(&var1.source_type, &var2.source_type);
-            }
-            (
-                AstErrorEnumVariant::InlineVariant(variant1),
-                AstErrorEnumVariant::InlineVariant(variant2),
-            ) => variant1 == variant2,
-            (AstErrorEnumVariant::WrappedVariant(_), AstErrorEnumVariant::InlineVariant(_)) => {
-                false
-            }
-            (AstErrorEnumVariant::InlineVariant(_), AstErrorEnumVariant::WrappedVariant(_)) => {
-                false
-            }
+pub(crate) fn is_same_error_variant_defintion(this: &AstErrorEnumVariant, other: &AstErrorEnumVariant) -> bool {
+    match (this, other) {
+        (AstErrorEnumVariant::WrappedVariant(var1), AstErrorEnumVariant::WrappedVariant(var2)) => {
+            // Dev Note: Does not include name, because we only care about the type, since each set can only have one of a type.
+            // And does not include backtrace since this is generated in the `From` impl if missing.
+            return is_type_path_equal(&var1.source_type, &var2.source_type);
         }
-    }
-}
-
-impl Eq for AstErrorEnumVariant {}
-
-impl std::hash::Hash for AstErrorEnumVariant {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            AstErrorEnumVariant::WrappedVariant(source_error_variant) => {
-                source_error_variant.name.hash(state);
-            }
-            AstErrorEnumVariant::InlineVariant(named_variant) => {
-                named_variant.hash(state);
-            }
-        }
+        (
+            AstErrorEnumVariant::InlineVariant(variant1),
+            AstErrorEnumVariant::InlineVariant(variant2),
+        ) => variant1 == variant2,
+        (AstErrorEnumVariant::WrappedVariant(_), AstErrorEnumVariant::InlineVariant(_)) => false,
+        (AstErrorEnumVariant::InlineVariant(_), AstErrorEnumVariant::WrappedVariant(_)) => false,
     }
 }
 
