@@ -26,3 +26,5 @@ indices = "0.3"
 [features]
 default = []
 coerce_macro = []
+# For developing and debugging the macro for possible issues. Do not expose.
+dev = []

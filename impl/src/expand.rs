@@ -1,10 +1,13 @@
-use std::{iter::zip, usize};
+#![cfg_attr(not(feature = "dev"), allow(dead_code))]
+#![cfg_attr(not(feature = "dev"), allow(unused_variables))]
+
+use std::usize;
 
 #[cfg(feature = "coerce_macro")]
 use coerce_macro::add_coerce_macro;
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
-use syn::{token::Token, Attribute, Ident, Lit};
+use syn::{Attribute, Ident, Lit};
 
 use crate::{
     ast::{AstErrorVariant, AstInlineErrorVariantField, DisplayAttribute},
@@ -21,32 +24,15 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
         .map(|e| ErrorEnumGraphNode::new(e))
         .collect();
 
-    // build a graph of sub-sets and sets based on if all the variants of one are included in another
+    // build a graph of valid conversion `From`'s
     for building_index in 0..graph.len() {
         'next_enum: for checking_index in 0..graph.len() {
             if checking_index == building_index {
                 continue;
             }
 
-            // let all_variants_in_checking_are_found_in_building =
-            //     graph[checking_index]
-            //         .error_enum
-            //         .error_variants
-            //         .iter()
-            //         .all(|checking_variant| {
-            //             graph[building_index].error_enum.error_variants.iter().any(
-            //                 |building_variant| {
-            //                     is_this_a_subset_of_that(checking_variant, building_variant)
-            //                 },
-            //             )
-            //         });
-            // if all_variants_in_checking_are_found_in_building {
-            //     graph[building_index].subsets.push(checking_index);
-            // }
-
             let mut variant_mappings = Vec::new();
-            // Each checking variant must be a subset of at least one building variant. Else move on.
-            'look_for_next_variant_subset: for (checking_variant_index, checking_variant) in graph
+            'look_for_next_variant_match: for (checking_variant_index, checking_variant) in graph
                 [checking_index]
                 .error_enum
                 .error_variants
@@ -59,21 +45,15 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
                     .iter()
                     .enumerate()
                 {
-                    //panic!("check: {}\n\nbuil:{}", checking_variant.name, building_variant.name);
                     if is_conversion_target(checking_variant, building_variant) {
-                        //panic!("{} is a subset of {}", checking_variant.name, building_variant.name);
                         variant_mappings.push((checking_variant_index, building_variant_index));
-                        // subset found for checking_variant move on to check the next one.
-                        continue 'look_for_next_variant_subset;
+                        continue 'look_for_next_variant_match;
                     }
                 }
-                // subset not found for checking_variant. Since a variant is not in building_index it is not a subset.
                 continue 'next_enum;
             }
-            //panic!("subset: {:?}\n\nregular:{:?}", graph[checking_index].error_enum.error_name, graph[building_index].error_enum.error_name);
-            //let mut building = &mut graph[building_index];
             graph[building_index]
-                .subsets
+                .froms
                 .push((checking_index, variant_mappings));
         }
     }
@@ -98,11 +78,12 @@ fn add_code_for_node(
 fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
-        subsets: _,
+        froms: _,
     } = error_enum_node;
 
     let enum_name = &error_enum.error_name;
     let error_variants = &error_enum.error_variants;
+    #[cfg(feature = "dev")]
     assert!(
         !error_variants.is_empty(),
         "Error variants should not be empty"
@@ -171,7 +152,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
 fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
-        subsets: _,
+        froms: _,
     } = error_enum_node;
 
     let enum_name = &error_enum.error_name;
@@ -207,131 +188,15 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     });
 }
 
-
-// trait DisplayArm<'a> {
-//     fn display_arm(&self, enum_name: &Ident) -> TokenStream {
-//         let display = self.display_tokens();
-//         let Some(display) = display else {
-//             return self.write_full(enum_name, &self.right_default(enum_name, ));
-//         }; 
-//         if is_opaque(display.clone()) {
-//             return self.write_full(enum_name, &self.right_opaque(enum_name));
-//         }
-//         let Some(string) = extract_string_if_str_literal(display.clone()) else {
-//             return self.write_full(enum_name, &self.right_raw_tokens(enum_name, display));
-//         };
-//         if is_format_str(&string) {
-//             return self.write_full(enum_name, &self.right_inline_interp(enum_name, display));
-//         }
-//         return self.write_full(enum_name, &self.right_literal(enum_name, display));
-//     }
-
-//     /// Get display field
-//     fn display_tokens(&self) -> Option<&'a TokenStream>;
-
-//     fn write_full(&self, enum_name: &Ident, right_side: &TokenStream) -> TokenStream;
-//     /// e.g. `"field: {}", field` raw tokens
-//     fn right_raw_tokens(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream;
-//     /// e.g. "This is {inline} interp"
-//     fn right_inline_interp(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream;
-//     /// e.g. `"literal str"`
-//     fn right_literal(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream;
-//     /// no display attribute
-//     fn right_default(&self, enum_name: &Ident) -> TokenStream;
-//     /// `opaque`
-//     fn right_opaque(&self, enum_name: &Ident) -> TokenStream;
-// }
-
-// impl<'a> DisplayArm<'a> for Named<'a> {
-//     fn display_tokens(&self) -> Option<&'a TokenStream> {
-//         self.display.as_ref().map(|e| &e.tokens)
-//     }
-
-//     fn write_full(&self, enum_name: &Ident, right_side: &TokenStream) -> TokenStream {
-//         let name = self.name;
-//         quote::quote! {
-//             #enum_name::#name =>  #right_side,
-//         }
-//     }
-
-//     fn right_raw_tokens(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
-//         self.right_literal(enum_name, display)
-//     }
-
-//     fn right_inline_interp(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
-//         self.right_literal(enum_name, display)
-//     }
-
-//     fn right_literal(&self, _enum_name: &Ident, display: &TokenStream) -> TokenStream {
-//         quote::quote! {
-//             write!(f, "{}", #display)
-//         }
-//     }
-
-//     fn right_default(&self, enum_name: &Ident) -> TokenStream {
-//         let name = self.name;
-//         quote::quote! {
-//             write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name)))
-//         }
-//     }
-
-//     fn right_opaque(&self, enum_name: &Ident) -> TokenStream {
-//         self.right_default(enum_name)
-//     }
-// }
-
-
-// impl<'a> DisplayArm<'a> for Struct<'a> {
-//     fn display_tokens(&self) -> Option<&'a TokenStream> {
-//         self.display.as_ref().map(|e| &e.tokens)
-//     }
-
-//     fn write_full(&self, enum_name: &Ident, right_side: &TokenStream) -> TokenStream {
-//         let name = self.name;
-//         let field_names = self.field_names();
-//         quote::quote! {
-//             #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
-//         }
-//     }
-
-//     fn right_raw_tokens(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
-//         quote::quote! {
-//             write!(f, #display)
-//         }
-//     }
-
-//     fn right_inline_interp(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
-//         quote::quote! {
-//             write!(f, #display)
-//         }
-//     }
-
-//     fn right_literal(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
-//         quote::quote! {
-//             write!(f, "{}", #display)
-//         }
-//     }
-
-//     fn right_default(&self, enum_name: &Ident) -> TokenStream {
-//         let name = self.name;
-//         quote::quote! {
-//             write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name)))
-//         }
-//     }
-
-//     fn right_opaque(&self, enum_name: &Ident) -> TokenStream {
-//         self.right_default(enum_name)
-//     }
-// }
-
 fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
-        subsets: _,
+        froms: _,
     } = error_enum_node;
 
     let enum_name = &error_enum.error_name;
     let error_variants = &error_enum.error_variants;
+    #[cfg(feature = "dev")]
     assert!(
         !error_variants.is_empty(),
         "Error variants should not be empty"
@@ -385,15 +250,12 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
 
         let variant = reshape(variant);
         match variant {
-            ErrorVariant::Named(variant) => {
-                //error_variant_tokens.append_all(variant.display_arm(enum_name));
+            ErrorVariant::Named(_) => {
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name =>  #right_side,
                 });
             }
             ErrorVariant::Struct(r#struct) => {
-                // let field_names = &r#struct.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-                // error_variant_tokens.append_all(r#struct.display_arm(enum_name));
                 let field_names = &r#struct.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
@@ -409,7 +271,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                     #enum_name::#name { ref source, #(ref #field_names),* } =>  #right_side,
                 });
             }
-            ErrorVariant::SourceTuple(source_tuple) => {
+            ErrorVariant::SourceTuple(_) => {
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name(ref source) =>  #right_side,
                 });
@@ -436,29 +298,37 @@ fn impl_froms(
     let error_enum = &error_enum_node.error_enum;
     let error_enum_name = &error_enum.error_name;
 
-    for (subset_error_enum, variant_mappings) in error_enum_node.resolved_subsets(graph) {
+    for (from_error_enum, variant_mappings) in error_enum_node.resolved_froms(graph) {
         let mut error_branch_tokens = TokenStream::new();
-        //panic!("subset: {:?}\n\nregular:{:?}", subset_error_enum.error_name, error_enum.error_name);
-        let subset_error_enum_name = &subset_error_enum.error_name;
-        for (subset_error_enum_variant, error_enum_variant) in variant_mappings {
-            assert!(subset_error_enum
-                .error_variants
-                .iter()
-                .any(|e| e.name == subset_error_enum_variant.name));
-            assert!(error_enum
-                .error_variants
-                .iter()
-                .any(|e| e.name == error_enum_variant.name));
+        let from_error_enum_name = &from_error_enum.error_name;
+        for (from_error_enum_variant, error_enum_variant) in variant_mappings {
+            #[cfg(feature = "dev")]
             assert!(
-                is_conversion_target(subset_error_enum_variant, error_enum_variant),
-                "Not subset\n\n{error_enum_variant:?}\n\nsubset: {subset_error_enum_variant:?}"
-            ); // todo comment out
-            let subset_error_variant_reshaped = &reshape(subset_error_enum_variant);
+                from_error_enum
+                    .error_variants
+                    .iter()
+                    .any(|e| e.name == from_error_enum_variant.name),
+                "Variant not found in from error enum"
+            );
+            #[cfg(feature = "dev")]
+            assert!(
+                error_enum
+                    .error_variants
+                    .iter()
+                    .any(|e| e.name == error_enum_variant.name),
+                "Variant not found in error enum"
+            );
+            #[cfg(feature = "dev")]
+            assert!(
+                is_conversion_target(from_error_enum_variant, error_enum_variant),
+                "Not a valid conversion target\n\nfrom:\n\n{from_error_enum_variant:?}\n\nto:\n\n{error_enum_variant:?}"
+            );
+            let from_error_variant_reshaped = &reshape(from_error_enum_variant);
             let error_variant_reshaped = &reshape(error_enum_variant);
             let arm: Option<TokenStream> =
-                match (subset_error_variant_reshaped, error_variant_reshaped) {
+                match (from_error_variant_reshaped, error_variant_reshaped) {
                     (ErrorVariant::Named(this), ErrorVariant::Named(that)) => Some(name_to_name(
-                        subset_error_enum_name,
+                        from_error_enum_name,
                         &this.name,
                         error_enum_name,
                         &that.name,
@@ -469,7 +339,7 @@ fn impl_froms(
                     (ErrorVariant::Struct(this), ErrorVariant::Named(that)) => None,
                     (ErrorVariant::Struct(this), ErrorVariant::Struct(that)) => {
                         Some(struct_to_struct(
-                            subset_error_enum_name,
+                            from_error_enum_name,
                             &this.name,
                             &this.fields,
                             error_enum_name,
@@ -483,7 +353,7 @@ fn impl_froms(
                     (ErrorVariant::SourceStruct(this), ErrorVariant::Struct(that)) => None,
                     (ErrorVariant::SourceStruct(this), ErrorVariant::SourceStruct(that)) => {
                         Some(source_struct_to_source_struct(
-                            subset_error_enum_name,
+                            from_error_enum_name,
                             &this.name,
                             &this.fields,
                             error_enum_name,
@@ -493,7 +363,7 @@ fn impl_froms(
                     }
                     (ErrorVariant::SourceStruct(this), ErrorVariant::SourceTuple(that)) => {
                         Some(source_struct_to_source_tuple(
-                            subset_error_enum_name,
+                            from_error_enum_name,
                             &this.name,
                             &this.fields,
                             error_enum_name,
@@ -505,7 +375,7 @@ fn impl_froms(
                     (ErrorVariant::SourceTuple(this), ErrorVariant::SourceStruct(that)) => {
                         if that.fields.is_empty() {
                             Some(source_tuple_to_source_only_struct(
-                                subset_error_enum_name,
+                                from_error_enum_name,
                                 &this.name,
                                 error_enum_name,
                                 &that.name,
@@ -516,7 +386,7 @@ fn impl_froms(
                     }
                     (ErrorVariant::SourceTuple(this), ErrorVariant::SourceTuple(that)) => {
                         Some(source_tuple_to_source_tuple(
-                            subset_error_enum_name,
+                            from_error_enum_name,
                             &this.name,
                             error_enum_name,
                             &that.name,
@@ -529,8 +399,8 @@ fn impl_froms(
         }
 
         token_stream.append_all(quote::quote! {
-            impl From<#subset_error_enum_name> for #error_enum_name {
-                fn from(error: #subset_error_enum_name) -> Self {
+            impl From<#from_error_enum_name> for #error_enum_name {
+                fn from(error: #from_error_enum_name) -> Self {
                     match error {
                         #error_branch_tokens
                     }
@@ -670,12 +540,6 @@ pub(crate) struct Struct<'a> {
     pub(crate) fields: &'a Vec<AstInlineErrorVariantField>,
 }
 
-// impl<'a> Struct<'a> {
-//     fn field_names(&self) -> impl Iterator<Item = &'a Ident> {
-//         self.fields.iter().map(|e| &e.name)
-//     }
-}
-
 #[derive(Clone)]
 pub(crate) struct SourceStruct<'a> {
     pub(crate) attributes: &'a Vec<Attribute>,
@@ -685,12 +549,6 @@ pub(crate) struct SourceStruct<'a> {
     // Dev Note: This field can be empty
     pub(crate) fields: &'a Vec<AstInlineErrorVariantField>,
 }
-
-// impl<'a> SourceStruct<'a> {
-//     fn field_names(&self) -> impl Iterator<Item = &'a Ident> {
-//         self.fields.iter().map(|e| &e.name)
-//     }
-// }
 
 #[derive(Clone)]
 pub(crate) struct SourceOnlyStruct<'a> {
@@ -761,12 +619,12 @@ fn reshape(this: &AstErrorVariant) -> ErrorVariant {
 #[derive(Clone)]
 struct ErrorEnumGraphNode {
     pub(crate) error_enum: ErrorEnum,
-    /// nodes where all error variants of the error enum are in this error enum's error variants.
-    /// 0: index of subset enum in graph
+    /// nodes where this error enum can be converted to the other error enum
+    /// 0: index of target enum in graph
     /// 1: variant mapping
-    ///   0: the subset's error_variants's index
-    ///   1: this [error_enum.error_variants]'s index
-    pub(crate) subsets: Vec<(usize, Vec<(usize, usize)>)>,
+    ///   0: the from's error_variants's index
+    ///   1: this's error_variants's index
+    pub(crate) froms: Vec<(usize, Vec<(usize, usize)>)>,
 }
 
 impl PartialEq for ErrorEnumGraphNode {
@@ -779,12 +637,12 @@ impl ErrorEnumGraphNode {
     pub(crate) fn new(node: ErrorEnum) -> ErrorEnumGraphNode {
         ErrorEnumGraphNode {
             error_enum: node,
-            subsets: Vec::new(),
+            froms: Vec::new(),
         }
     }
 
-    /// Returns an iterator of all the subsets of this error enum. And the variant mappings from this to that.
-    pub(crate) fn resolved_subsets<'a>(
+    /// Returns an iterator of all the froms of this error enum. And the variant mappings from this to that.
+    pub(crate) fn resolved_froms<'a>(
         &'a self,
         graph: &'a [ErrorEnumGraphNode],
     ) -> impl Iterator<
@@ -793,18 +651,18 @@ impl ErrorEnumGraphNode {
             Vec<(&'a AstErrorVariant, &'a AstErrorVariant)>,
         ),
     > {
-        self.subsets.iter().map(|e| {
-            let subset = &graph[e.0];
+        self.froms.iter().map(|e| {
+            let from = &graph[e.0];
             let variant_mappings =
                 e.1.iter()
-                    .map(|(subset_index, this_index)| {
+                    .map(|(from_index, this_index)| {
                         (
-                            &subset.error_enum.error_variants[*subset_index],
+                            &from.error_enum.error_variants[*from_index],
                             &self.error_enum.error_variants[*this_index],
                         )
                     })
                     .collect::<Vec<_>>();
-            (&subset.error_enum, variant_mappings)
+            (&from.error_enum, variant_mappings)
         })
     }
 }
@@ -831,15 +689,6 @@ impl PartialEq for ErrorEnum {
 }
 
 //************************************************************************//
-
-fn is_str_literal(input: TokenStream) -> bool {
-    if let Ok(expr) = syn::parse2::<Lit>(input) {
-        if let Lit::Str(_) = expr {
-            return true;
-        }
-    }
-    false
-}
 
 fn extract_string_if_str_literal(input: TokenStream) -> Option<String> {
     if let Ok(expr) = syn::parse2::<Lit>(input) {

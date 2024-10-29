@@ -3,10 +3,8 @@ mod expand;
 mod resolve;
 mod validate;
 
-use ast::{AstErrorSet, AstErrorVariant, AstInlineErrorVariantField};
+use ast::{AstErrorSet, AstErrorVariant};
 use expand::expand;
-
-use quote::ToTokens;
 use resolve::resolve;
 use validate::validate;
 
@@ -58,7 +56,7 @@ pub(crate) fn is_source_tuple_type(error_variant: &AstErrorVariant) -> bool {
 /// }
 /// ```
 /// Thus, the names and shapes must be exactly the same to avoid this. 
-/// Note, there can multiple source tuples or sources only struct of each wrapped error type.
+/// Note, there can multiple source tuples or sources only structs with the same wrapped error types (different names).
 /// The first that is encountered becomes the `From` impl of that source error type.
 /// To ensure the correct one is selected, pay attention to `X = A || B` ordering 
 /// or define your own `X = { IoError(std::io::Error) } || A || B`

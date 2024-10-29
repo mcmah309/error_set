@@ -136,7 +136,7 @@ impl Parse for AstInlineError {
 //************************************************************************//
 
 /// A variant for an error
-#[derive(Clone,Debug)] //todo remove debug
+#[derive(Clone)]
 pub(crate) struct AstErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
@@ -144,7 +144,7 @@ pub(crate) struct AstErrorVariant {
     // Dev Note: `Some(Vec::new())` == `{}`, `Some(Vec::new(..))` == `{..}`, `None` == ``. `{}` means inline struct if has source as well.
     pub(crate) fields: Option<Vec<AstInlineErrorVariantField>>,
     pub(crate) source_type: Option<syn::TypePath>,
-    #[allow(dead_code)] //todo remove
+    #[allow(dead_code)] // todo remove when this is implemented
     pub(crate) backtrace_type: Option<syn::TypePath>,
 }
 
@@ -215,7 +215,7 @@ impl Parse for AstErrorVariant {
 //************************************************************************//
 
 /// The format string to use for display
-#[derive(Clone,Debug)]//todo remove debug
+#[derive(Clone)]
 pub(crate) struct DisplayAttribute {
     pub(crate) tokens: TokenStream,
 }
@@ -271,7 +271,7 @@ fn display_tokens(attribute: &Attribute) -> Option<DisplayAttribute> {
     };
 }
 
-#[derive(Clone, Debug, PartialEq)]//todo remove debug
+#[derive(Clone, PartialEq)]
 pub(crate) struct AstInlineErrorVariantField {
     pub(crate) name: Ident,
     pub(crate) r#type: syn::Type,
