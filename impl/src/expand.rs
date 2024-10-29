@@ -207,6 +207,123 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     });
 }
 
+
+// trait DisplayArm<'a> {
+//     fn display_arm(&self, enum_name: &Ident) -> TokenStream {
+//         let display = self.display_tokens();
+//         let Some(display) = display else {
+//             return self.write_full(enum_name, &self.right_default(enum_name, ));
+//         }; 
+//         if is_opaque(display.clone()) {
+//             return self.write_full(enum_name, &self.right_opaque(enum_name));
+//         }
+//         let Some(string) = extract_string_if_str_literal(display.clone()) else {
+//             return self.write_full(enum_name, &self.right_raw_tokens(enum_name, display));
+//         };
+//         if is_format_str(&string) {
+//             return self.write_full(enum_name, &self.right_inline_interp(enum_name, display));
+//         }
+//         return self.write_full(enum_name, &self.right_literal(enum_name, display));
+//     }
+
+//     /// Get display field
+//     fn display_tokens(&self) -> Option<&'a TokenStream>;
+
+//     fn write_full(&self, enum_name: &Ident, right_side: &TokenStream) -> TokenStream;
+//     /// e.g. `"field: {}", field` raw tokens
+//     fn right_raw_tokens(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream;
+//     /// e.g. "This is {inline} interp"
+//     fn right_inline_interp(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream;
+//     /// e.g. `"literal str"`
+//     fn right_literal(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream;
+//     /// no display attribute
+//     fn right_default(&self, enum_name: &Ident) -> TokenStream;
+//     /// `opaque`
+//     fn right_opaque(&self, enum_name: &Ident) -> TokenStream;
+// }
+
+// impl<'a> DisplayArm<'a> for Named<'a> {
+//     fn display_tokens(&self) -> Option<&'a TokenStream> {
+//         self.display.as_ref().map(|e| &e.tokens)
+//     }
+
+//     fn write_full(&self, enum_name: &Ident, right_side: &TokenStream) -> TokenStream {
+//         let name = self.name;
+//         quote::quote! {
+//             #enum_name::#name =>  #right_side,
+//         }
+//     }
+
+//     fn right_raw_tokens(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
+//         self.right_literal(enum_name, display)
+//     }
+
+//     fn right_inline_interp(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
+//         self.right_literal(enum_name, display)
+//     }
+
+//     fn right_literal(&self, _enum_name: &Ident, display: &TokenStream) -> TokenStream {
+//         quote::quote! {
+//             write!(f, "{}", #display)
+//         }
+//     }
+
+//     fn right_default(&self, enum_name: &Ident) -> TokenStream {
+//         let name = self.name;
+//         quote::quote! {
+//             write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name)))
+//         }
+//     }
+
+//     fn right_opaque(&self, enum_name: &Ident) -> TokenStream {
+//         self.right_default(enum_name)
+//     }
+// }
+
+
+// impl<'a> DisplayArm<'a> for Struct<'a> {
+//     fn display_tokens(&self) -> Option<&'a TokenStream> {
+//         self.display.as_ref().map(|e| &e.tokens)
+//     }
+
+//     fn write_full(&self, enum_name: &Ident, right_side: &TokenStream) -> TokenStream {
+//         let name = self.name;
+//         let field_names = self.field_names();
+//         quote::quote! {
+//             #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
+//         }
+//     }
+
+//     fn right_raw_tokens(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
+//         quote::quote! {
+//             write!(f, #display)
+//         }
+//     }
+
+//     fn right_inline_interp(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
+//         quote::quote! {
+//             write!(f, #display)
+//         }
+//     }
+
+//     fn right_literal(&self, enum_name: &Ident, display: &TokenStream) -> TokenStream {
+//         quote::quote! {
+//             write!(f, "{}", #display)
+//         }
+//     }
+
+//     fn right_default(&self, enum_name: &Ident) -> TokenStream {
+//         let name = self.name;
+//         quote::quote! {
+//             write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name)))
+//         }
+//     }
+
+//     fn right_opaque(&self, enum_name: &Ident) -> TokenStream {
+//         self.right_default(enum_name)
+//     }
+// }
+
 fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream) {
     let ErrorEnumGraphNode {
         error_enum,
@@ -255,19 +372,28 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 };
             }
         } else {
-            right_side = quote::quote! {
-                write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name)))
-            };
+            if is_source_tuple_type(variant) {
+                right_side = quote::quote! {
+                    write!(f, "{}", source)
+                };
+            } else {
+                right_side = quote::quote! {
+                    write!(f, "{}", concat!(stringify!(#enum_name), "::", stringify!(#name)))
+                };
+            }
         }
 
         let variant = reshape(variant);
         match variant {
-            ErrorVariant::Named(_) => {
+            ErrorVariant::Named(variant) => {
+                //error_variant_tokens.append_all(variant.display_arm(enum_name));
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name =>  #right_side,
                 });
             }
             ErrorVariant::Struct(r#struct) => {
+                // let field_names = &r#struct.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                // error_variant_tokens.append_all(r#struct.display_arm(enum_name));
                 let field_names = &r#struct.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
@@ -416,7 +542,8 @@ fn impl_froms(
     let mut source_errors_froms_already_implemented = Vec::new();
     // Add all `From`'s for variants that are wrappers around source errors.
     for source in error_enum.error_variants.iter().filter_map(|e| {
-        if is_source_tuple_type(e) { //todo change to include inline structs as well
+        if is_source_tuple_type(e) {
+            //todo change to include inline structs as well
             return Some(e);
         }
         None
@@ -543,6 +670,12 @@ pub(crate) struct Struct<'a> {
     pub(crate) fields: &'a Vec<AstInlineErrorVariantField>,
 }
 
+// impl<'a> Struct<'a> {
+//     fn field_names(&self) -> impl Iterator<Item = &'a Ident> {
+//         self.fields.iter().map(|e| &e.name)
+//     }
+}
+
 #[derive(Clone)]
 pub(crate) struct SourceStruct<'a> {
     pub(crate) attributes: &'a Vec<Attribute>,
@@ -552,6 +685,12 @@ pub(crate) struct SourceStruct<'a> {
     // Dev Note: This field can be empty
     pub(crate) fields: &'a Vec<AstInlineErrorVariantField>,
 }
+
+// impl<'a> SourceStruct<'a> {
+//     fn field_names(&self) -> impl Iterator<Item = &'a Ident> {
+//         self.fields.iter().map(|e| &e.name)
+//     }
+// }
 
 #[derive(Clone)]
 pub(crate) struct SourceOnlyStruct<'a> {
