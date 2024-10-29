@@ -8,7 +8,7 @@ use syn::{token::Token, Attribute, Ident, Lit};
 
 use crate::{
     ast::{AstErrorVariant, AstInlineErrorVariantField, DisplayAttribute},
-    can_convert_this_into_that, is_source_tuple_type,
+    is_conversion_target, is_source_tuple_type,
 };
 
 /// Expand the [ErrorEnum]s into code.
@@ -60,7 +60,7 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
                     .enumerate()
                 {
                     //panic!("check: {}\n\nbuil:{}", checking_variant.name, building_variant.name);
-                    if can_convert_this_into_that(checking_variant, building_variant) {
+                    if is_conversion_target(checking_variant, building_variant) {
                         //panic!("{} is a subset of {}", checking_variant.name, building_variant.name);
                         variant_mappings.push((checking_variant_index, building_variant_index));
                         // subset found for checking_variant move on to check the next one.
@@ -324,7 +324,7 @@ fn impl_froms(
                 .iter()
                 .any(|e| e.name == error_enum_variant.name));
             assert!(
-                can_convert_this_into_that(subset_error_enum_variant, error_enum_variant),
+                is_conversion_target(subset_error_enum_variant, error_enum_variant),
                 "Not subset\n\n{error_enum_variant:?}\n\nsubset: {subset_error_enum_variant:?}"
             ); // todo comment out
             let subset_error_variant_reshaped = &reshape(subset_error_enum_variant);
@@ -413,22 +413,28 @@ fn impl_froms(
         });
     }
 
+    let mut source_errors_froms_already_implemented = Vec::new();
     // Add all `From`'s for variants that are wrappers around source errors.
     for source in error_enum.error_variants.iter().filter_map(|e| {
-        if is_source_tuple_type(e) {
+        if is_source_tuple_type(e) { //todo change to include inline structs as well
             return Some(e);
         }
         None
     }) {
-        let variant_name = &source.name;
         let source_type = &source.source_type;
+        if source_errors_froms_already_implemented.contains(&source_type) {
+            continue;
+        }
+        let variant_name = &source.name;
         token_stream.append_all(quote::quote! {
             impl From<#source_type> for #error_enum_name {
                 fn from(error: #source_type) -> Self {
                     #error_enum_name::#variant_name(error)
                 }
             }
-        })
+        });
+        source_errors_froms_already_implemented.push(source_type);
+        break;
     }
 }
 //************************************************************************//

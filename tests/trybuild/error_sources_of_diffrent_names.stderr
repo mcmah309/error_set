@@ -1,0 +1,9 @@
+error[E0277]: the trait bound `Y: From<X>` is not satisfied
+  --> tests/trybuild/error_sources_of_diffrent_names.rs:23:18
+   |
+23 |     let y: Y = x.into();
+   |                  ^^^^ the trait `From<X>` is not implemented for `Y`, which is required by `X: Into<_>`
+   |
+   = help: the trait `From<std::io::Error>` is implemented for `Y`
+   = help: for that trait implementation, expected `std::io::Error`, found `X`
+   = note: required for `X` to implement `Into<Y>`

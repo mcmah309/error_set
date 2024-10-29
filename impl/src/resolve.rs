@@ -117,19 +117,9 @@ fn resolve_builders_helper<'a>(
 }
 
 /// If the error defintions occupy the same space. Useful since if this space is already occupied e.g. ` X = A || B`
-/// If `A` has a variant like `V1(std::io::Error)` and `B` `V2(std::io::Error)`, we should only add A's variant.
-///
-/// - Only one error wrapped error variant of each source type is allowed. e.g. `V1(std::io::IoError)` V2(std::io::IoError)`
-///   is a no go in the same error.
-/// - Only one non-wrapping error variant of each name. e.g. `ParsingError` and `ParsingError` is not valid
-pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErrorVariant) -> bool { //todo correct?
-    return match (&this.source_type, &other.source_type) {
-        (Some(this_source_type), Some(other_source_type)) => {
-            return this_source_type.path == other_source_type.path;
-        }
-        (None, None) => this.name == other.name,
-        _ => return false,
-    };
+/// If `A` has a variant like `V1(std::io::Error)` and `B` `V1(std::io::Error)`.
+pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErrorVariant) -> bool {
+    return this.name == other.name;
 }
 
 struct ErrorEnumBuilder {

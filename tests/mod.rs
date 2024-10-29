@@ -103,30 +103,42 @@ pub mod error_sources_of_same_name {
 }
 
 #[cfg(test)]
-pub mod error_sources_of_different_names {
+pub mod first_wrapped_type_implements_from_source {
     use error_set::error_set;
 
     error_set! {
-        SetLevelError = {
-            IoError(std::io::Error),
-        };
         X = {
             IoError(std::io::Error),
+            IoError2(std::io::Error),
         };
         Y = {
             IoError2(std::io::Error),
+            IoError(std::io::Error),
+        };
+        Z = {
+            IoError(std::io::Error),
         };
     }
 
     #[test]
     fn test() {
-        let x = X::IoError(std::io::Error::new(
+        let io_error = std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory",
-        ));
+        );
+        let z: Z = io_error.into();
+        let x: X = z.into();
+        matches!(x, X::IoError(_));
         let y: Y = x.into();
-        assert!(matches!(y, Y::IoError2(_)));
-        let _set: SetLevelError = y.into();
+        matches!(y, Y::IoError2(_));
+        let x: X = y.into();
+        matches!(x, X::IoError(_));
+        let io_error = std::io::Error::new(
+            std::io::ErrorKind::OutOfMemory,
+            "oops out of memory",
+        );
+        let y: Y = io_error.into();
+        matches!(y, Y::IoError2(_));
     }
 }
 
@@ -147,7 +159,7 @@ pub mod readme_example {
         };
         BookParsingError = {
             MissingBookDescription,
-            CouldNotReadBook(std::io::Error),
+            IoError(std::io::Error),
             MissingName,
             NoContents,
         };
@@ -157,7 +169,7 @@ pub mod readme_example {
         };
         DownloadError = {
             InvalidUrl,
-            CouldNotSaveBook(std::io::Error),
+            IoError(std::io::Error),
         };
         ParseUploadError = {
             MaximumUploadSizeReached,
@@ -187,12 +199,10 @@ pub mod readme_example_aggregation {
     use error_set::error_set;
 
     error_set! {
-        MediaError = {
-            IoError(std::io::Error)
-            } || BookParsingError || DownloadError || ParseUploadError;
+        MediaError = BookParsingError || DownloadError || ParseUploadError;
         BookParsingError = {
             MissingBookDescription,
-            CouldNotReadBook(std::io::Error),
+            IoError(std::io::Error),
         } || BookSectionParsingError;
         BookSectionParsingError = {
             MissingName,
@@ -200,7 +210,7 @@ pub mod readme_example_aggregation {
         };
         DownloadError = {
             InvalidUrl,
-            CouldNotSaveBook(std::io::Error),
+            IoError(std::io::Error),
         };
         ParseUploadError = {
             MaximumUploadSizeReached,
@@ -276,7 +286,7 @@ pub mod documentation {
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.coerce();
-        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+        assert!(matches!(result_media_error, Err(MediaError::OutOfMemory(_))));
     }
 }
 
@@ -552,6 +562,39 @@ pub mod fields_with_unique_types {
 }
 
 #[cfg(test)]
+pub mod inline_source_error {
+    use error_set::error_set;
+
+    error_set! {
+        AuthError = {
+            SourceStruct1(std::fmt::Error) {},
+
+            #[display("User `{name}` with role `{}` does not exist", role.1)]
+            UserDoesNotExist1(std::io::Error) {
+                name: &'static str,
+                role: (u32,String),
+            },
+            UserDoesNotExist2 {
+                name: String,
+                role: u32,
+            },
+            #[display("The provided credentials are invalid")]
+            InvalidCredentials
+        };
+        LoginError = {
+            IoError(std::io::Error),
+            //A
+        } || AuthError;
+    }
+
+    #[test]
+    fn test() {
+        let x = AuthError::InvalidCredentials;
+        let y: LoginError = x.into();
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]
@@ -561,9 +604,9 @@ pub mod should_not_compile_tests {
     }
 
     #[test]
-    fn multiple_same_sources() {
+    fn error_sources_of_diffrent_names() {
         let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/multiple_same_sources.rs");
+        t.compile_fail("tests/trybuild/error_sources_of_diffrent_names.rs");
     }
 
     #[test]
