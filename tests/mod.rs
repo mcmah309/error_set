@@ -589,8 +589,17 @@ pub mod inline_source_error {
 
     #[test]
     fn test() {
-        let x = AuthError::InvalidCredentials;
-        let y: LoginError = x.into();
+        let fmt_error = std::fmt::Error::default();
+        let auth_error: AuthError = fmt_error.into();
+        matches!(auth_error, AuthError::SourceStruct1 { source: _ });
+        let login_error:LoginError = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let fmt_error = std::fmt::Error::default();
+        let login_error:LoginError = fmt_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let auth_error = AuthError::InvalidCredentials;
+        let login_error: LoginError = auth_error.into();
+        matches!(login_error, LoginError::InvalidCredentials);
     }
 }
 

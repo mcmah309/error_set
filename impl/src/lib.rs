@@ -32,9 +32,14 @@ pub(crate) fn is_source_tuple_type(error_variant: &AstErrorVariant) -> bool {
     return error_variant.source_type.is_some() && error_variant.fields.is_none();
 }
 
+pub(crate) fn is_source_only_struct_type(error_variant: &AstErrorVariant) -> bool {
+    return error_variant.source_type.is_some()
+        && error_variant.fields.as_ref().is_some_and(|e| e.is_empty());
+}
+
 /// To determine if [this] can be converted into [that] without dropping values.
 /// Ignoring backtrace (since this is generated in the `From` impl if missing) and display.
-/// This does not mean [this] is a subset of [that]. 
+/// This does not mean [this] is a subset of [that].
 /// Why do they need to be exact?
 /// e.g.
 /// ```
@@ -55,12 +60,12 @@ pub(crate) fn is_source_tuple_type(error_variant: &AstErrorVariant) -> bool {
 ///  b: u32
 /// }
 /// ```
-/// Thus, the names and shapes must be exactly the same to avoid this. 
+/// Thus, the names and shapes must be exactly the same to avoid this.
 /// Note, there can multiple source tuples or sources only structs with the same wrapped error types (different names).
 /// The first that is encountered becomes the `From` impl of that source error type.
-/// To ensure the correct one is selected, pay attention to `X = A || B` ordering 
+/// To ensure the correct one is selected, pay attention to `X = A || B` ordering
 /// or define your own `X = { IoError(std::io::Error) } || A || B`
-/// 
+///
 /// Another example:
 /// ```
 ///  N1 {
@@ -82,11 +87,11 @@ pub(crate) fn is_source_tuple_type(error_variant: &AstErrorVariant) -> bool {
 pub(crate) fn is_conversion_target(this: &AstErrorVariant, that: &AstErrorVariant) -> bool {
     return match (&this.source_type, &that.source_type) {
         (Some(this_source_type), Some(other_source_type)) => {
-            this_source_type.path == other_source_type.path && this.name == that.name && this.fields == that.fields
+            this_source_type.path == other_source_type.path
+                && this.name == that.name
+                && this.fields == that.fields
         }
-        (None, None) => {
-            this.name == that.name && this.fields == that.fields
-        }
+        (None, None) => this.name == that.name && this.fields == that.fields,
         _ => false,
     };
 }

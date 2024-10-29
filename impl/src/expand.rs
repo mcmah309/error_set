@@ -11,7 +11,7 @@ use syn::{Attribute, Ident, Lit};
 
 use crate::{
     ast::{AstErrorVariant, AstInlineErrorVariantField, DisplayAttribute},
-    is_conversion_target, is_source_tuple_type,
+    is_conversion_target, is_source_only_struct_type, is_source_tuple_type,
 };
 
 /// Expand the [ErrorEnum]s into code.
@@ -411,27 +411,32 @@ fn impl_froms(
 
     let mut source_errors_froms_already_implemented = Vec::new();
     // Add all `From`'s for variants that are wrappers around source errors.
-    for source in error_enum.error_variants.iter().filter_map(|e| {
-        if is_source_tuple_type(e) {
-            //todo change to include inline structs as well
-            return Some(e);
-        }
-        None
-    }) {
-        let source_type = &source.source_type;
+    for error_variant in error_enum.error_variants.iter() {
+        let source_type = &error_variant.source_type;
         if source_errors_froms_already_implemented.contains(&source_type) {
             continue;
         }
-        let variant_name = &source.name;
-        token_stream.append_all(quote::quote! {
-            impl From<#source_type> for #error_enum_name {
-                fn from(error: #source_type) -> Self {
-                    #error_enum_name::#variant_name(error)
+        if is_source_tuple_type(error_variant) {
+            let variant_name = &error_variant.name;
+            token_stream.append_all(quote::quote! {
+                impl From<#source_type> for #error_enum_name {
+                    fn from(error: #source_type) -> Self {
+                        #error_enum_name::#variant_name(error)
+                    }
                 }
-            }
-        });
-        source_errors_froms_already_implemented.push(source_type);
-        break;
+            });
+            source_errors_froms_already_implemented.push(source_type);
+        } else if is_source_only_struct_type(error_variant) {
+            let variant_name = &error_variant.name;
+            token_stream.append_all(quote::quote! {
+                impl From<#source_type> for #error_enum_name {
+                    fn from(error: #source_type) -> Self {
+                        #error_enum_name::#variant_name { source: error }
+                    }
+                }
+            });
+            source_errors_froms_already_implemented.push(source_type);
+        }
     }
 }
 //************************************************************************//
