@@ -37,6 +37,11 @@ pub(crate) fn is_source_only_struct_type(error_variant: &AstErrorVariant) -> boo
         && error_variant.fields.as_ref().is_some_and(|e| e.is_empty());
 }
 
+pub(crate) fn is_source_struct_type(error_variant: &AstErrorVariant) -> bool {
+    return error_variant.source_type.is_some()
+        && error_variant.fields.as_ref().is_some();
+}
+
 /// To determine if [this] can be converted into [that] without dropping values.
 /// Ignoring backtrace (since this is generated in the `From` impl if missing) and display.
 /// This does not mean [this] is a subset of [that].

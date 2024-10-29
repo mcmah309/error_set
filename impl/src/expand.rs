@@ -11,7 +11,7 @@ use syn::{Attribute, Ident, Lit};
 
 use crate::{
     ast::{AstErrorVariant, AstInlineErrorVariantField, DisplayAttribute},
-    is_conversion_target, is_source_only_struct_type, is_source_tuple_type,
+    is_conversion_target, is_source_only_struct_type, is_source_struct_type, is_source_tuple_type,
 };
 
 /// Expand the [ErrorEnum]s into code.
@@ -104,8 +104,8 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 let attributes = &r#struct.attributes;
                 let name = &r#struct.name;
                 let fields = &r#struct.fields;
-                let field_names = &fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-                let field_types = &fields.iter().map(|e| &e.r#type).collect::<Vec<_>>();
+                let field_names = fields.iter().map(|e| &e.name);
+                let field_types = fields.iter().map(|e| &e.r#type);
                 error_variant_tokens.append_all(quote::quote! {
                     #(#attributes)*
                     #name {
@@ -117,8 +117,8 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 let attributes = &source_struct.attributes;
                 let name = &source_struct.name;
                 let fields = &source_struct.fields;
-                let field_names = &fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-                let field_types = &fields.iter().map(|e| &e.r#type).collect::<Vec<_>>();
+                let field_names = fields.iter().map(|e| &e.name);
+                let field_types = fields.iter().map(|e| &e.r#type);
                 let source_type = &source_struct.source_type;
                 error_variant_tokens.append_all(quote::quote! {
                     #(#attributes)*
@@ -165,13 +165,20 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             source_match_branches.append_all(quote::quote! {
                 #enum_name::#name(ref source) => source.source(),
             });
+        } else if is_source_struct_type(variant) {
+            has_source_match_branches = true;
+            let name = &variant.name;
+            let field_names = variant.fields.as_ref().unwrap().iter().map(|e| &e.name);
+            source_match_branches.append_all(quote::quote! {
+                #enum_name::#name { ref source, #(#field_names),* } => source.source(),
+            });
         }
     }
     let mut error_inner = TokenStream::new();
     if has_source_match_branches {
         error_inner.append_all(quote::quote! {
             fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-                match *self {
+                match self {
                     #source_match_branches
                     #[allow(unreachable_patterns)]
                     _ => None,
@@ -256,17 +263,13 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 });
             }
             ErrorVariant::Struct(r#struct) => {
-                let field_names = &r#struct.fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+                let field_names = r#struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
                 });
             }
             ErrorVariant::SourceStruct(source_struct) => {
-                let field_names = &source_struct
-                    .fields
-                    .iter()
-                    .map(|e| &e.name)
-                    .collect::<Vec<_>>();
+                let field_names = source_struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
                     #enum_name::#name { ref source, #(ref #field_names),* } =>  #right_side,
                 });
@@ -460,8 +463,8 @@ fn struct_to_struct(
     that_variant_name: &Ident,
     that_enum_fields: &Vec<AstInlineErrorVariantField>,
 ) -> TokenStream {
-    let this_field_names = this_enum_fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-    let that_field_names = that_enum_fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+    let this_field_names = this_enum_fields.iter().map(|e| &e.name);
+    let that_field_names = that_enum_fields.iter().map(|e| &e.name);
     quote::quote! {
         #this_enum_name::#this_variant_name { #(#this_field_names),*  } =>  #that_enum_name::#that_variant_name { #(#that_field_names),*  },
     }
@@ -496,7 +499,7 @@ fn source_struct_to_source_tuple(
     that_enum_name: &Ident,
     that_enum_variant_name: &Ident,
 ) -> TokenStream {
-    let this_field_names = this_enum_fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+    let this_field_names = this_enum_fields.iter().map(|e| &e.name);
     quote::quote! {
         #this_enum_name::#this_enum_variant_name { source, #(#this_field_names),* } =>  #that_enum_name::#that_enum_variant_name(source),
     }
@@ -510,8 +513,8 @@ fn source_struct_to_source_struct(
     that_variant_name: &Ident,
     that_enum_fields: &Vec<AstInlineErrorVariantField>,
 ) -> TokenStream {
-    let this_field_names = this_enum_fields.iter().map(|e| &e.name).collect::<Vec<_>>();
-    let that_field_names = that_enum_fields.iter().map(|e| &e.name).collect::<Vec<_>>();
+    let this_field_names = this_enum_fields.iter().map(|e| &e.name);
+    let that_field_names = that_enum_fields.iter().map(|e| &e.name);
     quote::quote! {
         #this_enum_name::#this_enum_variant_name { source, #(#this_field_names),*  } =>  #that_enum_name::#that_variant_name { source, #(#that_field_names),* },
     }
