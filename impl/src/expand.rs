@@ -168,9 +168,8 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         } else if is_source_struct_type(variant) {
             has_source_match_branches = true;
             let name = &variant.name;
-            let field_names = variant.fields.as_ref().unwrap().iter().map(|e| &e.name);
             source_match_branches.append_all(quote::quote! {
-                #enum_name::#name { ref source, #(#field_names),* } => source.source(),
+                #enum_name::#name { ref source, .. } => source.source(),
             });
         }
     }
@@ -499,9 +498,8 @@ fn source_struct_to_source_tuple(
     that_enum_name: &Ident,
     that_enum_variant_name: &Ident,
 ) -> TokenStream {
-    let this_field_names = this_enum_fields.iter().map(|e| &e.name);
     quote::quote! {
-        #this_enum_name::#this_enum_variant_name { source, #(#this_field_names),* } =>  #that_enum_name::#that_enum_variant_name(source),
+        #this_enum_name::#this_enum_variant_name { source, .. } =>  #that_enum_name::#that_enum_variant_name(source),
     }
 }
 
