@@ -543,6 +543,7 @@ let value: Result<(), &str> = result.warn("If `Err`, this message is logged as w
 let value: Result<(), &str> = result.with_debug(|err| format!("If `Err`, this message is logged as debug via tracing/log/defmt: {}", err));
 let value: Option<()> = result.consume_info(); // If `Err`, the `Err` is logged as info via tracing/log/defmt
 let value: Option<()> = result.consume_with_trace(|err| format!("If `Err`, this message is logged as trace via tracing/log/defmt: {}", err));
+// ...etc.
 ```
 This is useful tracing context around errors. e.g.
 ```rust
