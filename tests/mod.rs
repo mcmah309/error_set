@@ -122,10 +122,7 @@ pub mod first_wrapped_type_implements_from_source {
 
     #[test]
     fn test() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::OutOfMemory,
-            "oops out of memory",
-        );
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let z: Z = io_error.into();
         let x: X = z.into();
         matches!(x, X::IoError(_));
@@ -133,10 +130,7 @@ pub mod first_wrapped_type_implements_from_source {
         matches!(y, Y::IoError2(_));
         let x: X = y.into();
         matches!(x, X::IoError(_));
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::OutOfMemory,
-            "oops out of memory",
-        );
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let y: Y = io_error.into();
         matches!(y, Y::IoError2(_));
     }
@@ -147,45 +141,46 @@ pub mod readme_example {
     use error_set::{error_set, CoerceResult};
 
     error_set! {
-        MediaError = {
-            IoError(std::io::Error),
-            MissingBookDescription,
-            MissingName,
-            NoContents,
-            InvalidUrl,
-            MaximumUploadSizeReached,
-            TimedOut,
-            AuthenticationFailed,
-        };
-        BookParsingError = {
-            MissingBookDescription,
-            IoError(std::io::Error),
-            MissingName,
-            NoContents,
-        };
-        BookSectionParsingError = {
-            MissingName,
-            NoContents,
-        };
+        /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
+        MediaError = DownloadError || BookParsingError;
+        /// Since this all of the variants in [DownloadError] are in [MediaError], this can be turned
+        /// into a [MediaError] with just `.into()` or `?`. Note restating variants directly,
+        /// instead of using `||`, also works
         DownloadError = {
             InvalidUrl,
+            /// The `From` trait for `std::io::Error` will also be automatically derived
             IoError(std::io::Error),
         };
-        ParseUploadError = {
-            MaximumUploadSizeReached,
-            TimedOut,
-            AuthenticationFailed,
+        /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived,
+        /// but one can always add more like below
+        #[derive(Clone)]
+        BookParsingError = {
+            #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
+            MissingBookDescription,
+        } || BookSectionParsingError; // Note the aggregation here as well
+        BookSectionParsingError = {
+            /// Inline structs are also supported
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
         };
     }
 
     #[test]
     fn test() {
         let book_section_parsing_error: BookSectionParsingError =
-            BookSectionParsingError::MissingName;
+            BookSectionParsingError::MissingField {
+                field: "author".to_string(),
+            };
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(book_parsing_error, BookParsingError::MissingName));
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingField { field: _ }
+        ));
         let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingName));
+        assert!(matches!(media_error, MediaError::MissingField { field: _ }));
 
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
@@ -195,40 +190,70 @@ pub mod readme_example {
 }
 
 #[cfg(test)]
-pub mod readme_example_aggregation {
-    use error_set::error_set;
+pub mod readme_example_full_expansion {
+    use error_set::{error_set, CoerceResult};
 
     error_set! {
-        MediaError = BookParsingError || DownloadError || ParseUploadError;
-        BookParsingError = {
-            MissingBookDescription,
+        /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
+        MediaError = {
+            InvalidUrl,
+            /// The `From` trait for `std::io::Error` will also be automatically derived
             IoError(std::io::Error),
-        } || BookSectionParsingError;
-        BookSectionParsingError = {
-            MissingName,
-            NoContents,
+            #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
+            MissingBookDescription,
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
         };
+        /// Since this all of the variants in [DownloadError] are in [MediaError], this can be turned
+        /// into a [MediaError] with just `.into()` or `?`. Note restating variants directly,
+        /// instead of using `||`, also works
         DownloadError = {
             InvalidUrl,
+            /// The `From` trait for `std::io::Error` will also be automatically derived
             IoError(std::io::Error),
         };
-        ParseUploadError = {
-            MaximumUploadSizeReached,
-            TimedOut,
-            AuthenticationFailed,
+        /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived,
+        /// but one can always add more like below
+        #[derive(Clone)]
+        BookParsingError = {
+            #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
+            MissingBookDescription,
+            /// Inline structs are also supported
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
+        };
+        BookSectionParsingError = {
+            /// Inline structs are also supported
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
         };
     }
 
     #[test]
     fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingName;
+        let book_section_parsing_error: BookSectionParsingError =
+            BookSectionParsingError::MissingField {
+                field: "author".to_string(),
+            };
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(book_parsing_error, BookParsingError::MissingName));
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingField { field: _ }
+        ));
         let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingName));
+        assert!(matches!(media_error, MediaError::MissingField { field: _ }));
 
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
@@ -286,7 +311,10 @@ pub mod documentation {
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.coerce();
-        assert!(matches!(result_media_error, Err(MediaError::OutOfMemory(_))));
+        assert!(matches!(
+            result_media_error,
+            Err(MediaError::OutOfMemory(_))
+        ));
     }
 }
 
@@ -469,37 +497,56 @@ pub mod display_ref_error {
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 2",
         ));
-        assert_eq!(y.to_string(), "Y io error: oops out of memory 2".to_string());
+        assert_eq!(
+            y.to_string(),
+            "Y io error: oops out of memory 2".to_string()
+        );
 
         let y2 = Y2::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 3",
         ));
-        assert_eq!(y2.to_string(), "Y2 io error type: out of memory".to_string());
+        assert_eq!(
+            y2.to_string(),
+            "Y2 io error type: out of memory".to_string()
+        );
 
         let z = Z::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 4",
         ));
-        assert_eq!(z.to_string(), "Z io error: oops out of memory 4".to_string());
+        assert_eq!(
+            z.to_string(),
+            "Z io error: oops out of memory 4".to_string()
+        );
 
         let yy = YY::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 5",
         ));
-        assert_eq!(yy.to_string(), "YY io error: oops out of memory 5".to_string());
-
+        assert_eq!(
+            yy.to_string(),
+            "YY io error: oops out of memory 5".to_string()
+        );
 
         let y_to_x: X = y.into();
         let x_to_y: Y = x.into();
         assert_eq!(y_to_x.to_string(), "X io error".to_string());
-        assert_eq!(x_to_y.to_string(), "Y io error: oops out of memory 1".to_string());
+        assert_eq!(
+            x_to_y.to_string(),
+            "Y io error: oops out of memory 1".to_string()
+        );
 
         let z_to_y2: Y2 = z.into();
         let y2_to_z: Z = y2.into();
-        assert_eq!(z_to_y2.to_string(), "Y2 io error type: out of memory".to_string());
-        assert_eq!(y2_to_z.to_string(), "Z io error: oops out of memory 3".to_string());
-
+        assert_eq!(
+            z_to_y2.to_string(),
+            "Y2 io error type: out of memory".to_string()
+        );
+        assert_eq!(
+            y2_to_z.to_string(),
+            "Z io error: oops out of memory 3".to_string()
+        );
 
         let a = A::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
@@ -592,10 +639,10 @@ pub mod inline_source_error {
         let fmt_error = std::fmt::Error::default();
         let auth_error: AuthError = fmt_error.into();
         matches!(auth_error, AuthError::SourceStruct1 { source: _ });
-        let login_error:LoginError = auth_error.into();
+        let login_error: LoginError = auth_error.into();
         matches!(login_error, LoginError::SourceStruct1 { source: _ });
         let fmt_error = std::fmt::Error::default();
-        let login_error:LoginError = fmt_error.into();
+        let login_error: LoginError = fmt_error.into();
         matches!(login_error, LoginError::SourceStruct1 { source: _ });
         let auth_error = AuthError::InvalidCredentials;
         let login_error: LoginError = auth_error.into();
