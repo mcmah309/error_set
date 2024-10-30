@@ -1,4 +1,4 @@
-use crate::ast::{AstErrorDeclaration, AstErrorEnumVariant, AstErrorSet, RefError};
+use crate::ast::{AstErrorDeclaration, AstErrorSet, AstErrorVariant, RefError};
 use crate::expand::ErrorEnum;
 
 use syn::{Attribute, Ident};
@@ -53,7 +53,7 @@ fn resolve_builders_helper<'a>(
     index: usize,
     error_enum_builders: &'a mut [ErrorEnumBuilder],
     visited: &mut Vec<Ident>,
-) -> syn::Result<Vec<AstErrorEnumVariant>> {
+) -> syn::Result<Vec<AstErrorVariant>> {
     //println!("visited `{}`", visited.iter().map(|e| e.to_string()).collect::<Vec<_>>().join(" - "));
     let error_enum_builder = &error_enum_builders[index];
     let error_name = &error_enum_builder.error_name;
@@ -102,7 +102,10 @@ fn resolve_builders_helper<'a>(
                 indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
             for variant in ref_error_enum_builder.error_variants.iter() {
                 let this_error_variants = &mut this_error_enum_builder.error_variants;
-                if !this_error_variants.contains(&variant) {
+                let is_variant_already_in_enum = this_error_variants
+                    .iter()
+                    .any(|e| does_occupy_the_same_space(e, &variant));
+                if !is_variant_already_in_enum {
                     this_error_variants.push(variant.clone());
                 }
             }
@@ -113,10 +116,16 @@ fn resolve_builders_helper<'a>(
     Ok(error_enum_builders[index].error_variants.clone())
 }
 
+/// If the error defintions occupy the same space. Useful since if this space is already occupied e.g. ` X = A || B`
+/// If `A` has a variant like `V1(std::io::Error)` and `B` `V1(std::io::Error)`.
+pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErrorVariant) -> bool {
+    return this.name == other.name;
+}
+
 struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
     pub error_name: Ident,
-    pub error_variants: Vec<AstErrorEnumVariant>,
+    pub error_variants: Vec<AstErrorVariant>,
     /// Once this is empty, all [ref_parts] have been resolved and [error_variants] is complete.
     pub ref_parts_to_resolve: Vec<RefError>,
 }

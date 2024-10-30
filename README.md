@@ -5,7 +5,7 @@
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-error_set-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/error_set)
 [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/mcmah309/error_set/ci.yml?branch=master&style=for-the-badge" height="20">](https://github.com/mcmah309/error_set/actions?query=branch%3Amaster)
 
-Error Set simplifies error management by providing a streamlined method for defining errors and easily converting between them. Resultingly, error handling becomes both straightforward and efficient.
+Error Set simplifies error management by providing a streamlined method for defining errors and easily converting between them.
 
 Error Set is inspired by Zig's [error set](https://ziglang.org/documentation/master/#Error-Set-Type), and offers similar functionality.
 
@@ -14,23 +14,27 @@ Instead of defining various enums/structs for errors and hand rolling relations,
 use error_set::error_set;
 
 error_set! {
-    MediaError = BookParsingError || DownloadError || ParseUploadError;
-    BookParsingError = {
-        MissingBookDescription,
-        IoError(std::io::Error),
-    } || BookSectionParsingError;
-    BookSectionParsingError = {
-        MissingName,
-        NoContents,
-    };
+    /// The syntax below aggregates the referenced error variants
+    MediaError = DownloadError || BookParsingError;
+    /// Since all variants in [DownloadError] are in [MediaError], a
+    /// [DownloadError] can be turned into a [MediaError] with just `.into()` or `?`. 
     DownloadError = {
+        #[display("Easily add custom display messages")]
         InvalidUrl,
+        /// The `From` trait for `std::io::Error` will also be automatically derived
+        #[display("Display messages work just like the `format!` macro {0}")]
         IoError(std::io::Error),
     };
-    ParseUploadError = {
-        MaximumUploadSizeReached,
-        TimedOut,
-        AuthenticationFailed,
+    /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived
+    #[derive(Clone)]
+    BookParsingError = { MissingBookDescription, } || BookSectionParsingError;
+    BookSectionParsingError = {
+        /// Inline structs are also supported
+        #[display("Display messages can also reference fields, like {field}")]
+        MissingField {
+            field: String
+        },
+        NoContent,
     };
 }
 ```
@@ -39,51 +43,24 @@ error_set! {
   <summary>Cargo Expand</summary>
 
 ```rust
-use error_set::error_set;
+#[doc = " The syntax below aggregates the referenced "]
+#[doc = " errors into the generated enum"]
+#[derive(Debug)]
 pub enum MediaError {
-    MissingBookDescription,
-    IoError(std::io::Error),
-    MissingName,
-    NoContents,
     InvalidUrl,
-    MaximumUploadSizeReached,
-    TimedOut,
-    AuthenticationFailed,
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for MediaError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            MediaError::MissingBookDescription => {
-                ::core::fmt::Formatter::write_str(f, "MissingBookDescription")
-            }
-            MediaError::IoError(__self_0) => {
-                ::core::fmt::Formatter::debug_tuple_field1_finish(
-                    f,
-                    "IoError",
-                    &__self_0,
-                )
-            }
-            MediaError::MissingName => {
-                ::core::fmt::Formatter::write_str(f, "MissingName")
-            }
-            MediaError::NoContents => ::core::fmt::Formatter::write_str(f, "NoContents"),
-            MediaError::InvalidUrl => ::core::fmt::Formatter::write_str(f, "InvalidUrl"),
-            MediaError::MaximumUploadSizeReached => {
-                ::core::fmt::Formatter::write_str(f, "MaximumUploadSizeReached")
-            }
-            MediaError::TimedOut => ::core::fmt::Formatter::write_str(f, "TimedOut"),
-            MediaError::AuthenticationFailed => {
-                ::core::fmt::Formatter::write_str(f, "AuthenticationFailed")
-            }
-        }
-    }
+    #[doc = " The `From` trait for `std::io::Error` will also be automatically derived"]
+    IoError(std::io::Error),
+    MissingBookDescription,
+    #[doc = " Inline structs are also supported"]
+    MissingField {
+        field: String,
+    },
+    NoContent,
 }
 #[allow(unused_qualifications)]
 impl core::error::Error for MediaError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        match *self {
+        match self {
             MediaError::IoError(ref source) => source.source(),
             #[allow(unreachable_patterns)]
             _ => None,
@@ -94,48 +71,29 @@ impl core::fmt::Display for MediaError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match *self {
-            MediaError::MissingBookDescription => {
-                f.write_fmt(format_args!("{0}", "MediaError::MissingBookDescription"))
-            }
-            MediaError::IoError(ref source) => f.write_fmt(format_args!("{0}", source)),
-            MediaError::MissingName => {
-                f.write_fmt(format_args!("{0}", "MediaError::MissingName"))
-            }
-            MediaError::NoContents => {
-                f.write_fmt(format_args!("{0}", "MediaError::NoContents"))
-            }
-            MediaError::InvalidUrl => {
-                f.write_fmt(format_args!("{0}", "MediaError::InvalidUrl"))
-            }
-            MediaError::MaximumUploadSizeReached => {
-                f.write_fmt(format_args!("{0}", "MediaError::MaximumUploadSizeReached"))
-            }
-            MediaError::TimedOut => {
-                f.write_fmt(format_args!("{0}", "MediaError::TimedOut"))
-            }
-            MediaError::AuthenticationFailed => {
-                f.write_fmt(format_args!("{0}", "MediaError::AuthenticationFailed"))
-            }
-        }
-    }
-}
-impl From<BookParsingError> for MediaError {
-    fn from(error: BookParsingError) -> Self {
-        match error {
-            BookParsingError::MissingBookDescription => {
-                MediaError::MissingBookDescription
-            }
-            BookParsingError::IoError(source) => MediaError::IoError(source),
-            BookParsingError::MissingName => MediaError::MissingName,
-            BookParsingError::NoContents => MediaError::NoContents,
-        }
-    }
-}
-impl From<BookSectionParsingError> for MediaError {
-    fn from(error: BookSectionParsingError) -> Self {
-        match error {
-            BookSectionParsingError::MissingName => MediaError::MissingName,
-            BookSectionParsingError::NoContents => MediaError::NoContents,
+            MediaError::InvalidUrl => f.write_fmt(core::format_args!(
+                "{}",
+                "Easily add custom display messages"
+            )),
+            MediaError::IoError(ref source) => f.write_fmt(core::format_args!(
+                "Display messages work just like the `format!` macro {0}",
+                source
+            )),
+            MediaError::MissingBookDescription => f.write_fmt(core::format_args!(
+                "{}",
+                concat!(
+                    stringify!(MediaError),
+                    "::",
+                    stringify!(MissingBookDescription)
+                )
+            )),
+            MediaError::MissingField { ref field } => f.write_fmt(core::format_args!(
+                "Display messages can also reference fields, like {field}"
+            )),
+            MediaError::NoContent => f.write_fmt(core::format_args!(
+                "{}",
+                concat!(stringify!(MediaError), "::", stringify!(NoContent))
+            )),
         }
     }
 }
@@ -147,14 +105,20 @@ impl From<DownloadError> for MediaError {
         }
     }
 }
-impl From<ParseUploadError> for MediaError {
-    fn from(error: ParseUploadError) -> Self {
+impl From<BookParsingError> for MediaError {
+    fn from(error: BookParsingError) -> Self {
         match error {
-            ParseUploadError::MaximumUploadSizeReached => {
-                MediaError::MaximumUploadSizeReached
-            }
-            ParseUploadError::TimedOut => MediaError::TimedOut,
-            ParseUploadError::AuthenticationFailed => MediaError::AuthenticationFailed,
+            BookParsingError::MissingBookDescription => MediaError::MissingBookDescription,
+            BookParsingError::MissingField { field } => MediaError::MissingField { field },
+            BookParsingError::NoContent => MediaError::NoContent,
+        }
+    }
+}
+impl From<BookSectionParsingError> for MediaError {
+    fn from(error: BookSectionParsingError) -> Self {
+        match error {
+            BookSectionParsingError::MissingField { field } => MediaError::MissingField { field },
+            BookSectionParsingError::NoContent => MediaError::NoContent,
         }
     }
 }
@@ -163,138 +127,19 @@ impl From<std::io::Error> for MediaError {
         MediaError::IoError(error)
     }
 }
-pub enum BookParsingError {
-    MissingBookDescription,
-    IoError(std::io::Error),
-    MissingName,
-    NoContents,
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for BookParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            BookParsingError::MissingBookDescription => {
-                ::core::fmt::Formatter::write_str(f, "MissingBookDescription")
-            }
-            BookParsingError::IoError(__self_0) => {
-                ::core::fmt::Formatter::debug_tuple_field1_finish(
-                    f,
-                    "IoError",
-                    &__self_0,
-                )
-            }
-            BookParsingError::MissingName => {
-                ::core::fmt::Formatter::write_str(f, "MissingName")
-            }
-            BookParsingError::NoContents => {
-                ::core::fmt::Formatter::write_str(f, "NoContents")
-            }
-        }
-    }
-}
-#[allow(unused_qualifications)]
-impl core::error::Error for BookParsingError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        match *self {
-            BookParsingError::IoError(ref source) => source.source(),
-            #[allow(unreachable_patterns)]
-            _ => None,
-        }
-    }
-}
-impl core::fmt::Display for BookParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match *self {
-            BookParsingError::MissingBookDescription => {
-                f.write_fmt(
-                    format_args!("{0}", "BookParsingError::MissingBookDescription"),
-                )
-            }
-            BookParsingError::IoError(ref source) => {
-                f.write_fmt(format_args!("{0}", source))
-            }
-            BookParsingError::MissingName => {
-                f.write_fmt(format_args!("{0}", "BookParsingError::MissingName"))
-            }
-            BookParsingError::NoContents => {
-                f.write_fmt(format_args!("{0}", "BookParsingError::NoContents"))
-            }
-        }
-    }
-}
-impl From<BookSectionParsingError> for BookParsingError {
-    fn from(error: BookSectionParsingError) -> Self {
-        match error {
-            BookSectionParsingError::MissingName => BookParsingError::MissingName,
-            BookSectionParsingError::NoContents => BookParsingError::NoContents,
-        }
-    }
-}
-impl From<std::io::Error> for BookParsingError {
-    fn from(error: std::io::Error) -> Self {
-        BookParsingError::IoError(error)
-    }
-}
-pub enum BookSectionParsingError {
-    MissingName,
-    NoContents,
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for BookSectionParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        ::core::fmt::Formatter::write_str(
-            f,
-            match self {
-                BookSectionParsingError::MissingName => "MissingName",
-                BookSectionParsingError::NoContents => "NoContents",
-            },
-        )
-    }
-}
-#[allow(unused_qualifications)]
-impl core::error::Error for BookSectionParsingError {}
-impl core::fmt::Display for BookSectionParsingError {
-    #[inline]
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match *self {
-            BookSectionParsingError::MissingName => {
-                f.write_fmt(format_args!("{0}", "BookSectionParsingError::MissingName"))
-            }
-            BookSectionParsingError::NoContents => {
-                f.write_fmt(format_args!("{0}", "BookSectionParsingError::NoContents"))
-            }
-        }
-    }
-}
+#[doc = " Since this all of the variants in [DownloadError] are in [MediaError],"]
+#[doc = " this can be turned into a [MediaError] with just `.into()` or `?`. "]
+#[doc = " Note restating variants directly, instead of using `||`, also works"]
+#[derive(Debug)]
 pub enum DownloadError {
     InvalidUrl,
+    #[doc = " The `From` trait for `std::io::Error` will also be automatically derived"]
     IoError(std::io::Error),
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for DownloadError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        match self {
-            DownloadError::InvalidUrl => {
-                ::core::fmt::Formatter::write_str(f, "InvalidUrl")
-            }
-            DownloadError::IoError(__self_0) => {
-                ::core::fmt::Formatter::debug_tuple_field1_finish(
-                    f,
-                    "IoError",
-                    &__self_0,
-                )
-            }
-        }
-    }
 }
 #[allow(unused_qualifications)]
 impl core::error::Error for DownloadError {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        match *self {
+        match self {
             DownloadError::IoError(ref source) => source.source(),
             #[allow(unreachable_patterns)]
             _ => None,
@@ -305,12 +150,14 @@ impl core::fmt::Display for DownloadError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match *self {
-            DownloadError::InvalidUrl => {
-                f.write_fmt(format_args!("{0}", "DownloadError::InvalidUrl"))
-            }
-            DownloadError::IoError(ref source) => {
-                f.write_fmt(format_args!("{0}", source))
-            }
+            DownloadError::InvalidUrl => f.write_fmt(core::format_args!(
+                "{}",
+                "Easily add custom display messages"
+            )),
+            DownloadError::IoError(ref source) => f.write_fmt(core::format_args!(
+                "Display messages work just like the `format!` macro {0}",
+                source
+            )),
         }
     }
 }
@@ -319,87 +166,126 @@ impl From<std::io::Error> for DownloadError {
         DownloadError::IoError(error)
     }
 }
-pub enum ParseUploadError {
-    MaximumUploadSizeReached,
-    TimedOut,
-    AuthenticationFailed,
-}
-#[automatically_derived]
-impl ::core::fmt::Debug for ParseUploadError {
-    #[inline]
-    fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-        ::core::fmt::Formatter::write_str(
-            f,
-            match self {
-                ParseUploadError::MaximumUploadSizeReached => "MaximumUploadSizeReached",
-                ParseUploadError::TimedOut => "TimedOut",
-                ParseUploadError::AuthenticationFailed => "AuthenticationFailed",
-            },
-        )
-    }
+#[doc = " Traits like `Debug`, `Display`, `Error`, and `From` are all automatically"]
+#[doc = " derived, but one can always add more like below"]
+#[derive(Clone, Debug)]
+pub enum BookParsingError {
+    MissingBookDescription,
+    #[doc = " Inline structs are also supported"]
+    MissingField {
+        field: String,
+    },
+    NoContent,
 }
 #[allow(unused_qualifications)]
-impl core::error::Error for ParseUploadError {}
-impl core::fmt::Display for ParseUploadError {
+impl core::error::Error for BookParsingError {}
+
+impl core::fmt::Display for BookParsingError {
     #[inline]
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match *self {
-            ParseUploadError::MaximumUploadSizeReached => {
-                f.write_fmt(
-                    format_args!("{0}", "ParseUploadError::MaximumUploadSizeReached"),
+            BookParsingError::MissingBookDescription => f.write_fmt(core::format_args!(
+                "{}",
+                concat!(
+                    stringify!(BookParsingError),
+                    "::",
+                    stringify!(MissingBookDescription)
                 )
+            )),
+            BookParsingError::MissingField { ref field } => f.write_fmt(core::format_args!(
+                "Display messages can also reference fields, like {field}"
+            )),
+            BookParsingError::NoContent => f.write_fmt(core::format_args!(
+                "{}",
+                concat!(stringify!(BookParsingError), "::", stringify!(NoContent))
+            )),
+        }
+    }
+}
+impl From<BookSectionParsingError> for BookParsingError {
+    fn from(error: BookSectionParsingError) -> Self {
+        match error {
+            BookSectionParsingError::MissingField { field } => {
+                BookParsingError::MissingField { field }
             }
-            ParseUploadError::TimedOut => {
-                f.write_fmt(format_args!("{0}", "ParseUploadError::TimedOut"))
-            }
-            ParseUploadError::AuthenticationFailed => {
-                f.write_fmt(
-                    format_args!("{0}", "ParseUploadError::AuthenticationFailed"),
+            BookSectionParsingError::NoContent => BookParsingError::NoContent,
+        }
+    }
+}
+#[derive(Debug)]
+pub enum BookSectionParsingError {
+    #[doc = " Inline structs are also supported"]
+    MissingField {
+        field: String,
+    },
+    NoContent,
+}
+#[allow(unused_qualifications)]
+impl core::error::Error for BookSectionParsingError {}
+
+impl core::fmt::Display for BookSectionParsingError {
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match *self {
+            BookSectionParsingError::MissingField { ref field } => f.write_fmt(core::format_args!(
+                "Display messages can also reference fields, like {field}"
+            )),
+            BookSectionParsingError::NoContent => f.write_fmt(core::format_args!(
+                "{}",
+                concat!(
+                    stringify!(BookSectionParsingError),
+                    "::",
+                    stringify!(NoContent)
                 )
-            }
+            )),
         }
     }
 }
 ```
 </details>
 
-which is also equivalent to writing the full expansion:
+The above error set can also be written as the full expansion (without the `||` operator).
+
+<details>
+
+  <summary>Full Expansion Representation</summary>
+
+\*Comments and messages removed for brevity\*
+
 ```rust
 error_set! {
     MediaError = {
-        IoError(std::io::Error),
-        MissingBookDescription,
-        MissingName,
-        NoContents,
         InvalidUrl,
-        MaximumUploadSizeReached,
-        TimedOut,
-        AuthenticationFailed,
-    };
-    BookParsingError = {
-        MissingBookDescription,
         IoError(std::io::Error),
-        MissingName,
-        NoContents,
-    };
-    BookSectionParsingError = {
-        MissingName,
-        NoContents,
+        MissingBookDescription,
+        MissingField {
+            field: String
+        },
+        NoContent,
     };
     DownloadError = {
         InvalidUrl,
         IoError(std::io::Error),
     };
-    ParseUploadError = {
-        MaximumUploadSizeReached,
-        TimedOut,
-        AuthenticationFailed,
+    BookParsingError = {
+        MissingBookDescription,
+        MissingField {
+            field: String
+        },
+        NoContent,
+    };
+    BookSectionParsingError = {
+        MissingField {
+            field: String
+        },
+        NoContent,
     };
 }
 ```
+</details>
+
 Any above subset can be converted into a superset with `.into()` or `?`. 
-This makes correctly scoping and passing around errors a breeze.
-Error enums and error variants can also accept doc comments and attributes like `#[derive(...)]`.
+This makes correctly scoping and passing up call chains a breeze.
 
 <details>
 
@@ -409,38 +295,36 @@ Error enums and error variants can also accept doc comments and attributes like 
 use error_set::error_set;
 
 error_set! {
-    MediaError = {
-        IoError(std::io::Error)
-    } || BookParsingError || DownloadError || ParseUploadError;
-    BookParsingError = {
-        MissingBookDescription,
-        CouldNotReadBook(std::io::Error),
-    } || BookSectionParsingError;
-    BookSectionParsingError = {
-        MissingName,
-        NoContents,
-    };
+    MediaError = DownloadError || BookParsingError;
     DownloadError = {
         InvalidUrl,
-        CouldNotSaveBook(std::io::Error),
+        IoError(std::io::Error),
     };
-    ParseUploadError = {
-        MaximumUploadSizeReached,
-        TimedOut,
-        AuthenticationFailed,
+    BookParsingError = { MissingBookDescription, } || BookSectionParsingError;
+    BookSectionParsingError = {
+        MissingField {
+            field: String
+        },
+        NoContent,
     };
 }
 
 fn main() {
-    let book_section_parsing_error: BookSectionParsingError = BookSectionParsingError::MissingName;
+    let book_section_parsing_error: BookSectionParsingError =
+        BookSectionParsingError::MissingField {
+            field: "author".to_string(),
+        };
     let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-    assert!(matches!(book_parsing_error, BookParsingError::MissingName));
+    assert!(matches!(
+        book_parsing_error,
+        BookParsingError::MissingField { field: _ }
+    ));
     let media_error: MediaError = book_parsing_error.into();
-    assert!(matches!(media_error, MediaError::MissingName));
+    assert!(matches!(media_error, MediaError::MissingField { field: _ }));
 
     let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-    let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // `.coerce()` == `.map_err(Into::into)`
-    let result_media_error: Result<(), MediaError> = result_download_error.coerce(); // `.coerce()` == `.map_err(Into::into)`
+    let result_download_error: Result<(), DownloadError> = Err(io_error).coerce(); // == .map_err(Into::into);
+    let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
     assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
 }
 ```
@@ -474,8 +358,137 @@ impl JwtVerifier {
 }
 ```
 
-Error sets also supports inline structs for passing error related data and custom display messages. 
-Just add the `#[display(...)]` attribute to the variant.
+## More Details
+
+### Source Variants
+
+Error sets that have source variants (aka wrapped variants), will delegate the `Error` trait's `source()` method to the
+correct source branch's wrapped error. `From` traits are also automatically generated from the
+inner type to the Error enum.
+
+#### Source Tuple Variants
+Source tuple variants are the most common source variant. Declared like
+```rust
+error_set! {
+    ErrorEnum = {
+        IoError(std::io::Error),
+        FmtError(std::fmt::Error),
+    };
+}
+```
+Which has the generated enum
+```rust
+pub enum ErrorEnum {
+    IoError(std::io::Error),
+    FmtError(std::fmt::Error),
+}
+```
+
+#### Source Structs Variants
+Source struct variants are also supported, declared like so
+```rust
+error_set! {
+    ErrorEnum = {
+        IoError(std::io::Error) {} // Note the `{}`
+    };
+}
+```
+Which has the generated enum
+```rust
+pub enum ErrorEnum {
+    IoError {
+        source: std::io::Error,
+    }
+}
+```
+Source structs become useful when you want to attach additional fields to an error
+```rust
+error_set! {
+    ErrorEnum = {
+        IoError(std::io::Error) {
+            field1: String,
+            field2: &'static str,
+        }
+    };
+}
+```
+Which has the generated enum
+```rust
+pub enum ErrorEnum {
+    IoError {
+        source: std::io::Error,
+        field1: String,
+        field2: &'static str,
+    }
+}
+```
+A `From` implementation for the inner `source` is not automatically generated for source struct variants that have fields,
+like above.
+
+#### Multiple Source Variants Of The Same Type
+Error sets can have multiple source variants of the same type. e.g.
+```rust
+error_set! {
+    ErrorEnum = {
+        IoError(std::io::Error),
+        IoError2(std::io::Error),
+    };
+}
+```
+A `From` trait implementation from the source (`std::io::Error`) will be automatically generated for the first
+variant. Therefore, in the above example, converting `std::io::Error` to `ErrorEnum` with `.into()` will
+be `ErrorEnum::IoError`. Keep this is mind during aggregations like
+```rust
+error_set! {
+    ErrorEnum1 = ErrorEnum2 || ErrorEnum3;
+    ErrorEnum2 = {
+        IoError2(std::io::Error),
+    };
+    ErrorEnum3 = {
+        IoError3(std::io::Error),
+    };
+}
+```
+But this can always be overridden - `ErrorEnum1 = { IoError3(std::io::Error), } || ErrorEnum2 || ErrorEnum3;`. 
+Or better yet just switch the order - `ErrorEnum1 = ErrorEnum3 || ErrorEnum2;`.
+
+### Aggregations And Conversions
+
+Error set uses `||` (or) for aggregation, but it is not needed, just a convenience.
+```rust
+error_set! {
+    ErrorEnum1 = {
+        Variant1,
+        Variant2
+    } || ErrorEnum2;
+    ErrorEnum2 = {
+        Variant3
+    };
+}
+```
+is equivalent to
+```rust
+error_set! {
+    ErrorEnum1 = {
+        Variant1,
+        Variant2,
+        Variant3,
+    };
+    ErrorEnum2 = {
+        Variant3
+    };
+}
+```
+For one type to be converted into another it needs to be considered a subset of the target type.
+Thus in the example above, `ErrorEnum2` can be converted into `ErrorEnum1` with `.into()` or `?`.
+
+### Display
+
+The `#[display(...)]` attribute provides a custom display message for variant.
+If a custom display is not provided for a wrapped error type like `IoError(std::io::Error)`, it will directly 
+delegate its display to the inner type (`std::io::Error`). If it is desired to prevent this, provide a custom 
+display message, like in the below example, or add `#[display(opaque)]`. The default display for other
+variant types is `ErrorName::VariantName`.
 ```rust
 error_set! {
     AuthError = {
@@ -493,9 +506,6 @@ error_set! {
     } || AuthError;
 }
 ```
-> Note: If a custom display is not provided for a wrapped error type like `IoError(std::io::Error)`, it will directly 
-> delegate its display to the inner type (`std::io::Error`). If it is desired to prevent this, provide a custom 
-> display message, like in the above example, or add `#[display(opaque)]`.
 
 <details>
 
@@ -517,108 +527,11 @@ fn main() {
 
 </details>
 
-You can even redeclare the same inline struct in a different set, change the display message, and conversion between sets will still work.
+Redeclaring the same variant in a different set and changing the display message, does not
+effect the conversion between sets.
 
 
 ### Feature Flags
-
-**coerce_macro:** Each error set will generates a `coerce!` macro to help handle coercion between partially intersecting sets.
-
-```rust
-let val = coerce!{ setx,
-            Ok(val) => val,
-            Err(SetX::X) => {}, // handle disjointedness
-            { Err(SetX) => return Err(SetY) } // terminal coercion
-        }?;
-```
-
-<details>
-
-<summary>More Details</summary>
-
-Given:
- ```rust
- error_set! {
-    SetX = {
-        X
-    } || Common;
-    SetY = {
-        Y
-    } || Common;
-    Common = {
-        A,
-        B,
-        C,
-        D,
-        E,
-        F,
-        G,
-        H,
-    };
- }
- ```
-
- rather than writing:
-
- ```rust
- fn setx_result_to_sety_result() -> Result<(), SetY> {
-    let _ok = match setx_result() {
-        Ok(ok) => ok,
-        Err(SetX::X) => {} // handle disjointedness
-        Err(SetX::A) => {
-            return Err(SetY::A);
-        }
-        Err(SetX::B) => {
-            return Err(SetY::B);
-        }
-        Err(SetX::C) => {
-            return Err(SetY::C);
-        }
-        Err(SetX::D) => {
-            return Err(SetY::D);
-        }
-        Err(SetX::E) => {
-            return Err(SetY::E);
-        }
-        Err(SetX::F) => {
-            return Err(SetY::F);
-        }
-        Err(SetX::G) => {
-            return Err(SetY::G);
-        }
-        Err(SetX::H) => {
-            return Err(SetY::H);
-        }
-    };
-    Ok(())
- }
- ```
-
- one can write this, which compiles to the `match` statement above:
-
- ```rust
- fn setx_result_to_sety_result() -> Result<(), SetY> {
-    let _ok = coerce!{ setx_result(),
-        Ok(ok) => ok,
-        Err(SetX::X) => {}, // handle disjointedness
-        { Err(SetX) => return Err(SetY) } // terminal coercion
-    };
-    Ok(())
- }
- ```
-
- The `coerce!` macro is a flat fast (no tt muncher 🦫) declarative macro created by the `error_set!` macro for the set.
- `coerce!` behaves like a regular `match` statement, except it allows a terminal coercion statement between sets. e.g.
-
- ```rust
- { Err(SetX) => return Err(SetY) }
- { Err(SetX) => Err(SetY) }
- { SetX => return SetY }
- { SetX => SetY }
- ```
-
- With `coerce!`, one can concisely handle specific variants of errors as they bubble up the call stack and propagate the rest.
-</details>
 
 **tracing** / **log** / **defmt** :
 Enables support for the `tracing` or `log` or `defmt` crates. Methods are added to `Result` and are executed when the `Result` is an `Err` for logging purposes. They work similarly to `anyhow`'s `.context(..)` method. e.g.
@@ -631,8 +544,21 @@ let value: Result<(), &str> = result.with_debug(|err| format!("If `Err`, this me
 let value: Option<()> = result.consume_info(); // If `Err`, the `Err` is logged as info via tracing/log/defmt
 let value: Option<()> = result.consume_with_trace(|err| format!("If `Err`, this message is logged as trace via tracing/log/defmt: {}", err));
 ```
+This is useful tracing context around errors. e.g.
+```rust
+let val = func().warn("`func` failed, here is some extra context like variable values")?;
+let val = func().consume_warn();
+```
+rather than
+```rust
+let val = func().inspect_err(|err| tracing::warn!("`func` failed, here is some extra context like variable values"))?;
+let val = func().map_err(|err| {
+        tracing::warn!("{}", err);
+        None
+    });
+```
 > Note: a `context_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
-> while a downstream binrary can ultimately decide the implementation. If no implementations is selected, since all the above
+> while a downstream binary can ultimately decide the implementation. If no implementations is selected, since all the above
 > methods are inlined, the code will be optimized away during compilation.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`

@@ -103,30 +103,36 @@ pub mod error_sources_of_same_name {
 }
 
 #[cfg(test)]
-pub mod error_sources_of_different_names {
+pub mod first_wrapped_type_implements_from_source {
     use error_set::error_set;
 
     error_set! {
-        SetLevelError = {
-            IoError(std::io::Error),
-        };
         X = {
             IoError(std::io::Error),
+            IoError2(std::io::Error),
         };
         Y = {
             IoError2(std::io::Error),
+            IoError(std::io::Error),
+        };
+        Z = {
+            IoError(std::io::Error),
         };
     }
 
     #[test]
     fn test() {
-        let x = X::IoError(std::io::Error::new(
-            std::io::ErrorKind::OutOfMemory,
-            "oops out of memory",
-        ));
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let z: Z = io_error.into();
+        let x: X = z.into();
+        matches!(x, X::IoError(_));
         let y: Y = x.into();
-        assert!(matches!(y, Y::IoError2(_)));
-        let _set: SetLevelError = y.into();
+        matches!(y, Y::IoError2(_));
+        let x: X = y.into();
+        matches!(x, X::IoError(_));
+        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
+        let y: Y = io_error.into();
+        matches!(y, Y::IoError2(_));
     }
 }
 
@@ -135,45 +141,46 @@ pub mod readme_example {
     use error_set::{error_set, CoerceResult};
 
     error_set! {
-        MediaError = {
-            IoError(std::io::Error),
-            MissingBookDescription,
-            MissingName,
-            NoContents,
-            InvalidUrl,
-            MaximumUploadSizeReached,
-            TimedOut,
-            AuthenticationFailed,
-        };
-        BookParsingError = {
-            MissingBookDescription,
-            CouldNotReadBook(std::io::Error),
-            MissingName,
-            NoContents,
-        };
-        BookSectionParsingError = {
-            MissingName,
-            NoContents,
-        };
+        /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
+        MediaError = DownloadError || BookParsingError;
+        /// Since this all of the variants in [DownloadError] are in [MediaError], this can be turned
+        /// into a [MediaError] with just `.into()` or `?`. Note restating variants directly,
+        /// instead of using `||`, also works
         DownloadError = {
             InvalidUrl,
-            CouldNotSaveBook(std::io::Error),
+            /// The `From` trait for `std::io::Error` will also be automatically derived
+            IoError(std::io::Error),
         };
-        ParseUploadError = {
-            MaximumUploadSizeReached,
-            TimedOut,
-            AuthenticationFailed,
+        /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived,
+        /// but one can always add more like below
+        #[derive(Clone)]
+        BookParsingError = {
+            #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
+            MissingBookDescription,
+        } || BookSectionParsingError; // Note the aggregation here as well
+        BookSectionParsingError = {
+            /// Inline structs are also supported
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
         };
     }
 
     #[test]
     fn test() {
         let book_section_parsing_error: BookSectionParsingError =
-            BookSectionParsingError::MissingName;
+            BookSectionParsingError::MissingField {
+                field: "author".to_string(),
+            };
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(book_parsing_error, BookParsingError::MissingName));
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingField { field: _ }
+        ));
         let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingName));
+        assert!(matches!(media_error, MediaError::MissingField { field: _ }));
 
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
@@ -183,42 +190,70 @@ pub mod readme_example {
 }
 
 #[cfg(test)]
-pub mod readme_example_aggregation {
-    use error_set::error_set;
+pub mod readme_example_full_expansion {
+    use error_set::{error_set, CoerceResult};
 
     error_set! {
+        /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
         MediaError = {
-            IoError(std::io::Error)
-            } || BookParsingError || DownloadError || ParseUploadError;
-        BookParsingError = {
+            InvalidUrl,
+            /// The `From` trait for `std::io::Error` will also be automatically derived
+            IoError(std::io::Error),
+            #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
             MissingBookDescription,
-            CouldNotReadBook(std::io::Error),
-        } || BookSectionParsingError;
-        BookSectionParsingError = {
-            MissingName,
-            NoContents,
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
         };
+        /// Since this all of the variants in [DownloadError] are in [MediaError], this can be turned
+        /// into a [MediaError] with just `.into()` or `?`. Note restating variants directly,
+        /// instead of using `||`, also works
         DownloadError = {
             InvalidUrl,
-            CouldNotSaveBook(std::io::Error),
+            /// The `From` trait for `std::io::Error` will also be automatically derived
+            IoError(std::io::Error),
         };
-        ParseUploadError = {
-            MaximumUploadSizeReached,
-            TimedOut,
-            AuthenticationFailed,
+        /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived,
+        /// but one can always add more like below
+        #[derive(Clone)]
+        BookParsingError = {
+            #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
+            MissingBookDescription,
+            /// Inline structs are also supported
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
+        };
+        BookSectionParsingError = {
+            /// Inline structs are also supported
+            #[display("Display messages can also reference fields, like {field}")]
+            MissingField {
+                field: String
+            },
+            NoContent,
         };
     }
 
     #[test]
     fn test() {
-        let book_section_parsing_error = BookSectionParsingError::MissingName;
+        let book_section_parsing_error: BookSectionParsingError =
+            BookSectionParsingError::MissingField {
+                field: "author".to_string(),
+            };
         let book_parsing_error: BookParsingError = book_section_parsing_error.into();
-        assert!(matches!(book_parsing_error, BookParsingError::MissingName));
+        assert!(matches!(
+            book_parsing_error,
+            BookParsingError::MissingField { field: _ }
+        ));
         let media_error: MediaError = book_parsing_error.into();
-        assert!(matches!(media_error, MediaError::MissingName));
+        assert!(matches!(media_error, MediaError::MissingField { field: _ }));
 
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let result_download_error: Result<(), DownloadError> = Err(io_error).map_err(Into::into);
+        let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.map_err(Into::into);
         assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
     }
@@ -276,7 +311,10 @@ pub mod documentation {
         let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
         let result_download_error: Result<(), DownloadError> = Err(io_error).coerce();
         let result_media_error: Result<(), MediaError> = result_download_error.coerce();
-        assert!(matches!(result_media_error, Err(MediaError::IoError(_))));
+        assert!(matches!(
+            result_media_error,
+            Err(MediaError::OutOfMemory(_))
+        ));
     }
 }
 
@@ -459,37 +497,56 @@ pub mod display_ref_error {
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 2",
         ));
-        assert_eq!(y.to_string(), "Y io error: oops out of memory 2".to_string());
+        assert_eq!(
+            y.to_string(),
+            "Y io error: oops out of memory 2".to_string()
+        );
 
         let y2 = Y2::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 3",
         ));
-        assert_eq!(y2.to_string(), "Y2 io error type: out of memory".to_string());
+        assert_eq!(
+            y2.to_string(),
+            "Y2 io error type: out of memory".to_string()
+        );
 
         let z = Z::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 4",
         ));
-        assert_eq!(z.to_string(), "Z io error: oops out of memory 4".to_string());
+        assert_eq!(
+            z.to_string(),
+            "Z io error: oops out of memory 4".to_string()
+        );
 
         let yy = YY::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
             "oops out of memory 5",
         ));
-        assert_eq!(yy.to_string(), "YY io error: oops out of memory 5".to_string());
-
+        assert_eq!(
+            yy.to_string(),
+            "YY io error: oops out of memory 5".to_string()
+        );
 
         let y_to_x: X = y.into();
         let x_to_y: Y = x.into();
         assert_eq!(y_to_x.to_string(), "X io error".to_string());
-        assert_eq!(x_to_y.to_string(), "Y io error: oops out of memory 1".to_string());
+        assert_eq!(
+            x_to_y.to_string(),
+            "Y io error: oops out of memory 1".to_string()
+        );
 
         let z_to_y2: Y2 = z.into();
         let y2_to_z: Z = y2.into();
-        assert_eq!(z_to_y2.to_string(), "Y2 io error type: out of memory".to_string());
-        assert_eq!(y2_to_z.to_string(), "Z io error: oops out of memory 3".to_string());
-
+        assert_eq!(
+            z_to_y2.to_string(),
+            "Y2 io error type: out of memory".to_string()
+        );
+        assert_eq!(
+            y2_to_z.to_string(),
+            "Z io error: oops out of memory 3".to_string()
+        );
 
         let a = A::IoError(std::io::Error::new(
             std::io::ErrorKind::OutOfMemory,
@@ -552,6 +609,48 @@ pub mod fields_with_unique_types {
 }
 
 #[cfg(test)]
+pub mod inline_source_error {
+    use error_set::error_set;
+
+    error_set! {
+        AuthError = {
+            SourceStruct1(std::fmt::Error) {},
+
+            #[display("User `{name}` with role `{}` does not exist", role.1)]
+            UserDoesNotExist1(std::io::Error) {
+                name: &'static str,
+                role: (u32,String),
+            },
+            UserDoesNotExist2 {
+                name: String,
+                role: u32,
+            },
+            #[display("The provided credentials are invalid")]
+            InvalidCredentials
+        };
+        LoginError = {
+            IoError(std::io::Error),
+            //A
+        } || AuthError;
+    }
+
+    #[test]
+    fn test() {
+        let fmt_error = std::fmt::Error::default();
+        let auth_error: AuthError = fmt_error.into();
+        matches!(auth_error, AuthError::SourceStruct1 { source: _ });
+        let login_error: LoginError = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let fmt_error = std::fmt::Error::default();
+        let login_error: LoginError = fmt_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let auth_error = AuthError::InvalidCredentials;
+        let login_error: LoginError = auth_error.into();
+        matches!(login_error, LoginError::InvalidCredentials);
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]
@@ -561,9 +660,9 @@ pub mod should_not_compile_tests {
     }
 
     #[test]
-    fn multiple_same_sources() {
+    fn error_sources_of_diffrent_names() {
         let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/multiple_same_sources.rs");
+        t.compile_fail("tests/trybuild/error_sources_of_diffrent_names.rs");
     }
 
     #[test]
@@ -848,211 +947,5 @@ mod log {
         let _ = result.error("This should not log an error");
 
         assert!(!logs_contain("This should not log an error"));
-    }
-}
-
-#[cfg(feature = "coerce_macro")]
-#[cfg(test)]
-pub mod coerce_macro_simple {
-    use error_set::error_set;
-
-    error_set! {
-        SetX = {
-            X
-        } || Common;
-        #[derive(PartialEq,Eq)]
-        SetY = {
-            Y
-        } || Common;
-        Common = {
-            A,
-            B,
-            C,
-            D,
-            E,
-            F,
-            G,
-            H,
-        };
-    }
-
-    fn setx_result() -> Result<(), SetX> {
-        Err(SetX::A)
-    }
-    fn setx() -> SetX {
-        SetX::A
-    }
-
-    fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
-        let _ok = coerce! { setx_result(),
-            Ok(ok) => ok,
-            Err(SetX::X) => (), // handle
-            { Err(SetX) => return Err(SetY) }
-        };
-        Ok(())
-    }
-    fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
-        let result: Result<(), SetY> = coerce! { setx_result(),
-            Ok(_) => Err(SetY::D),
-            Err(SetX::X) => Err(SetY::F), // handle
-            { Err(SetX) => Err(SetY) }
-        };
-        result
-    }
-    fn setx_to_sety_coerce() -> SetY {
-        let sety = coerce! { setx(),
-            SetX::X => SetY::C, // handle
-            {SetX => SetY}
-        };
-        sety
-    }
-    fn setx_to_sety_coerce_return() -> SetY {
-        let sety = coerce! { setx(),
-            SetX::X => SetY::G, // handle
-            {SetX => return SetY}
-        };
-        sety
-    }
-
-    fn setx_result_to_sety_result() -> Result<(), SetY> {
-        let _ok = match setx_result() {
-            Ok(ok) => ok,
-            Err(SetX::X) => {}
-            Err(SetX::A) => {
-                return Err(SetY::A);
-            }
-            Err(SetX::B) => {
-                return Err(SetY::B);
-            }
-            Err(SetX::C) => {
-                return Err(SetY::C);
-            }
-            Err(SetX::D) => {
-                return Err(SetY::D);
-            }
-            Err(SetX::E) => {
-                return Err(SetY::E);
-            }
-            Err(SetX::F) => {
-                return Err(SetY::F);
-            }
-            Err(SetX::G) => {
-                return Err(SetY::G);
-            }
-            Err(SetX::H) => {
-                return Err(SetY::H);
-            }
-        };
-        Ok(())
-    }
-
-    #[test]
-    fn test() {
-        assert_eq!(
-            setx_result_to_sety_result_coerce_return().unwrap_err(),
-            SetY::A
-        );
-        assert_eq!(setx_result_to_sety_result_coerce().unwrap_err(), SetY::A);
-        assert_eq!(setx_to_sety_coerce(), SetY::A);
-        assert_eq!(setx_to_sety_coerce_return(), SetY::A);
-
-        assert_eq!(setx_result_to_sety_result().unwrap_err(), SetY::A);
-    }
-}
-
-#[cfg(feature = "coerce_macro")]
-#[cfg(test)]
-pub mod coerce_macro_complex {
-    use error_set::error_set;
-
-    error_set! {
-        SetX = {
-            X
-        } || Common;
-        SetY = {
-            Y
-        } || Common;
-        Common = {
-            A,
-            B {
-                val1: String,
-                val2: i32,
-            },
-            C(std::io::Error)
-        };
-    }
-
-    impl PartialEq for SetY {
-        fn eq(&self, other: &Self) -> bool {
-            core::mem::discriminant(self) == core::mem::discriminant(other)
-        }
-    }
-
-    fn setx_result() -> Result<(), SetX> {
-        Err(SetX::A)
-    }
-    fn setx() -> SetX {
-        SetX::A
-    }
-
-    fn setx_result_to_sety_result_coerce_return() -> Result<(), SetY> {
-        let _ok = coerce! {setx_result(),
-            Ok(ok) => ok,
-            Err(SetX::X) => (), // handle
-            { Err(SetX) => return Err(SetY) }
-        };
-        Ok(())
-    }
-    fn setx_result_to_sety_result_coerce() -> Result<(), SetY> {
-        let result: Result<(), SetY> = coerce! {setx_result(),
-            Ok(_) => Err(SetY::A),
-            Err(SetX::X) => Err(SetY::A), // handle
-            { Err(SetX) => Err(SetY) }
-        };
-        result
-    }
-    fn setx_to_sety_coerce() -> SetY {
-        let sety = coerce! { setx(),
-            SetX::X => SetY::A, // handle
-            {SetX => SetY}
-        };
-        sety
-    }
-    fn setx_to_sety_coerce_return() -> SetY {
-        let sety = coerce! { setx(),
-            SetX::X => SetY::A, // handle
-            {SetX => return SetY}
-        };
-        sety
-    }
-
-    fn setx_result_to_sety_result() -> Result<(), SetY> {
-        let _ok = match setx_result() {
-            Ok(ok) => ok,
-            Err(SetX::X) => {}
-            Err(SetX::A) => {
-                return Err(SetY::A);
-            }
-            Err(SetX::B { val1, val2 }) => {
-                return Err(SetY::B { val1, val2 });
-            }
-            Err(SetX::C(e)) => {
-                return Err(SetY::C(e));
-            }
-        };
-        Ok(())
-    }
-
-    #[test]
-    fn test() {
-        assert_eq!(
-            setx_result_to_sety_result_coerce_return().unwrap_err(),
-            SetY::A
-        );
-        assert_eq!(setx_result_to_sety_result_coerce().unwrap_err(), SetY::A);
-        assert_eq!(setx_to_sety_coerce(), SetY::A);
-        assert_eq!(setx_to_sety_coerce_return(), SetY::A);
-
-        assert_eq!(setx_result_to_sety_result().unwrap_err(), SetY::A);
     }
 }

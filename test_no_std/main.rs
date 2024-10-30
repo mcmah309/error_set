@@ -38,7 +38,7 @@ error_set! {
     };
     BookParsingError = {
         MissingBookDescription,
-        CouldNotReadBook(self::TestError),
+        IoError(self::TestError),
         MissingName,
         NoContents,
     };
@@ -48,7 +48,7 @@ error_set! {
     };
     DownloadError = {
         InvalidUrl,
-        CouldNotSaveBook(self::TestError),
+        IoError(self::TestError),
     };
     ParseUploadError = {
         MaximumUploadSizeReached,
