@@ -384,7 +384,7 @@ pub enum ErrorEnum {
 }
 ```
 
-#### Source Structs Variants
+#### Source Struct Variants
 Source struct variants are also supported, declared like so
 ```rust
 error_set! {
@@ -552,10 +552,7 @@ let val = func().consume_warn();
 rather than
 ```rust
 let val = func().inspect_err(|err| tracing::warn!("`func` failed, here is some extra context like variable values"))?;
-let val = func().map_err(|err| {
-        tracing::warn!("{}", err);
-        None
-    });
+let val = func().inspect_err(|err| tracing::warn!("{}", err)).ok();
 ```
 > Note: a `context_stub` feature flag also exists to be used by libraries. This allows the api's to be used in libraries
 > while a downstream binary can ultimately decide the implementation. If no implementations is selected, since all the above
