@@ -454,7 +454,8 @@ Or better yet just switch the order - `ErrorEnum1 = ErrorEnum3 || ErrorEnum2;`.
 
 ### Aggregations And Conversions
 
-Error set uses `||` (or) for aggregation, but it is not needed, just a convenience.
+Error set uses `||` (or) for aggregation, which performs an "or" operation on the set space. 
+Note, `||` is not needed, just a convenience -
 ```rust
 error_set! {
     ErrorEnum1 = {
@@ -479,6 +480,7 @@ error_set! {
     };
 }
 ```
+
 For one type to be converted into another it needs to be considered a subset of the target type.
 Thus in the example above, `ErrorEnum2` can be converted into `ErrorEnum1` with `.into()` or `?`.
 
