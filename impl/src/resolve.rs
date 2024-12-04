@@ -105,21 +105,22 @@ fn resolve_builders_helper<'a>(
                 &this_error_enum_builder.generics,
                 &ref_error_enum_builder.generics,
             ) {
-                (Some(_), Some(_)) => {
-                    // Dev Note: Merging generics may cause collisions in a combined definitions, e.g. `T` and `T`.
-                    // or unintended sparsity, e.g. `T` and `G` when one would rather just have `T`.
-                    return Err(syn::parse::Error::new_spanned(
-                        &ref_part,
-                        "Aggregating multiple generic errors is not supported. \
+                (Some(this_generics), Some(that_generics)) => {
+                    if this_generics != that_generics {
+                        // Dev Note: Merging generics may cause collisions in a combined definitions, e.g. `T: Debug` and `T`.
+                        // or unintended sparsity, e.g. `T` and `G` when one would rather just have `T`.
+                        return Err(syn::parse::Error::new_spanned(
+                            &ref_part,
+                            "Aggregating multiple different generic errors is not supported. \
                         Instead redefine the error set with the desired generics and fields.",
-                    ));
+                        ));
+                    }
                 }
-                (None, None) => {},
+                (None, None) => {}
                 (None, Some(generics)) => {
                     this_error_enum_builder.generics = Some(generics.clone());
-                },
-                (Some(_), None) => {},
-                
+                }
+                (Some(_), None) => {}
             };
             for variant in ref_error_enum_builder.error_variants.iter() {
                 let this_error_variants = &mut this_error_enum_builder.error_variants;
