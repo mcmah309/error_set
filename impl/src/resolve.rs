@@ -1,7 +1,7 @@
 use crate::ast::{AstErrorDeclaration, AstErrorSet, AstErrorVariant, RefError};
 use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
-use syn::{Attribute, Ident};
+use syn::{Attribute, Generics, Ident};
 
 /// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
 /// all error sets with the full expansion.
@@ -12,10 +12,11 @@ pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
         let AstErrorDeclaration {
             attributes,
             error_name,
+            generics,
             parts,
         } = declaration;
 
-        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attributes);
+        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attributes, generics);
 
         for part in parts.into_iter() {
             match part {
@@ -86,7 +87,7 @@ fn resolve_builders_helper<'a>(
                 None => {
                     return Err(syn::parse::Error::new_spanned(
                         &ref_part,
-                        format!("Not a declared error set."),
+                        "Not a declared error set.",
                     ));
                 }
             };
@@ -100,6 +101,26 @@ fn resolve_builders_helper<'a>(
             }
             let (this_error_enum_builder, ref_error_enum_builder) =
                 indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
+            match (
+                &this_error_enum_builder.generics,
+                &ref_error_enum_builder.generics,
+            ) {
+                (Some(_), Some(_)) => {
+                    // Dev Note: Merging generics may cause collisions in a combined definitions, e.g. `T` and `T`.
+                    // or unintended sparsity, e.g. `T` and `G` when one would rather just have `T`.
+                    return Err(syn::parse::Error::new_spanned(
+                        &ref_part,
+                        "Aggregating multiple generic errors is not supported. \
+                        Instead redefine the error set with the desired generics and fields.",
+                    ));
+                }
+                (None, None) => {},
+                (None, Some(generics)) => {
+                    this_error_enum_builder.generics = Some(generics.clone());
+                },
+                (Some(_), None) => {},
+                
+            };
             for variant in ref_error_enum_builder.error_variants.iter() {
                 let this_error_variants = &mut this_error_enum_builder.error_variants;
                 let is_variant_already_in_enum = this_error_variants
@@ -125,16 +146,18 @@ pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErro
 struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
     pub error_name: Ident,
+    pub generics: Option<Generics>,
     pub error_variants: Vec<AstErrorVariant>,
     /// Once this is empty, all [ref_parts] have been resolved and [error_variants] is complete.
     pub ref_parts_to_resolve: Vec<RefError>,
 }
 
 impl ErrorEnumBuilder {
-    fn new(error_name: Ident, attributes: Vec<Attribute>) -> Self {
+    fn new(error_name: Ident, attributes: Vec<Attribute>, generics: Option<Generics>) -> Self {
         Self {
             attributes,
             error_name,
+            generics,
             error_variants: Vec::new(),
             ref_parts_to_resolve: Vec::new(),
         }
@@ -154,6 +177,7 @@ impl From<ErrorEnumBuilder> for ErrorEnum {
         ErrorEnum {
             attributes: value.attributes,
             error_name: value.error_name,
+            generics: value.generics,
             error_variants: value
                 .error_variants
                 .into_iter()

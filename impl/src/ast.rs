@@ -1,10 +1,6 @@
 use proc_macro2::TokenStream;
 use syn::{
-    braced, parenthesized,
-    parse::{Parse, ParseStream},
-    punctuated::Punctuated,
-    spanned::Spanned,
-    token, Attribute, Ident, Result,
+    braced, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, spanned::Spanned, token, Attribute, Generics, Ident, Result
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
@@ -35,6 +31,7 @@ impl Parse for AstErrorSet {
 pub(crate) struct AstErrorDeclaration {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
+    pub(crate) generics: Option<Generics>,
     pub(crate) parts: Vec<AstInlineOrRefError>,
 }
 
@@ -43,13 +40,24 @@ impl Parse for AstErrorDeclaration {
         let attributes = input.call(Attribute::parse_outer)?;
         let save_position = input.fork();
         let error_name: Ident = input.parse()?;
-        if !input.peek(syn::Token![=]) {
+        if !input.peek(syn::Token![=]) && !input.peek(syn::Token![<]) {
             return Err(syn::Error::new(
                 save_position.span(),
-                "Expected `=` to be next next.",
+                "Expected `=` or generic `<..>` to be next next.",
             ));
         }
+        let generics = if input.peek(syn::Token![<]) {
+            Some(input.parse::<Generics>()?)
+        } else {
+            None
+        };
         let last_position_save = input.fork();
+        if !input.peek(syn::Token![=]) {
+            return Err(syn::Error::new(
+                last_position_save.span(),
+                "Expected `=` to be next.",
+            ));
+        }
         input.parse::<syn::Token![=]>().unwrap();
         let mut parts = Vec::new();
         while !input.is_empty() {
@@ -78,6 +86,7 @@ impl Parse for AstErrorDeclaration {
         return Ok(AstErrorDeclaration {
             attributes,
             error_name,
+            generics,
             parts,
         });
     }

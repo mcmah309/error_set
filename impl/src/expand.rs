@@ -5,7 +5,7 @@ use std::usize;
 
 use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
-use syn::{Attribute, Ident, Lit};
+use syn::{Attribute, Generics, Ident, ImplGenerics, Lit, TypeGenerics, WhereClause};
 
 use crate::ast::{AstInlineErrorVariantField, DisplayAttribute};
 
@@ -132,10 +132,11 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         }
     }
     let attributes = &error_enum.attributes;
+    let generic_params = &error_enum.generics;
     token_stream.append_all(quote::quote! {
         #(#attributes)*
         #[derive(Debug)]
-        pub enum #enum_name {
+        pub enum #enum_name #generic_params {
             #error_variant_tokens
         }
     });
@@ -177,10 +178,10 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             }
         });
     }
-
+    let (impl_generics, ty_generics, where_clause) = generic_tokens(&error_enum.generics);
     token_stream.append_all(quote::quote! {
         #[allow(unused_qualifications)]
-        impl core::error::Error for #enum_name {
+        impl #impl_generics core::error::Error for #enum_name #ty_generics #where_clause {
             #error_inner
         }
     });
@@ -271,8 +272,9 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
             }
         }
     }
+    let (impl_generics, ty_generics, where_clause) = generic_tokens(&error_enum.generics);
     token_stream.append_all(quote::quote! {
-        impl core::fmt::Display for #enum_name {
+        impl #impl_generics core::fmt::Display for #enum_name #ty_generics #where_clause {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
                 match *self {
@@ -387,10 +389,11 @@ fn impl_froms(
                 error_branch_tokens.append_all(arm);
             }
         }
-
+        let (impl_generics, ty_generics, where_clause) = generic_tokens(&error_enum.generics);
+        // Dev Note: We can safely apply ty_generics to the `from` since only one level of generic inheritence is allowed.
         token_stream.append_all(quote::quote! {
-            impl From<#from_error_enum_name> for #error_enum_name {
-                fn from(error: #from_error_enum_name) -> Self {
+            impl #impl_generics From<#from_error_enum_name #ty_generics> for #error_enum_name #ty_generics #where_clause {
+                fn from(error: #from_error_enum_name #ty_generics) -> Self {
                     match error {
                         #error_branch_tokens
                     }
@@ -407,9 +410,10 @@ fn impl_froms(
             continue;
         }
         if is_source_tuple_type(error_variant) {
+            let (impl_generics, ty_generics, where_clause) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
             token_stream.append_all(quote::quote! {
-                impl From<#source_type> for #error_enum_name {
+                impl #impl_generics From<#source_type> for #error_enum_name #ty_generics #where_clause {
                     fn from(error: #source_type) -> Self {
                         #error_enum_name::#variant_name(error)
                     }
@@ -417,9 +421,10 @@ fn impl_froms(
             });
             source_errors_froms_already_implemented.push(source_type);
         } else if is_source_only_struct_type(error_variant) {
+            let (impl_generics, ty_generics, where_clause) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
             token_stream.append_all(quote::quote! {
-                impl From<#source_type> for #error_enum_name {
+                impl #impl_generics From<#source_type> for #error_enum_name #ty_generics #where_clause {
                     fn from(error: #source_type) -> Self {
                         #error_enum_name::#variant_name { source: error }
                     }
@@ -726,6 +731,7 @@ impl ErrorEnumGraphNode {
 pub(crate) struct ErrorEnum {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
+    pub(crate) generics: Option<Generics>,
     pub(crate) error_variants: Vec<ErrorVariant>,
 }
 
@@ -792,6 +798,19 @@ fn is_opaque(input: TokenStream) -> bool {
     } else {
         false
     }
+}
+
+//************************************************************************//
+
+fn generic_tokens(generics: &Option<Generics>) -> (Option<ImplGenerics<'_>>, Option<TypeGenerics<'_>>, Option<&WhereClause>) {
+    let (impl_generics, ty_generics, where_clause) = if let Some(generics) = generics {
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+        (Some(impl_generics), Some(ty_generics), where_clause)
+    }
+    else {
+        (None,None,None)
+    };
+    (impl_generics, ty_generics, where_clause)
 }
 
 //************************************************************************//
