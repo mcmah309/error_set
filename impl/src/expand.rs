@@ -7,10 +7,7 @@ use proc_macro2::TokenStream;
 use quote::TokenStreamExt;
 use syn::{Attribute, Ident, Lit};
 
-use crate::{
-    ast::{AstErrorVariant, AstInlineErrorVariantField, DisplayAttribute},
-    is_conversion_target, is_source_only_struct_type, is_source_struct_type, is_source_tuple_type,
-};
+use crate::ast::{AstInlineErrorVariantField, DisplayAttribute};
 
 /// Expand the [ErrorEnum]s into code.
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
@@ -86,11 +83,10 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     );
     let mut error_variant_tokens = TokenStream::new();
     for variant in error_variants {
-        let variant = reshape(&variant);
         match variant {
             ErrorVariant::Named(named) => {
                 let attributes = &named.attributes;
-                let name = named.name;
+                let name = &named.name;
                 error_variant_tokens.append_all(quote::quote! {
                     #(#attributes)*
                     #name,
@@ -157,13 +153,13 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
     for variant in &error_enum.error_variants {
         if is_source_tuple_type(variant) {
             has_source_match_branches = true;
-            let name = &variant.name;
+            let name = &variant.name();
             source_match_branches.append_all(quote::quote! {
                 #enum_name::#name(ref source) => source.source(),
             });
         } else if is_source_struct_type(variant) {
             has_source_match_branches = true;
-            let name = &variant.name;
+            let name = &variant.name();
             source_match_branches.append_all(quote::quote! {
                 #enum_name::#name { ref source, .. } => source.source(),
             });
@@ -206,8 +202,8 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
     let mut error_variant_tokens = TokenStream::new();
     for variant in error_variants {
         let right_side: TokenStream;
-        let name = &variant.name;
-        if let Some(display) = &variant.display {
+        let name = &variant.name();
+        if let Some(display) = &variant.display() {
             let tokens = &display.tokens;
             // e.g. `opaque`
             if is_opaque(tokens.clone()) {
@@ -250,7 +246,6 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
             }
         }
 
-        let variant = reshape(variant);
         match variant {
             ErrorVariant::Named(_) => {
                 error_variant_tokens.append_all(quote::quote! {
@@ -301,96 +296,93 @@ fn impl_froms(
         let from_error_enum_name = &from_error_enum.error_name;
         for (from_error_enum_variant, error_enum_variant) in variant_mappings {
             #[cfg(feature = "dev")]
-            assert!(
-                from_error_enum
-                    .error_variants
-                    .iter()
-                    .any(|e| e.name == from_error_enum_variant.name),
-                "Variant not found in from error enum"
-            );
-            #[cfg(feature = "dev")]
-            assert!(
-                error_enum
-                    .error_variants
-                    .iter()
-                    .any(|e| e.name == error_enum_variant.name),
-                "Variant not found in error enum"
-            );
-            #[cfg(feature = "dev")]
-            assert!(
-                is_conversion_target(from_error_enum_variant, error_enum_variant),
-                "Not a valid conversion target\n\nfrom:\n\n{from_error_enum_variant:?}\n\nto:\n\n{error_enum_variant:?}"
-            );
-            let from_error_variant_reshaped = &reshape(from_error_enum_variant);
-            let error_variant_reshaped = &reshape(error_enum_variant);
-            let arm: Option<TokenStream> =
-                match (from_error_variant_reshaped, error_variant_reshaped) {
-                    (ErrorVariant::Named(this), ErrorVariant::Named(that)) => Some(name_to_name(
+            {
+                assert!(
+                    from_error_enum
+                        .error_variants
+                        .iter()
+                        .any(|e| e.name() == from_error_enum_variant.name()),
+                    "Variant not found in from error enum"
+                );
+                assert!(
+                    error_enum
+                        .error_variants
+                        .iter()
+                        .any(|e| e.name() == error_enum_variant.name()),
+                    "Variant not found in error enum"
+                );
+                let from = from_error_enum_variant.name();
+                let to = error_enum_variant.name();
+                assert!(
+                    is_conversion_target(from_error_enum_variant, error_enum_variant),
+                    "Not a valid conversion target\n\nfrom:\n\n{from}\n\nto:\n\n{to}"
+                );
+            }
+            let arm: Option<TokenStream> = match (from_error_enum_variant, error_enum_variant) {
+                (ErrorVariant::Named(this), ErrorVariant::Named(that)) => Some(name_to_name(
+                    from_error_enum_name,
+                    &this.name,
+                    error_enum_name,
+                    &that.name,
+                )),
+                (ErrorVariant::Named(this), ErrorVariant::Struct(that)) => None,
+                (ErrorVariant::Named(this), ErrorVariant::SourceStruct(that)) => None,
+                (ErrorVariant::Named(this), ErrorVariant::SourceTuple(that)) => None,
+                (ErrorVariant::Struct(this), ErrorVariant::Named(that)) => None,
+                (ErrorVariant::Struct(this), ErrorVariant::Struct(that)) => Some(struct_to_struct(
+                    from_error_enum_name,
+                    &this.name,
+                    &this.fields,
+                    error_enum_name,
+                    &that.name,
+                    &that.fields,
+                )),
+                (ErrorVariant::Struct(this), ErrorVariant::SourceStruct(that)) => None,
+                (ErrorVariant::Struct(this), ErrorVariant::SourceTuple(that)) => None,
+                (ErrorVariant::SourceStruct(this), ErrorVariant::Named(that)) => None,
+                (ErrorVariant::SourceStruct(this), ErrorVariant::Struct(that)) => None,
+                (ErrorVariant::SourceStruct(this), ErrorVariant::SourceStruct(that)) => {
+                    Some(source_struct_to_source_struct(
+                        from_error_enum_name,
+                        &this.name,
+                        &this.fields,
+                        error_enum_name,
+                        &that.name,
+                        &that.fields,
+                    ))
+                }
+                (ErrorVariant::SourceStruct(this), ErrorVariant::SourceTuple(that)) => {
+                    Some(source_struct_to_source_tuple(
+                        from_error_enum_name,
+                        &this.name,
+                        &this.fields,
+                        error_enum_name,
+                        &that.name,
+                    ))
+                }
+                (ErrorVariant::SourceTuple(this), ErrorVariant::Named(that)) => None,
+                (ErrorVariant::SourceTuple(this), ErrorVariant::Struct(that)) => None,
+                (ErrorVariant::SourceTuple(this), ErrorVariant::SourceStruct(that)) => {
+                    if that.fields.is_empty() {
+                        Some(source_tuple_to_source_only_struct(
+                            from_error_enum_name,
+                            &this.name,
+                            error_enum_name,
+                            &that.name,
+                        ))
+                    } else {
+                        None
+                    }
+                }
+                (ErrorVariant::SourceTuple(this), ErrorVariant::SourceTuple(that)) => {
+                    Some(source_tuple_to_source_tuple(
                         from_error_enum_name,
                         &this.name,
                         error_enum_name,
                         &that.name,
-                    )),
-                    (ErrorVariant::Named(this), ErrorVariant::Struct(that)) => None,
-                    (ErrorVariant::Named(this), ErrorVariant::SourceStruct(that)) => None,
-                    (ErrorVariant::Named(this), ErrorVariant::SourceTuple(that)) => None,
-                    (ErrorVariant::Struct(this), ErrorVariant::Named(that)) => None,
-                    (ErrorVariant::Struct(this), ErrorVariant::Struct(that)) => {
-                        Some(struct_to_struct(
-                            from_error_enum_name,
-                            &this.name,
-                            &this.fields,
-                            error_enum_name,
-                            &that.name,
-                            &that.fields,
-                        ))
-                    }
-                    (ErrorVariant::Struct(this), ErrorVariant::SourceStruct(that)) => None,
-                    (ErrorVariant::Struct(this), ErrorVariant::SourceTuple(that)) => None,
-                    (ErrorVariant::SourceStruct(this), ErrorVariant::Named(that)) => None,
-                    (ErrorVariant::SourceStruct(this), ErrorVariant::Struct(that)) => None,
-                    (ErrorVariant::SourceStruct(this), ErrorVariant::SourceStruct(that)) => {
-                        Some(source_struct_to_source_struct(
-                            from_error_enum_name,
-                            &this.name,
-                            &this.fields,
-                            error_enum_name,
-                            &that.name,
-                            &that.fields,
-                        ))
-                    }
-                    (ErrorVariant::SourceStruct(this), ErrorVariant::SourceTuple(that)) => {
-                        Some(source_struct_to_source_tuple(
-                            from_error_enum_name,
-                            &this.name,
-                            &this.fields,
-                            error_enum_name,
-                            &that.name,
-                        ))
-                    }
-                    (ErrorVariant::SourceTuple(this), ErrorVariant::Named(that)) => None,
-                    (ErrorVariant::SourceTuple(this), ErrorVariant::Struct(that)) => None,
-                    (ErrorVariant::SourceTuple(this), ErrorVariant::SourceStruct(that)) => {
-                        if that.fields.is_empty() {
-                            Some(source_tuple_to_source_only_struct(
-                                from_error_enum_name,
-                                &this.name,
-                                error_enum_name,
-                                &that.name,
-                            ))
-                        } else {
-                            None
-                        }
-                    }
-                    (ErrorVariant::SourceTuple(this), ErrorVariant::SourceTuple(that)) => {
-                        Some(source_tuple_to_source_tuple(
-                            from_error_enum_name,
-                            &this.name,
-                            error_enum_name,
-                            &that.name,
-                        ))
-                    }
-                };
+                    ))
+                }
+            };
             if let Some(arm) = arm {
                 error_branch_tokens.append_all(arm);
             }
@@ -410,12 +402,12 @@ fn impl_froms(
     let mut source_errors_froms_already_implemented = Vec::new();
     // Add all `From`'s for variants that are wrappers around source errors.
     for error_variant in error_enum.error_variants.iter() {
-        let source_type = &error_variant.source_type;
+        let source_type = error_variant.source_type();
         if source_errors_froms_already_implemented.contains(&source_type) {
             continue;
         }
         if is_source_tuple_type(error_variant) {
-            let variant_name = &error_variant.name;
+            let variant_name = &error_variant.name();
             token_stream.append_all(quote::quote! {
                 impl From<#source_type> for #error_enum_name {
                     fn from(error: #source_type) -> Self {
@@ -425,7 +417,7 @@ fn impl_froms(
             });
             source_errors_froms_already_implemented.push(source_type);
         } else if is_source_only_struct_type(error_variant) {
-            let variant_name = &error_variant.name;
+            let variant_name = &error_variant.name();
             token_stream.append_all(quote::quote! {
                 impl From<#source_type> for #error_enum_name {
                     fn from(error: #source_type) -> Self {
@@ -514,106 +506,172 @@ fn source_struct_to_source_struct(
     }
 }
 
+pub(crate) trait Common {
+    fn attributes(&self) -> &Vec<Attribute>;
+    fn display(&self) -> Option<&DisplayAttribute>;
+    fn name(&self) -> &Ident;
+    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>>;
+    fn source_type(&self) -> Option<&syn::TypePath>;
+}
+
 #[derive(Clone)]
-pub(crate) enum ErrorVariant<'a> {
+pub(crate) enum ErrorVariant {
     /// e.g. `ErrorVariantNamed,`
-    Named(Named<'a>),
+    Named(Named),
     /// e.g. `ErrorVariantNamed {...}`
-    Struct(Struct<'a>),
+    Struct(Struct),
     /// e.g. `ErrorVariantNamed(std::io::Error) {...}`
-    SourceStruct(SourceStruct<'a>),
+    SourceStruct(SourceStruct),
     /// e.g. `ErrorVariantNamed(std::io::Error)`
-    SourceTuple(SourceTuple<'a>),
+    SourceTuple(SourceTuple),
+}
+
+impl Common for ErrorVariant {
+    fn attributes(&self) -> &Vec<Attribute> {
+        match self {
+            ErrorVariant::Named(e) => e.attributes(),
+            ErrorVariant::Struct(e) => e.attributes(),
+            ErrorVariant::SourceStruct(e) => e.attributes(),
+            ErrorVariant::SourceTuple(e) => e.attributes(),
+        }
+    }
+    fn display(&self) -> Option<&DisplayAttribute> {
+        match self {
+            ErrorVariant::Named(e) => e.display(),
+            ErrorVariant::Struct(e) => e.display(),
+            ErrorVariant::SourceStruct(e) => e.display(),
+            ErrorVariant::SourceTuple(e) => e.display(),
+        }
+    }
+    fn name(&self) -> &Ident {
+        match self {
+            ErrorVariant::Named(e) => e.name(),
+            ErrorVariant::Struct(e) => e.name(),
+            ErrorVariant::SourceStruct(e) => e.name(),
+            ErrorVariant::SourceTuple(e) => e.name(),
+        }
+    }
+    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
+        match self {
+            ErrorVariant::Named(e) => e.fields(),
+            ErrorVariant::Struct(e) => e.fields(),
+            ErrorVariant::SourceStruct(e) => e.fields(),
+            ErrorVariant::SourceTuple(e) => e.fields(),
+        }
+    }
+    fn source_type(&self) -> Option<&syn::TypePath> {
+        match self {
+            ErrorVariant::Named(e) => e.source_type(),
+            ErrorVariant::Struct(e) => e.source_type(),
+            ErrorVariant::SourceStruct(e) => e.source_type(),
+            ErrorVariant::SourceTuple(e) => e.source_type(),
+        }
+    }
 }
 
 #[derive(Clone)]
-pub(crate) struct Named<'a> {
-    pub(crate) attributes: &'a Vec<Attribute>,
-    pub(crate) display: &'a Option<DisplayAttribute>,
-    pub(crate) name: &'a Ident,
+pub(crate) struct Named {
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) display: Option<DisplayAttribute>,
+    pub(crate) name: Ident,
+}
+
+impl Common for Named {
+    fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
+    fn display(&self) -> Option<&DisplayAttribute> {
+        self.display.as_ref()
+    }
+    fn name(&self) -> &Ident {
+        &self.name
+    }
+    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
+        None
+    }
+    fn source_type(&self) -> Option<&syn::TypePath> {
+        None
+    }
 }
 
 #[derive(Clone)]
-pub(crate) struct Struct<'a> {
-    pub(crate) attributes: &'a Vec<Attribute>,
-    pub(crate) display: &'a Option<DisplayAttribute>,
-    pub(crate) name: &'a Ident,
+pub(crate) struct Struct {
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) display: Option<DisplayAttribute>,
+    pub(crate) name: Ident,
     // Dev Note: This field will never be empty. Otherwise it should just be a [Named]
-    pub(crate) fields: &'a Vec<AstInlineErrorVariantField>,
+    pub(crate) fields: Vec<AstInlineErrorVariantField>,
+}
+
+impl Common for Struct {
+    fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
+    fn display(&self) -> Option<&DisplayAttribute> {
+        self.display.as_ref()
+    }
+    fn name(&self) -> &Ident {
+        &self.name
+    }
+    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
+        Some(&self.fields)
+    }
+    fn source_type(&self) -> Option<&syn::TypePath> {
+        None
+    }
 }
 
 #[derive(Clone)]
-pub(crate) struct SourceStruct<'a> {
-    pub(crate) attributes: &'a Vec<Attribute>,
-    pub(crate) display: &'a Option<DisplayAttribute>,
-    pub(crate) name: &'a Ident,
-    pub(crate) source_type: &'a syn::TypePath,
+pub(crate) struct SourceStruct {
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) display: Option<DisplayAttribute>,
+    pub(crate) name: Ident,
+    pub(crate) source_type: syn::TypePath,
     // Dev Note: This field can be empty
-    pub(crate) fields: &'a Vec<AstInlineErrorVariantField>,
+    pub(crate) fields: Vec<AstInlineErrorVariantField>,
+}
+
+impl Common for SourceStruct {
+    fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
+    fn display(&self) -> Option<&DisplayAttribute> {
+        self.display.as_ref()
+    }
+    fn name(&self) -> &Ident {
+        &self.name
+    }
+    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
+        Some(&self.fields)
+    }
+    fn source_type(&self) -> Option<&syn::TypePath> {
+        Some(&self.source_type)
+    }
 }
 
 #[derive(Clone)]
-pub(crate) struct SourceOnlyStruct<'a> {
-    pub(crate) attributes: &'a Vec<Attribute>,
-    pub(crate) display: &'a Option<DisplayAttribute>,
-    pub(crate) name: &'a Ident,
-    pub(crate) source_type: &'a syn::TypePath,
+pub(crate) struct SourceTuple {
+    pub(crate) attributes: Vec<Attribute>,
+    pub(crate) display: Option<DisplayAttribute>,
+    pub(crate) name: Ident,
+    pub(crate) source_type: syn::TypePath,
 }
 
-#[derive(Clone)]
-pub(crate) struct SourceTuple<'a> {
-    pub(crate) attributes: &'a Vec<Attribute>,
-    pub(crate) display: &'a Option<DisplayAttribute>,
-    pub(crate) name: &'a Ident,
-    pub(crate) source_type: &'a syn::TypePath,
-}
-
-fn reshape(this: &AstErrorVariant) -> ErrorVariant {
-    let AstErrorVariant {
-        attributes,
-        display,
-        name,
-        fields,
-        source_type,
-        backtrace_type,
-    } = this;
-    match (fields, source_type) {
-        // e.g. `Variant(std::io::Error) {}` or `Variant(std::io::Error) {...}`
-        (Some(fields), Some(source_type)) => {
-            return ErrorVariant::SourceStruct(SourceStruct {
-                attributes,
-                display,
-                name,
-                source_type,
-                fields,
-            });
-        }
-        // e.g. `Variant(std::io::Error)`
-        (Some(fields), None) => {
-            return ErrorVariant::Struct(Struct {
-                attributes,
-                display,
-                name,
-                fields,
-            });
-        }
-        // e.g. `Variant(std::io::Error)`
-        (None, Some(source_type)) => {
-            return ErrorVariant::SourceTuple(SourceTuple {
-                attributes,
-                display,
-                name,
-                source_type,
-            });
-        }
-        // e.g. `Variant {}`
-        (None, None) => {
-            return ErrorVariant::Named(Named {
-                attributes,
-                display,
-                name,
-            });
-        }
+impl Common for SourceTuple {
+    fn attributes(&self) -> &Vec<Attribute> {
+        &self.attributes
+    }
+    fn display(&self) -> Option<&DisplayAttribute> {
+        self.display.as_ref()
+    }
+    fn name(&self) -> &Ident {
+        &self.name
+    }
+    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
+        None
+    }
+    fn source_type(&self) -> Option<&syn::TypePath> {
+        Some(&self.source_type)
     }
 }
 
@@ -647,12 +705,7 @@ impl ErrorEnumGraphNode {
     pub(crate) fn resolved_froms<'a>(
         &'a self,
         graph: &'a [ErrorEnumGraphNode],
-    ) -> impl Iterator<
-        Item = (
-            &'a ErrorEnum,
-            Vec<(&'a AstErrorVariant, &'a AstErrorVariant)>,
-        ),
-    > {
+    ) -> impl Iterator<Item = (&'a ErrorEnum, Vec<(&'a ErrorVariant, &'a ErrorVariant)>)> {
         self.froms.iter().map(|e| {
             let from = &graph[e.0];
             let variant_mappings =
@@ -673,7 +726,7 @@ impl ErrorEnumGraphNode {
 pub(crate) struct ErrorEnum {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
-    pub(crate) error_variants: Vec<AstErrorVariant>,
+    pub(crate) error_variants: Vec<ErrorVariant>,
 }
 
 impl core::hash::Hash for ErrorEnum {
@@ -739,4 +792,78 @@ fn is_opaque(input: TokenStream) -> bool {
     } else {
         false
     }
+}
+
+//************************************************************************//
+
+pub(crate) fn is_source_tuple_type(error_variant: &ErrorVariant) -> bool {
+    return error_variant.source_type().is_some() && error_variant.fields().is_none();
+}
+
+pub(crate) fn is_source_only_struct_type(error_variant: &ErrorVariant) -> bool {
+    return error_variant.source_type().is_some()
+        && error_variant.fields().as_ref().is_some_and(|e| e.is_empty());
+}
+
+pub(crate) fn is_source_struct_type(error_variant: &ErrorVariant) -> bool {
+    return error_variant.source_type().is_some() && error_variant.fields().as_ref().is_some();
+}
+
+/// To determine if [this] can be converted into [that] without dropping values.
+/// Ignoring backtrace (since this is generated in the `From` impl if missing) and display.
+/// This does not mean [this] is a subset of [that].
+/// Why do they need to be exact?
+/// e.g.
+/// ```
+/// X {
+///   a: String,
+///   b: u32,
+/// }
+/// ```
+/// The above can be converted to the below, by droping the `b`. Even though the below could be considered a "subset".
+/// ```
+/// Y {
+///   a: String
+/// }
+/// ```
+/// If the below was also in the target enum, it would also be valid conversion target
+/// ```
+/// Z {
+///  b: u32
+/// }
+/// ```
+/// Thus, the names and shapes must be exactly the same to avoid this.
+/// Note, there can multiple source tuples or sources only structs with the same wrapped error types (different names).
+/// The first that is encountered becomes the `From` impl of that source error type.
+/// To ensure the correct one is selected, pay attention to `X = A || B` ordering
+/// or define your own `X = { IoError(std::io::Error) } || A || B`
+///
+/// Another example:
+/// ```
+///  N1 {
+///     field: i32
+///  }
+/// ```
+/// ==
+/// ```
+/// N1 {
+///     field: i32
+///  }
+/// ```
+/// !=
+/// ```
+/// N2 {
+///     field: i32
+///  }
+/// ```
+pub(crate) fn is_conversion_target(this: &ErrorVariant, that: &ErrorVariant) -> bool {
+    return match (&this.source_type(), &that.source_type()) {
+        (Some(this_source_type), Some(other_source_type)) => {
+            this_source_type.path == other_source_type.path
+                && this.name() == that.name()
+                && this.fields() == that.fields()
+        }
+        (None, None) => this.name() == that.name() && this.fields() == that.fields(),
+        _ => false,
+    };
 }

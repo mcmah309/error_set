@@ -3,7 +3,7 @@ mod expand;
 mod resolve;
 mod validate;
 
-use ast::{AstErrorSet, AstErrorVariant};
+use ast::AstErrorSet;
 use expand::expand;
 use resolve::resolve;
 use validate::validate;
@@ -24,79 +24,4 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
         return err.into_compile_error().into();
     }
     expand(error_enums).into()
-}
-
-//************************************************************************//
-
-pub(crate) fn is_source_tuple_type(error_variant: &AstErrorVariant) -> bool {
-    return error_variant.source_type.is_some() && error_variant.fields.is_none();
-}
-
-pub(crate) fn is_source_only_struct_type(error_variant: &AstErrorVariant) -> bool {
-    return error_variant.source_type.is_some()
-        && error_variant.fields.as_ref().is_some_and(|e| e.is_empty());
-}
-
-pub(crate) fn is_source_struct_type(error_variant: &AstErrorVariant) -> bool {
-    return error_variant.source_type.is_some()
-        && error_variant.fields.as_ref().is_some();
-}
-
-/// To determine if [this] can be converted into [that] without dropping values.
-/// Ignoring backtrace (since this is generated in the `From` impl if missing) and display.
-/// This does not mean [this] is a subset of [that].
-/// Why do they need to be exact?
-/// e.g.
-/// ```
-/// X {
-///   a: String,
-///   b: u32,
-/// }
-/// ```
-/// The above can be converted to the below, by droping the `b`. Even though the below could be considered a "subset".
-/// ```
-/// Y {
-///   a: String
-/// }
-/// ```
-/// If the below was also in the target enum, it would also be valid conversion target
-/// ```
-/// Z {
-///  b: u32
-/// }
-/// ```
-/// Thus, the names and shapes must be exactly the same to avoid this.
-/// Note, there can multiple source tuples or sources only structs with the same wrapped error types (different names).
-/// The first that is encountered becomes the `From` impl of that source error type.
-/// To ensure the correct one is selected, pay attention to `X = A || B` ordering
-/// or define your own `X = { IoError(std::io::Error) } || A || B`
-///
-/// Another example:
-/// ```
-///  N1 {
-///     field: i32
-///  }
-/// ```
-/// ==
-/// ```
-/// N1 {
-///     field: i32
-///  }
-/// ```
-/// !=
-/// ```
-/// N2 {
-///     field: i32
-///  }
-/// ```
-pub(crate) fn is_conversion_target(this: &AstErrorVariant, that: &AstErrorVariant) -> bool {
-    return match (&this.source_type, &that.source_type) {
-        (Some(this_source_type), Some(other_source_type)) => {
-            this_source_type.path == other_source_type.path
-                && this.name == that.name
-                && this.fields == that.fields
-        }
-        (None, None) => this.name == that.name && this.fields == that.fields,
-        _ => false,
-    };
 }

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use syn::Ident;
 
-use crate::expand::ErrorEnum;
+use crate::expand::{Common, ErrorEnum};
 
 /// Additional validation logic
 pub fn validate(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
@@ -33,7 +33,7 @@ fn unique_variant_names_per_enum(
     let mut unique_variant_names: HashSet<&Ident> = HashSet::new();
     for error_enum in error_enums {
         for variant in &error_enum.error_variants {
-            let variant_name = &variant.name;
+            let variant_name = &variant.name();
             if unique_variant_names.contains(variant_name) {
                 return Err(syn::parse::Error::new_spanned(
                     quote::quote! {variant},

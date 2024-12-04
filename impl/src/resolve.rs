@@ -1,5 +1,5 @@
 use crate::ast::{AstErrorDeclaration, AstErrorSet, AstErrorVariant, RefError};
-use crate::expand::ErrorEnum;
+use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
 use syn::{Attribute, Ident};
 
@@ -154,7 +154,11 @@ impl From<ErrorEnumBuilder> for ErrorEnum {
         ErrorEnum {
             attributes: value.attributes,
             error_name: value.error_name,
-            error_variants: value.error_variants,
+            error_variants: value
+                .error_variants
+                .into_iter()
+                .map(|v| reshape(v))
+                .collect::<Vec<_>>(),
         }
     }
 }
@@ -172,3 +176,54 @@ impl std::hash::Hash for ErrorEnumBuilder {
 }
 
 impl Eq for ErrorEnumBuilder {}
+
+//************************************************************************//
+
+fn reshape(this: AstErrorVariant) -> ErrorVariant {
+    let AstErrorVariant {
+        attributes,
+        display,
+        name,
+        fields,
+        source_type,
+        backtrace_type: _,
+    } = this;
+    match (fields, source_type) {
+        // e.g. `Variant(std::io::Error) {}` or `Variant(std::io::Error) {...}`
+        (Some(fields), Some(source_type)) => {
+            return ErrorVariant::SourceStruct(SourceStruct {
+                attributes,
+                display,
+                name,
+                source_type,
+                fields,
+            });
+        }
+        // e.g. `Variant(std::io::Error)`
+        (Some(fields), None) => {
+            return ErrorVariant::Struct(Struct {
+                attributes,
+                display,
+                name,
+                fields,
+            });
+        }
+        // e.g. `Variant(std::io::Error)`
+        (None, Some(source_type)) => {
+            return ErrorVariant::SourceTuple(SourceTuple {
+                attributes,
+                display,
+                name,
+                source_type,
+            });
+        }
+        // e.g. `Variant {}`
+        (None, None) => {
+            return ErrorVariant::Named(Named {
+                attributes,
+                display,
+                name,
+            });
+        }
+    }
+}
