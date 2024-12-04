@@ -734,6 +734,12 @@ pub mod should_not_compile_tests {
     }
 
     #[test]
+    fn multiple_different_generics() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/multiple_different_generics.rs");
+    }
+
+    #[test]
     fn two_enums_same_name() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/two_enums_same_name.rs");
