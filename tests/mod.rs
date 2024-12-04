@@ -673,10 +673,17 @@ pub mod generics {
             },
             InvalidCredentials
         };
+        AuthError3<G: Debug> = {
+            SourceStruct(std::fmt::Error) {},
+            DoesNotExist {
+                name: G,
+                role: u32,
+            },
+            InvalidCredentials
+        };
         LoginError = {
             IoError(std::io::Error),
-            //A
-        } || AuthError1;
+        } || AuthError1 || AuthError2;
     }
 
     #[test]
