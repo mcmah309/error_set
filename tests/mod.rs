@@ -651,6 +651,67 @@ pub mod inline_source_error {
 }
 
 #[cfg(test)]
+pub mod generics {
+    use std::fmt::Debug;
+
+    use error_set::error_set;
+
+    error_set! {
+        AuthError1<T: Debug> = {
+            SourceStruct(std::fmt::Error) {},
+            DoesNotExist {
+                name: T,
+                role: u32,
+            },
+            InvalidCredentials
+        };
+        AuthError2<T: Debug> = {
+            SourceStruct(std::fmt::Error) {},
+            DoesNotExist {
+                name: T,
+                role: u32,
+            },
+            InvalidCredentials
+        };
+        LoginError = {
+            IoError(std::io::Error),
+            //A
+        } || AuthError1;
+    }
+
+    #[test]
+    fn test() {
+        let fmt_error = std::fmt::Error::default();
+        let auth_error: AuthError1<i32> = fmt_error.into();
+        matches!(auth_error, AuthError1::SourceStruct { source: _ });
+        let login_error: LoginError<i32> = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct { source: _ });
+
+        let fmt_error = std::fmt::Error::default();
+        let auth_error: AuthError2<i32> = fmt_error.into();
+        matches!(auth_error, AuthError2::SourceStruct { source: _ });
+        let login_error: LoginError<i32> = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct { source: _ });
+
+        let fmt_error = std::fmt::Error::default();
+        let login_error: LoginError<i32> = fmt_error.into();
+        matches!(login_error, LoginError::SourceStruct { source: _ });
+        let auth_error = AuthError1::InvalidCredentials;
+        let login_error: LoginError<i32> = auth_error.into();
+        matches!(login_error, LoginError::InvalidCredentials);
+        let auth_error: AuthError2<i32> = AuthError2::InvalidCredentials;
+        let login_error: LoginError<i32> = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct { source: _ });
+
+        let auth_error: AuthError2<String> = AuthError2::InvalidCredentials;
+        let auth_error: AuthError1<String> = auth_error.into();
+        matches!(auth_error, AuthError1::InvalidCredentials);
+        let auth_error: AuthError2<String> = auth_error.into();
+        matches!(auth_error, AuthError2::InvalidCredentials);
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]
