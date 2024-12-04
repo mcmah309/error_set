@@ -1,6 +1,10 @@
 use proc_macro2::TokenStream;
 use syn::{
-    braced, parenthesized, parse::{Parse, ParseStream}, punctuated::Punctuated, spanned::Spanned, token, Attribute, Generics, Ident, Result
+    braced, parenthesized,
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+    spanned::Spanned,
+    token, Attribute, Generics, Ident, Result,
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
@@ -38,6 +42,12 @@ pub(crate) struct AstErrorDeclaration {
 impl Parse for AstErrorDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
         let attributes = input.call(Attribute::parse_outer)?;
+        if input.is_empty() {
+            return Err(syn::Error::new(
+                input.span(),
+                    "Expected an error definition to be next after attributes. You may have a dangling doc comment.",
+            ));
+        }
         let save_position = input.fork();
         let error_name: Ident = input.parse()?;
         if !input.peek(syn::Token![=]) && !input.peek(syn::Token![<]) {

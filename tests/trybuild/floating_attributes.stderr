@@ -1,0 +1,13 @@
+error: Expected an error definition to be next after attributes. You may have a dangling doc comment.
+  --> tests/trybuild/floating_attributes.rs:3:1
+   |
+3  | / error_set! {
+4  | |     /// Doc
+5  | |     // comment
+6  | |     /// Doc
+...  |
+13 | |     /// Doc
+14 | | }
+   | |_^
+   |
+   = note: this error originates in the macro `error_set` (in Nightly builds, run with -Z macro-backtrace for more info)

@@ -734,6 +734,12 @@ pub mod should_not_compile_tests {
     }
 
     #[test]
+    fn floating_attributes() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/floating_attributes.rs");
+    }
+
+    #[test]
     fn multiple_different_generics() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/multiple_different_generics.rs");
