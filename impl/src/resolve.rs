@@ -1,7 +1,11 @@
-use crate::ast::{AstErrorDeclaration, AstErrorSet, AstErrorVariant, RefError};
+use std::collections::HashMap;
+
+use crate::ast::{
+    AstErrorDeclaration, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, RefError,
+};
 use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
-use syn::{Attribute, Generics, Ident};
+use syn::{Attribute, Ident, TypeParam};
 
 /// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
 /// all error sets with the full expansion.
@@ -81,12 +85,12 @@ fn resolve_builders_helper<'a>(
         for ref_part in ref_parts_to_resolve {
             let ref_error_enum_index = error_enum_builders
                 .iter()
-                .position(|e| e.error_name == ref_part);
+                .position(|e| e.error_name == ref_part.name);
             let ref_error_enum_index = match ref_error_enum_index {
                 Some(e) => e,
                 None => {
                     return Err(syn::parse::Error::new_spanned(
-                        &ref_part,
+                        &ref_part.name,
                         "Not a declared error set.",
                     ));
                 }
@@ -101,28 +105,76 @@ fn resolve_builders_helper<'a>(
             }
             let (this_error_enum_builder, ref_error_enum_builder) =
                 indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
-            match (
-                &this_error_enum_builder.generics,
-                &ref_error_enum_builder.generics,
-            ) {
-                (Some(this_generics), Some(that_generics)) => {
-                    if this_generics != that_generics {
-                        // Dev Note: Merging generics may cause collisions in a combined definitions, e.g. `T: Debug` and `T`.
-                        // or unintended sparsity, e.g. `T` and `G` when one would rather just have `T`.
-                        return Err(syn::parse::Error::new_spanned(
-                            &ref_part,
-                            "Aggregating multiple different generic errors is not supported. \
-                        Instead redefine the error set with the desired generics and fields.",
-                        ));
-                    }
+            // Let the ref declaration override the original generic declaration name to avoid collisions - `.. || X<T> ..`
+            if ref_part.generic_refs.len() != ref_error_enum_builder.generics.len() {
+                Err(syn::parse::Error::new_spanned(
+                    &ref_part.name,
+                    format!("A reference to {} was declared with {} generic param(s), but the original defintion takes {}.", ref_part.name, ref_part.generic_refs.len(), ref_error_enum_builder.generics.len()),
+                ))?;
+            }
+            let mut error_variants = Vec::new();
+            let error_variants = if ref_part.generic_refs.is_empty() {
+                &ref_error_enum_builder.error_variants
+            } else {
+                fn ident_to_type(ident: Ident) -> syn::Type {
+                    let segment = syn::PathSegment {
+                        ident,
+                        arguments: syn::PathArguments::None, // No generic arguments
+                    };
+                    let path = syn::Path {
+                        leading_colon: None,
+                        segments: {
+                            let mut punctuated = syn::punctuated::Punctuated::new();
+                            punctuated.push(segment);
+                            punctuated
+                        },
+                    };
+                    let type_path = syn::TypePath { qself: None, path };
+                    syn::Type::Path(type_path)
                 }
-                (None, None) => {}
-                (None, Some(generics)) => {
-                    this_error_enum_builder.generics = Some(generics.clone());
+                // rename the generics inside the variants to the new declared name - to avoid collisions.
+                let mut rename = HashMap::<syn::Type, syn::Type>::new();
+                for (ref_part_generic, ref_error_enum_generic) in ref_part
+                    .generic_refs
+                    .iter()
+                    .zip(ref_error_enum_builder.generics.iter())
+                {
+                    rename.insert(
+                        ident_to_type(ref_error_enum_generic.ident.clone()),
+                        ident_to_type(ref_part_generic.clone()),
+                    );
                 }
-                (Some(_), None) => {}
+                // let error_variants = Vec::new();
+                for error_variant in ref_error_enum_builder.error_variants.iter() {
+                    let newfields = if let Some(fields) = &error_variant.fields {
+                        let mut newfields = Vec::new();
+                        for field in fields.iter() {
+                            if rename.contains_key(&field.r#type) {
+                                let new_type = rename.get(&field.r#type).unwrap().clone();
+                                newfields.push(AstInlineErrorVariantField {
+                                    name: field.name.clone(),
+                                    r#type: new_type.clone(),
+                                });
+                            } else {
+                                newfields.push(field.clone());
+                            }
+                        }
+                        Some(newfields)
+                    } else {
+                        None
+                    };
+                    error_variants.push(AstErrorVariant {
+                        attributes: error_variant.attributes.clone(),
+                        display: error_variant.display.clone(),
+                        name: error_variant.name.clone(),
+                        fields: newfields,
+                        source_type: error_variant.source_type.clone(),
+                        backtrace_type: error_variant.backtrace_type.clone(),
+                    });
+                }
+                &error_variants
             };
-            for variant in ref_error_enum_builder.error_variants.iter() {
+            for variant in error_variants {
                 let this_error_variants = &mut this_error_enum_builder.error_variants;
                 let is_variant_already_in_enum = this_error_variants
                     .iter()
@@ -144,17 +196,34 @@ pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErro
     return this.name == other.name;
 }
 
+// fn merge_generics(this: &mut Generics, other: &Generics) {
+//     let other_params = other.params.iter().collect::<Vec<_>>();
+//     for other_param in other_params {
+//         if !this.params.iter().any(|param| param == other_param) {
+//             this.params.push(other_param.clone());
+//         }
+//     }
+//     let other_where = other.where_clause.as_ref();
+//     if let Some(other_where) = other_where {
+//         if let Some(this_where) = &mut this.where_clause {
+//             this_where.predicates.extend(other_where.predicates.clone());
+//         } else {
+//             this.where_clause = Some(other_where.clone());
+//         }
+//     }
+// }
+
 struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
     pub error_name: Ident,
-    pub generics: Option<Generics>,
+    pub generics: Vec<TypeParam>,
     pub error_variants: Vec<AstErrorVariant>,
     /// Once this is empty, all [ref_parts] have been resolved and [error_variants] is complete.
     pub ref_parts_to_resolve: Vec<RefError>,
 }
 
 impl ErrorEnumBuilder {
-    fn new(error_name: Ident, attributes: Vec<Attribute>, generics: Option<Generics>) -> Self {
+    fn new(error_name: Ident, attributes: Vec<Attribute>, generics: Vec<TypeParam>) -> Self {
         Self {
             attributes,
             error_name,

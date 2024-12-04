@@ -4,7 +4,7 @@ use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
-    token, Attribute, Generics, Ident, Result,
+    token, Attribute, Ident, Result, TypeParam,
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
@@ -35,7 +35,7 @@ impl Parse for AstErrorSet {
 pub(crate) struct AstErrorDeclaration {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
-    pub(crate) generics: Option<Generics>,
+    pub(crate) generics: Vec<TypeParam>,
     pub(crate) parts: Vec<AstInlineOrRefError>,
 }
 
@@ -56,11 +56,7 @@ impl Parse for AstErrorDeclaration {
                 "Expected `=` or generic `<..>` to be next next.",
             ));
         }
-        let generics = if input.peek(syn::Token![<]) {
-            Some(input.parse::<Generics>()?)
-        } else {
-            None
-        };
+        let generics = generics(&input)?;
         let last_position_save = input.fork();
         if !input.peek(syn::Token![=]) {
             return Err(syn::Error::new(
@@ -101,8 +97,6 @@ impl Parse for AstErrorDeclaration {
         });
     }
 }
-
-pub(crate) type RefError = Ident;
 
 #[derive(Clone)]
 pub(crate) enum AstInlineOrRefError {
@@ -149,6 +143,23 @@ impl Parse for AstInlineError {
             ));
         }
         return Ok(AstInlineError { error_variants });
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct RefError {
+    pub(crate) name: Ident,
+    pub(crate) generic_refs: Vec<Ident>,
+}
+
+impl Parse for RefError {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name = input.parse::<Ident>()?;
+        let generics = generics(&input)?;
+        Ok(RefError {
+            name,
+            generic_refs: generics,
+        })
     }
 }
 
@@ -228,6 +239,30 @@ impl Parse for AstErrorVariant {
             source_type,
             backtrace_type,
         })
+    }
+}
+
+//************************************************************************//
+
+fn generics<T: Parse>(input: &ParseStream) -> Result<Vec<T>> {
+    if input.peek(syn::Token![<]) {
+        input.parse::<syn::Token![<]>()?;
+        let mut generics = Vec::new();
+        loop {
+            let next = input.parse::<T>();
+            match next {
+                Ok(next) => generics.push(next),
+                Err(_) => {}
+            }
+            let punc = input.parse::<syn::Token![,]>();
+            if punc.is_err() {
+                break;
+            }
+        }
+        input.parse::<syn::Token![>]>()?;
+        Ok(generics)
+    } else {
+        Ok(Vec::new())
     }
 }
 

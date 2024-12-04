@@ -1,0 +1,13 @@
+error: A reference to AuthError1 was declared with 0 generic param(s), but the original defintion takes 1.
+  --> tests/trybuild/generic_specification_needed.rs:32:10
+   |
+32 |     } || AuthError1 || AuthError2 || AuthError3;
+   |          ^^^^^^^^^^
+
+warning: unused import: `std::fmt::Debug`
+ --> tests/trybuild/generic_specification_needed.rs:1:5
+  |
+1 | use std::fmt::Debug;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default

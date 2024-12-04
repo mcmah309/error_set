@@ -681,9 +681,21 @@ pub mod generics {
             },
             InvalidCredentials
         };
-        LoginError = {
+        LoginError<T: Debug> = {
             IoError(std::io::Error),
-        } || AuthError1 || AuthError2;
+        } || AuthError1<T> || AuthError2<T>;
+
+        X<G: Debug> = {
+            A {
+                a: G
+            }
+        };
+        Y<H: Debug> = {
+            B {
+                b: H
+            }
+        };
+        Z<T: Debug> = X<T> || Y<T>;
     }
 
     #[test]
@@ -715,6 +727,14 @@ pub mod generics {
         matches!(auth_error, AuthError1::InvalidCredentials);
         let auth_error: AuthError2<String> = auth_error.into();
         matches!(auth_error, AuthError2::InvalidCredentials);
+
+        let _x: X<i32> = X::A { a: 1 };
+        //let z: Z<i32> = x.into();
+        //matches!(z, Z::A { a: _ });
+
+        let _y: Y<i32> = Y::B { b: 1 };
+        //let z: Z<i32> = y.into();
+        //matches!(z, Z::B { b: _ });
     }
 }
 
@@ -740,9 +760,9 @@ pub mod should_not_compile_tests {
     }
 
     #[test]
-    fn multiple_different_generics() {
+    fn generic_specification_needed() {
         let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/multiple_different_generics.rs");
+        t.compile_fail("tests/trybuild/generic_specification_needed.rs");
     }
 
     #[test]
