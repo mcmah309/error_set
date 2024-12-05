@@ -147,20 +147,20 @@ fn resolve_builders_helper<'a>(
                 }
                 // let error_variants = Vec::new();
                 for error_variant in ref_error_enum_builder.error_variants.iter() {
-                    let newfields = if let Some(fields) = &error_variant.fields {
-                        let mut newfields = Vec::new();
+                    let new_fields = if let Some(fields) = &error_variant.fields {
+                        let mut new_fields = Vec::new();
                         for field in fields.iter() {
                             if rename.contains_key(&field.r#type) {
                                 let new_type = rename.get(&field.r#type).unwrap().clone();
-                                newfields.push(AstInlineErrorVariantField {
+                                new_fields.push(AstInlineErrorVariantField {
                                     name: field.name.clone(),
                                     r#type: new_type.clone(),
                                 });
                             } else {
-                                newfields.push(field.clone());
+                                new_fields.push(field.clone());
                             }
                         }
-                        Some(newfields)
+                        Some(new_fields)
                     } else {
                         None
                     };
@@ -168,7 +168,7 @@ fn resolve_builders_helper<'a>(
                         attributes: error_variant.attributes.clone(),
                         display: error_variant.display.clone(),
                         name: error_variant.name.clone(),
-                        fields: newfields,
+                        fields: new_fields,
                         source_type: error_variant.source_type.clone(),
                         backtrace_type: error_variant.backtrace_type.clone(),
                     });
@@ -191,7 +191,7 @@ fn resolve_builders_helper<'a>(
     Ok(error_enum_builders[index].error_variants.clone())
 }
 
-/// If the error defintions occupy the same space. Useful since if this space is already occupied e.g. ` X = A || B`
+/// If the error definitions occupy the same space. Useful since if this space is already occupied e.g. ` X = A || B`
 /// If `A` has a variant like `V1(std::io::Error)` and `B` `V1(std::io::Error)`.
 pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErrorVariant) -> bool {
     return this.name == other.name;

@@ -411,11 +411,18 @@ fn impl_froms(
                 error_branch_tokens.append_all(arm);
             }
         }
+        // If from has generics and they are not the same as target's, then there is no guarantee that `impl_generics`
+        // will contain all of and the correct named generics that are for `from_ty_generics`. Merging may cause
+        // conflicts so for now we just do not implement
+        // todo create a general generic resolution system to resolve this and related.
+        if !from_error_enum.generics.is_empty() && error_enum.generics != from_error_enum.generics {
+            continue;
+        }
         let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
-        // todo it is not always correct to apply `ty_generics` to `from_error_enum_name`.
+        let (from_impl_generics, from_ty_generics) = generic_tokens(&from_error_enum.generics);
         token_stream.append_all(quote::quote! {
-            impl #impl_generics From<#from_error_enum_name #ty_generics> for #error_enum_name #ty_generics {
-                fn from(error: #from_error_enum_name #ty_generics) -> Self {
+            impl #impl_generics From<#from_error_enum_name #from_ty_generics> for #error_enum_name #ty_generics {
+                fn from(error: #from_error_enum_name #from_ty_generics) -> Self {
                     match error {
                         #error_branch_tokens
                     }
