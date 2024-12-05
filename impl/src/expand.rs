@@ -135,8 +135,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
     let debug = if error_enum.disabled.debug {
         quote! {}
-    }
-    else {
+    } else {
         quote! { #[derive(Debug)] }
     };
     token_stream.append_all(quote::quote! {
@@ -301,12 +300,22 @@ fn impl_froms(
     token_stream: &mut TokenStream,
 ) {
     let error_enum = &error_enum_node.error_enum;
-    if error_enum.disabled.from {
+    let from = &error_enum.disabled.from;
+    if from.as_ref().is_some_and(|e| e.is_empty()) {
         return;
     }
+    let temp = Vec::new();
+    let froms_to_disable = from.as_ref().unwrap_or(&temp);
+    let froms_to_disable_idents = froms_to_disable
+        .iter()
+        .flat_map(|e| e.path.get_ident())
+        .collect::<Vec<_>>();
     let error_enum_name = &error_enum.error_name;
 
     for (from_error_enum, variant_mappings) in error_enum_node.resolved_froms(graph) {
+        if froms_to_disable_idents.contains(&&from_error_enum.error_name) {
+            continue;
+        }
         let mut error_branch_tokens = TokenStream::new();
         let from_error_enum_name = &from_error_enum.error_name;
         for (from_error_enum_variant, error_enum_variant) in variant_mappings {
@@ -420,10 +429,12 @@ fn impl_froms(
     let mut all_source_types = HashSet::new();
     for error_variant in error_enum.error_variants.iter() {
         if let Some(source_type) = error_variant.source_type() {
+            if froms_to_disable.contains(source_type) {
+                continue;
+            }
             if all_source_types.contains(source_type) {
                 source_type_to_error_variants.remove(source_type);
-            }
-            else {
+            } else {
                 all_source_types.insert(source_type);
                 source_type_to_error_variants.insert(source_type, error_variant);
             }

@@ -742,6 +742,15 @@ pub mod disable {
     use error_set::error_set;
 
     error_set! {
+        U = {
+            IoError(std::io::Error),
+        };
+        V = {
+            FmtError(std::fmt::Error),
+            IoError(std::io::Error),
+        };
+        #[disable(From(std::io::Error,U))]
+        W = V || U;
         #[disable(From)]
         X = {
             A
@@ -754,6 +763,20 @@ pub mod disable {
         Z = {
             A,
         };
+    }
+
+    impl From<U> for W {
+        fn from(u: U) -> Self {
+            match u {
+                U::IoError(e) => W::IoError(e),
+            }
+        }
+    }
+
+    impl From<std::io::Error> for W {
+        fn from(e: std::io::Error) -> Self {
+            W::IoError(e)
+        }
     }
 
     impl From<Y> for X {
@@ -780,6 +803,15 @@ pub mod disable {
 
     #[test]
     fn test() {
+        let u: U = std::io::Error::new(std::io::ErrorKind::Other, "oops").into();
+        let w: W = u.into();
+        assert!(matches!(w, W::IoError(_)));
+        let w: W = std::io::Error::new(std::io::ErrorKind::Other, "oops").into();
+        assert!(matches!(w, W::IoError(_)));
+        let v = V::IoError(std::io::Error::new(std::io::ErrorKind::Other, "oops"));
+        let w: W = v.into();
+        assert!(matches!(w, W::IoError(_)));
+
         let x = X::A;
         let y: Y = x.into();
         assert!(matches!(y, Y::A));

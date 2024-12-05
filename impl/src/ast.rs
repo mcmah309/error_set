@@ -272,13 +272,50 @@ fn generics<T: Parse>(input: &ParseStream) -> Result<Vec<T>> {
 
 //************************************************************************//
 
+#[derive(Clone)]
+pub(crate) struct DisableArg {
+    pub(crate) name: Ident,
+    pub(crate) refs: Vec<syn::TypePath>,
+}
+
+impl Parse for DisableArg {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let name = input.parse::<Ident>()?;
+        let content: syn::Result<_> = (|| {
+            let content;
+            parenthesized!(content in input);
+            return Ok(content);
+        })();
+        let refs = if let Ok(content) = content {
+            let refs = content
+                .parse_terminated(
+                    |input: ParseStream| input.parse::<syn::TypePath>(),
+                    token::Comma,
+                )
+                .ok();
+            if let Some(refs) = refs {
+                refs.into_iter().collect()
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+
+        Ok(DisableArg {
+            name,
+            refs
+        })
+    }
+}
+
 fn extract_disabled(attributes: &mut Vec<Attribute>) -> syn::Result<Disabled> {
     let mut to_remove = Vec::new();
     let mut disabled = Disabled::default();
     for (i, e) in attributes.iter().enumerate() {
         let this_disabled = extract_disabled_helper(e)?;
-        if let Some(mut this_disabled) = this_disabled {
-            disabled.merge(&mut this_disabled);
+        if let Some(this_disabled) = this_disabled {
+            disabled.merge(this_disabled);
             to_remove.push(i);
         }
     }
@@ -310,33 +347,70 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
                 return Ok(None);
             }
 
-            let punc = syn::parse::Parser::parse2(
-                &|input: ParseStream| Punctuated::<Ident, token::Comma>::parse_terminated(input),
+            let punc = match syn::parse::Parser::parse2(
+                &|input: ParseStream| Punctuated::<DisableArg, token::Comma>::parse_terminated(input),
                 list.tokens.clone(),
-            )?;
-            let mut from = false;
+            ) {
+                Ok(okay) => okay,
+                Err(_) => return Err(syn::parse::Error::new(
+                    list.tokens.span(),
+                    format!("Invalid syntax for `{}` attribute.", DISABLE_ATTRIBUTE_NAME),
+                )),
+            };
+            let mut from = None;
             let mut display = false;
             let mut debug = false;
             let mut error = false;
-            for ident in punc {
-                let ident = ident.to_string();
+            for DisableArg { name, refs } in punc {
+                let ident = name.to_string();
                 match &*ident {
                     "From" => {
-                        from = true;
+                        from = Some(refs);
                     }
                     "Display" => {
                         display = true;
+                        if !refs.is_empty() {
+                            return Err(syn::parse::Error::new(
+                                name.span(),
+                                format!(
+                                    "`Display` does not take any arguments for `{}` attribute.",
+                                    DISABLE_ATTRIBUTE_NAME
+                                ),
+                            ));
+                        }
                     }
                     "Debug" => {
                         debug = true;
+                        if !refs.is_empty() {
+                            return Err(syn::parse::Error::new(
+                                name.span(),
+                                format!(
+                                    "`Debug` does not take any arguments for `{}` attribute.",
+                                    DISABLE_ATTRIBUTE_NAME
+                                ),
+                            ));
+                        }
                     }
                     "Error" => {
                         error = true;
+                        if !refs.is_empty() {
+                            return Err(syn::parse::Error::new(
+                                name.span(),
+                                format!(
+                                    "`Error` does not take any arguments for `{}` attribute.",
+                                    DISABLE_ATTRIBUTE_NAME
+                                ),
+                            ));
+                        }
                     }
-                    _ => return Err(syn::parse::Error::new(
-                        ident.span(),
-                        format!("`{ident}` is not a valid option for `{DISABLE_ATTRIBUTE_NAME}`"),
-                    ))
+                    _ => {
+                        return Err(syn::parse::Error::new(
+                            ident.span(),
+                            format!(
+                                "`{ident}` is not a valid option for `{DISABLE_ATTRIBUTE_NAME}`"
+                            ),
+                        ))
+                    }
                 }
             }
             Ok(Some(Disabled {
@@ -351,14 +425,15 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
 
 #[derive(Clone)]
 pub(crate) struct Disabled {
-    pub(crate) from: bool,
+    /// `None` == no disabling, `Some` and empty == empty disables all, `Some` and args == only disable args
+    pub(crate) from: Option<Vec<syn::TypePath>>,
     pub(crate) display: bool,
     pub(crate) debug: bool,
     pub(crate) error: bool,
 }
 
 impl Disabled {
-    fn merge(&mut self, other: &Disabled) {
+    fn merge(&mut self, other: Disabled) {
         self.from = other.from;
         self.display = other.display;
         self.debug = other.debug;
@@ -369,7 +444,7 @@ impl Disabled {
 impl Default for Disabled {
     fn default() -> Self {
         Disabled {
-            from: false,
+            from: None,
             display: false,
             debug: false,
             error: false,
