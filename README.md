@@ -522,7 +522,7 @@ effect the conversion between sets.
 
 ### Disable
 
-error_set auto-implements `From`, `Display`, `Debug`, and `Error` for the set. If it is ever desired to disable
+error_set auto-implements `From`, `Display`, `Debug`, and `Error` for a set. If it is ever desired to disable
 this. Add `#[disable(..)]` to the set. e.g.
 ```rust
 error_set! {
@@ -542,6 +542,20 @@ impl Debug for X {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "X")
     }
+}
+```
+`From` also accepts arguments to only disable certain `From` implementations. e.g.
+```rust
+error_set! {
+    U = {
+        IoError(std::io::Error),
+    };
+    V = {
+        FmtError(std::fmt::Error),
+        IoError(std::io::Error),
+    };
+    #[disable(From(std::io::Error, U))]
+    W = V || U;
 }
 ```
 
