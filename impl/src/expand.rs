@@ -133,9 +133,15 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     }
     let attributes = &error_enum.attributes;
     let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
+    let debug = if error_enum.disabled.debug {
+        quote! {}
+    }
+    else {
+        quote! { #[derive(Debug)] }
+    };
     token_stream.append_all(quote::quote! {
         #(#attributes)*
-        #[derive(Debug)]
+        #debug
         pub enum #enum_name #impl_generics {
             #error_variant_tokens
         }
@@ -147,7 +153,9 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         error_enum,
         froms: _,
     } = error_enum_node;
-
+    if error_enum.disabled.error {
+        return;
+    }
     let enum_name = &error_enum.error_name;
     let mut source_match_branches = TokenStream::new();
     let mut has_source_match_branches = false;
@@ -192,7 +200,9 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
         error_enum,
         froms: _,
     } = error_enum_node;
-
+    if error_enum.disabled.display {
+        return;
+    }
     let enum_name = &error_enum.error_name;
     let error_variants = &error_enum.error_variants;
     #[cfg(feature = "dev")]

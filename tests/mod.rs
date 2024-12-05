@@ -740,6 +740,8 @@ pub mod generics {
 
 #[cfg(test)]
 pub mod disable {
+    use std::{error::Error, fmt::{Debug, Display}};
+
     use error_set::error_set;
 
     error_set! {
@@ -747,7 +749,12 @@ pub mod disable {
         X = {
             A
         };
+        #[disable(Display,Error)]
         Y = {
+            A,
+        };
+        #[disable(Debug)]
+        Z = {
             A,
         };
     }
@@ -760,6 +767,20 @@ pub mod disable {
         }
     }
 
+    impl Display for Y {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Y")
+        }
+    }
+
+    impl Error for Y {}
+
+    impl Debug for Z {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Z")
+        }
+    }
+
     #[test]
     fn test() {
         let x = X::A;
@@ -769,6 +790,15 @@ pub mod disable {
         let y = Y::A;
         let x: X = y.into();
         assert!(matches!(x, X::A));
+
+        let y = Y::A;
+        assert_eq!(format!("{}", y), "Y");
+
+        let err: Box<dyn Error> = y.into();
+        assert_eq!(err.to_string(), "Y");
+
+        let z = Z::A;
+        assert_eq!(format!("{:?}", z), "Z");
     }
 }
 

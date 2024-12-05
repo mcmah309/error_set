@@ -1,7 +1,6 @@
 use proc_macro2::TokenStream;
 use syn::{
-    braced,
-    parenthesized,
+    braced, parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
@@ -316,12 +315,36 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
                 list.tokens.clone(),
             )?;
             let mut from = false;
+            let mut display = false;
+            let mut debug = false;
+            let mut error = false;
             for ident in punc {
-                if ident.to_string() == "From" {
-                    from = true;
+                let ident = ident.to_string();
+                match &*ident {
+                    "From" => {
+                        from = true;
+                    }
+                    "Display" => {
+                        display = true;
+                    }
+                    "Debug" => {
+                        debug = true;
+                    }
+                    "Error" => {
+                        error = true;
+                    }
+                    _ => return Err(syn::parse::Error::new(
+                        ident.span(),
+                        format!("`{ident}` is not a valid option for `{DISABLE_ATTRIBUTE_NAME}`"),
+                    ))
                 }
             }
-            Ok(Some(Disabled { from }))
+            Ok(Some(Disabled {
+                from,
+                display,
+                debug,
+                error,
+            }))
         }
     };
 }
@@ -329,17 +352,28 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
 #[derive(Clone)]
 pub(crate) struct Disabled {
     pub(crate) from: bool,
+    pub(crate) display: bool,
+    pub(crate) debug: bool,
+    pub(crate) error: bool,
 }
 
 impl Disabled {
     fn merge(&mut self, other: &Disabled) {
         self.from = other.from;
+        self.display = other.display;
+        self.debug = other.debug;
+        self.error = other.error;
     }
 }
 
 impl Default for Disabled {
     fn default() -> Self {
-        Disabled { from: false }
+        Disabled {
+            from: false,
+            display: false,
+            debug: false,
+            error: false,
+        }
     }
 }
 
