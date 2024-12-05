@@ -103,7 +103,7 @@ pub mod error_sources_of_same_name {
 }
 
 #[cfg(test)]
-pub mod first_wrapped_type_implements_from_source {
+pub mod multiple_error_sources_of_same_type {
     use error_set::error_set;
 
     error_set! {
@@ -130,9 +130,6 @@ pub mod first_wrapped_type_implements_from_source {
         matches!(y, Y::IoError2(_));
         let x: X = y.into();
         matches!(x, X::IoError(_));
-        let io_error = std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory");
-        let y: Y = io_error.into();
-        matches!(y, Y::IoError2(_));
     }
 }
 
@@ -827,6 +824,12 @@ pub mod should_not_compile_tests {
     fn generic_specification_needed() {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/generic_specification_needed.rs");
+    }
+
+    #[test]
+    fn no_from_for_multiple_of_same_type() {
+        let t = trybuild::TestCases::new();
+        t.compile_fail("tests/trybuild/no_from_for_multiple_of_same_type.rs");
     }
 
     #[test]

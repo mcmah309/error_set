@@ -1,0 +1,10 @@
+error[E0277]: the trait bound `Y: From<std::io::Error>` is not satisfied
+  --> tests/trybuild/no_from_for_multiple_of_same_type.rs:27:25
+   |
+27 |     let y: Y = io_error.into();
+   |                         ^^^^ the trait `From<std::io::Error>` is not implemented for `Y`, which is required by `std::io::Error: Into<_>`
+   |
+   = help: the following other types implement trait `From<T>`:
+             `Y` implements `From<X>`
+             `Y` implements `From<Z>`
+   = note: required for `std::io::Error` to implement `Into<Y>`

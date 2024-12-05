@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "dev"), allow(dead_code))]
 #![cfg_attr(not(feature = "dev"), allow(unused_variables))]
 
-use std::usize;
+use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
@@ -415,13 +415,24 @@ fn impl_froms(
         });
     }
 
-    let mut source_errors_froms_already_implemented = Vec::new();
-    // Add all `From`'s for variants that are wrappers around source errors.
+    // Do not impl `From` for source where source is the same between multiple variants
+    let mut source_type_to_error_variants = HashMap::new();
+    let mut all_source_types = HashSet::new();
     for error_variant in error_enum.error_variants.iter() {
-        let source_type = error_variant.source_type();
-        if source_errors_froms_already_implemented.contains(&source_type) {
-            continue;
+        if let Some(source_type) = error_variant.source_type() {
+            if all_source_types.contains(source_type) {
+                source_type_to_error_variants.remove(source_type);
+            }
+            else {
+                all_source_types.insert(source_type);
+                source_type_to_error_variants.insert(source_type, error_variant);
+            }
         }
+    }
+
+    // Add `From`'s for all valid variants that are wrappers around source errors.
+    for error_variant in source_type_to_error_variants.values() {
+        let source_type = error_variant.source_type();
         if is_source_tuple_type(error_variant) {
             let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
@@ -432,7 +443,6 @@ fn impl_froms(
                     }
                 }
             });
-            source_errors_froms_already_implemented.push(source_type);
         } else if is_source_only_struct_type(error_variant) {
             let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
@@ -443,7 +453,6 @@ fn impl_froms(
                     }
                 }
             });
-            source_errors_froms_already_implemented.push(source_type);
         }
     }
 }
