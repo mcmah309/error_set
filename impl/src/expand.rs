@@ -411,10 +411,13 @@ fn impl_froms(
                 error_branch_tokens.append_all(arm);
             }
         }
-        // If from has generics and they are not the same as target's, then there is no guarantee that `impl_generics`
-        // will contain all of and the correct named generics that are for `from_ty_generics`. Merging may cause
-        // conflicts so for now we just do not implement
-        // todo create a general generic resolution system to resolve this and related.
+        // Dev Note: If from has generics and they are not the same as target's, then there is no guarantee that `impl_generics`
+        // will contain all of and the correct generics definitions that are for `from_ty_generics`. Merging may cause
+        // conflicts. This guard likely won't ever be removed since the correct mixture of generics may be
+        // impossible to determine without the user explicitly specifying. Even if this guard does not hold,
+        // an "unwanted" (but no compile error) `From` may be generated. This is an edge case and we are
+        // being optimistic, so we don't just not implement `From` for all generics. But a user can opt-out
+        // with `#[disable(From(..))]`
         if !from_error_enum.generics.is_empty() && error_enum.generics != from_error_enum.generics {
             continue;
         }
