@@ -739,6 +739,40 @@ pub mod generics {
 }
 
 #[cfg(test)]
+pub mod disable {
+    use error_set::error_set;
+
+    error_set! {
+        #[disable(From)]
+        X = {
+            A
+        };
+        Y = {
+            A,
+        };
+    }
+
+    impl From<Y> for X {
+        fn from(x: Y) -> Self {
+            match x {
+                Y::A => X::A,
+            }
+        }
+    }
+
+    #[test]
+    fn test() {
+        let x = X::A;
+        let y: Y = x.into();
+        assert!(matches!(y, Y::A));
+
+        let y = Y::A;
+        let x: X = y.into();
+        assert!(matches!(x, X::A));
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]

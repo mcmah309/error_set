@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AstErrorDeclaration, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, RefError,
+    AstErrorDeclaration, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, Disabled, RefError
 };
 use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
@@ -17,10 +17,11 @@ pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
             attributes,
             error_name,
             generics,
+            disabled,
             parts,
         } = declaration;
 
-        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attributes, generics);
+        let mut error_enum_builder = ErrorEnumBuilder::new(error_name, attributes, generics, disabled);
 
         for part in parts.into_iter() {
             match part {
@@ -217,17 +218,19 @@ struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
     pub error_name: Ident,
     pub generics: Vec<TypeParam>,
+    pub disabled: Disabled,
     pub error_variants: Vec<AstErrorVariant>,
     /// Once this is empty, all [ref_parts] have been resolved and [error_variants] is complete.
     pub ref_parts_to_resolve: Vec<RefError>,
 }
 
 impl ErrorEnumBuilder {
-    fn new(error_name: Ident, attributes: Vec<Attribute>, generics: Vec<TypeParam>) -> Self {
+    fn new(error_name: Ident, attributes: Vec<Attribute>, generics: Vec<TypeParam>, disabled: Disabled) -> Self {
         Self {
             attributes,
             error_name,
             generics,
+            disabled,
             error_variants: Vec::new(),
             ref_parts_to_resolve: Vec::new(),
         }
@@ -248,6 +251,7 @@ impl From<ErrorEnumBuilder> for ErrorEnum {
             attributes: value.attributes,
             error_name: value.error_name,
             generics: value.generics,
+            disabled: value.disabled,
             error_variants: value
                 .error_variants
                 .into_iter()

@@ -1,6 +1,7 @@
 use proc_macro2::TokenStream;
 use syn::{
-    braced, parenthesized,
+    braced,
+    parenthesized,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
@@ -8,6 +9,7 @@ use syn::{
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
+const DISABLE_ATTRIBUTE_NAME: &str = "disable";
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {
@@ -36,12 +38,14 @@ pub(crate) struct AstErrorDeclaration {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
     pub(crate) generics: Vec<TypeParam>,
+    pub(crate) disabled: Disabled,
     pub(crate) parts: Vec<AstInlineOrRefError>,
 }
 
 impl Parse for AstErrorDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
-        let attributes = input.call(Attribute::parse_outer)?;
+        let mut attributes = input.call(Attribute::parse_outer)?;
+        let disabled = extract_disabled(&mut attributes)?;
         if input.is_empty() {
             return Err(syn::Error::new(
                 input.span(),
@@ -93,6 +97,7 @@ impl Parse for AstErrorDeclaration {
             attributes,
             error_name,
             generics,
+            disabled,
             parts,
         });
     }
@@ -268,6 +273,78 @@ fn generics<T: Parse>(input: &ParseStream) -> Result<Vec<T>> {
 
 //************************************************************************//
 
+fn extract_disabled(attributes: &mut Vec<Attribute>) -> syn::Result<Disabled> {
+    let mut to_remove = Vec::new();
+    let mut disabled = Disabled::default();
+    for (i, e) in attributes.iter().enumerate() {
+        let this_disabled = extract_disabled_helper(e)?;
+        if let Some(mut this_disabled) = this_disabled {
+            disabled.merge(&mut this_disabled);
+            to_remove.push(i);
+        }
+    }
+
+    if to_remove.is_empty() {
+        return Ok(disabled);
+    }
+    let mut index = 0;
+    attributes.retain(|_| {
+        let retain = !&to_remove.contains(&index);
+        index += 1;
+        return retain;
+    });
+
+    Ok(disabled)
+}
+
+fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled>> {
+    return match &attribute.meta {
+        syn::Meta::Path(_) => Ok(None),
+        syn::Meta::NameValue(_) => Ok(None),
+        syn::Meta::List(list) => {
+            let ident = list.path.get_ident();
+            let Some(ident) = ident else {
+                return Ok(None);
+            };
+            let ident = ident.to_string();
+            if &*ident != DISABLE_ATTRIBUTE_NAME {
+                return Ok(None);
+            }
+
+            let punc = syn::parse::Parser::parse2(
+                &|input: ParseStream| Punctuated::<Ident, token::Comma>::parse_terminated(input),
+                list.tokens.clone(),
+            )?;
+            let mut from = false;
+            for ident in punc {
+                if ident.to_string() == "From" {
+                    from = true;
+                }
+            }
+            Ok(Some(Disabled { from }))
+        }
+    };
+}
+
+#[derive(Clone)]
+pub(crate) struct Disabled {
+    pub(crate) from: bool,
+}
+
+impl Disabled {
+    fn merge(&mut self, other: &Disabled) {
+        self.from = other.from;
+    }
+}
+
+impl Default for Disabled {
+    fn default() -> Self {
+        Disabled { from: false }
+    }
+}
+
+//************************************************************************//
+
 /// The format string to use for display
 #[derive(Clone)]
 pub(crate) struct DisplayAttribute {
@@ -277,28 +354,32 @@ pub(crate) struct DisplayAttribute {
 fn extract_display_attribute(
     attributes: &mut Vec<Attribute>,
 ) -> syn::Result<Option<DisplayAttribute>> {
-    let mut display_indices = Vec::new();
+    let mut to_remove = Vec::new();
     let mut displays = Vec::new();
     for (i, e) in attributes.iter().enumerate() {
         if let Some(display_tokens) = display_tokens(e) {
             displays.push(display_tokens);
-            display_indices.push(i);
+            to_remove.push(i);
         }
     }
-    if display_indices.is_empty() {
+    if to_remove.is_empty() {
         return Ok(None);
     }
     let display = displays.remove(0);
-    if display_indices.len() > 1 {
+    if to_remove.len() > 1 {
         return Err(syn::parse::Error::new(
             display.tokens.span(),
             format!("More than one `{}` attribute found", DISPLAY_ATTRIBUTE_NAME),
         ));
     }
 
+    if to_remove.is_empty() {
+        return Ok(Some(display));
+    }
+
     let mut index = 0;
     attributes.retain(|_| {
-        let retain = !&display_indices.contains(&index);
+        let retain = !&to_remove.contains(&index);
         index += 1;
         return retain;
     });

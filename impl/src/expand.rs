@@ -7,7 +7,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
 use syn::{Attribute, Ident, Lit, TypeParam};
 
-use crate::ast::{AstInlineErrorVariantField, DisplayAttribute};
+use crate::ast::{AstInlineErrorVariantField, Disabled, DisplayAttribute};
 
 /// Expand the [ErrorEnum]s into code.
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
@@ -291,6 +291,9 @@ fn impl_froms(
     token_stream: &mut TokenStream,
 ) {
     let error_enum = &error_enum_node.error_enum;
+    if error_enum.disabled.from {
+        return;
+    }
     let error_enum_name = &error_enum.error_name;
 
     for (from_error_enum, variant_mappings) in error_enum_node.resolved_froms(graph) {
@@ -732,6 +735,7 @@ pub(crate) struct ErrorEnum {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
     pub(crate) generics: Vec<TypeParam>,
+    pub(crate) disabled: Disabled,
     pub(crate) error_variants: Vec<ErrorVariant>,
 }
 
