@@ -16,6 +16,7 @@ use error_set::error_set;
 error_set! {
     /// The syntax below aggregates the referenced error variants
     MediaError = DownloadError || BookParsingError;
+
     /// Since all variants in [DownloadError] are in [MediaError], a
     /// [DownloadError] can be turned into a [MediaError] with just `.into()` or `?`. 
     DownloadError = {
@@ -25,9 +26,11 @@ error_set! {
         #[display("Display messages work just like the `format!` macro {0}")]
         IoError(std::io::Error),
     };
+
     /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived
     #[derive(Clone)]
     BookParsingError = { MissingBookDescription, } || BookSectionParsingError;
+
     BookSectionParsingError = {
         /// Inline structs are also supported
         #[display("Display messages can also reference fields, like {field}")]
@@ -429,28 +432,13 @@ like above.
 Error sets can have multiple source variants of the same type. e.g.
 ```rust
 error_set! {
-    ErrorEnum = {
-        IoError(std::io::Error),
-        IoError2(std::io::Error),
-    };
-}
-```
-A `From` trait implementation from the source (`std::io::Error`) will be automatically generated for the first
-variant. Therefore, in the above example, converting `std::io::Error` to `ErrorEnum` with `.into()` will
-be `ErrorEnum::IoError`. Keep this is mind during aggregations like
-```rust
-error_set! {
-    ErrorEnum1 = ErrorEnum2 || ErrorEnum3;
-    ErrorEnum2 = {
-        IoError2(std::io::Error),
-    };
     ErrorEnum3 = {
-        IoError3(std::io::Error),
+        IoError1(std::io::Error),
+        IoError2(std::io::Error),
     };
 }
 ```
-But this can always be overridden - `ErrorEnum1 = { IoError3(std::io::Error), } || ErrorEnum2 || ErrorEnum3;`. 
-Or better yet just switch the order - `ErrorEnum1 = ErrorEnum3 || ErrorEnum2;`.
+But a `From` implementation will not be automatically generated for these cases.
 
 ### Aggregations And Conversions
 
@@ -532,6 +520,65 @@ fn main() {
 Redeclaring the same variant in a different set and changing the display message, does not
 effect the conversion between sets.
 
+### Disable
+
+error_set auto-implements `From`, `Display`, `Debug`, and `Error` for the set. If it is ever desired to disable
+this. Add `#[disable(..)]` to the set. e.g.
+```rust
+error_set! {
+    #[disable(Display,Debug)]
+    X = {
+        A,
+    };
+}
+
+impl Display for X {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "X")
+    }
+}
+
+impl Debug for X {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "X")
+    }
+}
+```
+
+### Generics
+
+error_set supports generics. e.g.
+```rust
+error_set! {
+    X<G: Debug> = {
+        A {
+            a: G
+        }
+    };
+    Y<H: Debug> = {
+        B {
+            b: H
+        }
+    };
+    Z<T: Debug> = X<T> || Y<T>;
+}
+```
+In `Z<T: Debug> = X<T> || Y<T>;` `T` will replace `G` in `X` - `X<T: Debug>`. Thus this statement is the
+same as writing
+```rust
+error_set! {
+    ...
+
+    Z<T: Debug> = {
+        A {
+            a: T
+        },
+        B {
+            b: T
+        }
+    };
+}
+```
 
 ### Feature Flags
 
