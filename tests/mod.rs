@@ -737,7 +737,10 @@ pub mod generics {
 
 #[cfg(test)]
 pub mod disable {
-    use std::{error::Error, fmt::{Debug, Display}};
+    use std::{
+        error::Error,
+        fmt::{Debug, Display},
+    };
 
     use error_set::error_set;
 
@@ -831,6 +834,32 @@ pub mod disable {
     }
 }
 
+#[cfg(test)]
+pub mod from_for_generic_and_regular {
+    use error_set::error_set;
+
+    error_set! {
+        #[disable(From(E))]
+        X<E: core::error::Error + core::fmt::Debug + core::fmt::Display> = Y || Z<E>;
+        Y = {
+            A,
+        };
+        Z<E: core::error::Error + core::fmt::Debug + core::fmt::Display> = {
+            B(E),
+        };
+    }
+
+    #[test]
+    fn test() {
+        let y = Y::A;
+        let x: X<std::io::Error> = y.into();
+        assert!(matches!(x, X::A));
+
+        let z = Z::B(std::io::Error::new(std::io::ErrorKind::Other, "oops"));
+        let x: X<std::io::Error> = z.into();
+        assert!(matches!(x, X::B(_)));
+    }
+}
 #[cfg(test)]
 pub mod should_not_compile_tests {
 
