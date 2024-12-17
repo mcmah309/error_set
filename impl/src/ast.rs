@@ -539,18 +539,15 @@ fn extract_cfg(attributes: Vec<Attribute>) -> (Vec<Attribute>, Vec<Attribute>) {
     }
 
     let mut cfgs = Vec::new();
-    // let mut index: usize = usize::MAX;
-    let mut index = 0;
+    let mut index: usize = usize::MAX;
     let attributes = attributes
         .into_iter()
         .filter_map(|e| {
-            // index = index.wrapping_add(1);
+            index = index.wrapping_add(1);
             if to_remove.contains(&index) {
-                index += 1;
                 cfgs.push(e);
                 return None;
             }
-            index += 1;
             Some(e)
         })
         .collect::<Vec<_>>();
