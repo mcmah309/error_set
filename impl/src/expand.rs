@@ -86,19 +86,23 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         match variant {
             ErrorVariant::Named(named) => {
                 let attributes = &named.attributes;
+                let cfg_attributes = &named.cfg_attributes;
                 let name = &named.name;
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #(#attributes)*
                     #name,
                 });
             }
             ErrorVariant::Struct(r#struct) => {
                 let attributes = &r#struct.attributes;
+                let cfg_attributes = &r#struct.cfg_attributes;
                 let name = &r#struct.name;
                 let fields = &r#struct.fields;
                 let field_names = fields.iter().map(|e| &e.name);
                 let field_types = fields.iter().map(|e| &e.r#type);
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #(#attributes)*
                     #name {
                         #(#field_names : #field_types),*
@@ -107,12 +111,14 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
             }
             ErrorVariant::SourceStruct(source_struct) => {
                 let attributes = &source_struct.attributes;
+                let cfg_attributes = &source_struct.cfg_attributes;
                 let name = &source_struct.name;
                 let fields = &source_struct.fields;
                 let field_names = fields.iter().map(|e| &e.name);
                 let field_types = fields.iter().map(|e| &e.r#type);
                 let source_type = &source_struct.source_type;
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #(#attributes)*
                     #name {
                         source: #source_type,
@@ -122,9 +128,11 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
             }
             ErrorVariant::SourceTuple(source_tuple) => {
                 let attributes = &source_tuple.attributes;
+                let cfg_attributes = &source_tuple.cfg_attributes;
                 let name = &source_tuple.name;
                 let source_type = &source_tuple.source_type;
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #(#attributes)*
                     #name(#source_type),
                 });
@@ -162,13 +170,17 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
         if is_source_tuple_type(variant) {
             has_source_match_branches = true;
             let name = &variant.name();
+            let cfg_attributes = &variant.cfg_attributes();
             source_match_branches.append_all(quote::quote! {
+                #(#cfg_attributes)*
                 #enum_name::#name(ref source) => source.source(),
             });
         } else if is_source_struct_type(variant) {
             has_source_match_branches = true;
             let name = &variant.name();
+            let cfg_attributes = &variant.cfg_attributes();
             source_match_branches.append_all(quote::quote! {
+                #(#cfg_attributes)*
                 #enum_name::#name { ref source, .. } => source.source(),
             });
         }
@@ -257,25 +269,33 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
         }
 
         match variant {
-            ErrorVariant::Named(_) => {
+            ErrorVariant::Named(named) => {
+                let cfg_attributes = &named.cfg_attributes;
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #enum_name::#name =>  #right_side,
                 });
             }
             ErrorVariant::Struct(r#struct) => {
+                let cfg_attributes = &r#struct.cfg_attributes;
                 let field_names = r#struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
                 });
             }
             ErrorVariant::SourceStruct(source_struct) => {
+                let cfg_attributes = &source_struct.cfg_attributes;
                 let field_names = source_struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #enum_name::#name { ref source, #(ref #field_names),* } =>  #right_side,
                 });
             }
-            ErrorVariant::SourceTuple(_) => {
+            ErrorVariant::SourceTuple(source_tuple) => {
+                let cfg_attributes = &source_tuple.cfg_attributes;
                 error_variant_tokens.append_all(quote::quote! {
+                    #(#cfg_attributes)*
                     #enum_name::#name(ref source) =>  #right_side,
                 });
             }
@@ -344,6 +364,7 @@ fn impl_froms(
             }
             let arm: Option<TokenStream> = match (from_error_enum_variant, error_enum_variant) {
                 (ErrorVariant::Named(this), ErrorVariant::Named(that)) => Some(name_to_name(
+                    &this.cfg_attributes,
                     from_error_enum_name,
                     &this.name,
                     error_enum_name,
@@ -354,6 +375,7 @@ fn impl_froms(
                 (ErrorVariant::Named(this), ErrorVariant::SourceTuple(that)) => None,
                 (ErrorVariant::Struct(this), ErrorVariant::Named(that)) => None,
                 (ErrorVariant::Struct(this), ErrorVariant::Struct(that)) => Some(struct_to_struct(
+                    &this.cfg_attributes,
                     from_error_enum_name,
                     &this.name,
                     &this.fields,
@@ -367,6 +389,7 @@ fn impl_froms(
                 (ErrorVariant::SourceStruct(this), ErrorVariant::Struct(that)) => None,
                 (ErrorVariant::SourceStruct(this), ErrorVariant::SourceStruct(that)) => {
                     Some(source_struct_to_source_struct(
+                    &this.cfg_attributes,
                         from_error_enum_name,
                         &this.name,
                         &this.fields,
@@ -377,6 +400,7 @@ fn impl_froms(
                 }
                 (ErrorVariant::SourceStruct(this), ErrorVariant::SourceTuple(that)) => {
                     Some(source_struct_to_source_tuple(
+                    &this.cfg_attributes,
                         from_error_enum_name,
                         &this.name,
                         &this.fields,
@@ -389,6 +413,7 @@ fn impl_froms(
                 (ErrorVariant::SourceTuple(this), ErrorVariant::SourceStruct(that)) => {
                     if that.fields.is_empty() {
                         Some(source_tuple_to_source_only_struct(
+                    &this.cfg_attributes,
                             from_error_enum_name,
                             &this.name,
                             error_enum_name,
@@ -400,6 +425,7 @@ fn impl_froms(
                 }
                 (ErrorVariant::SourceTuple(this), ErrorVariant::SourceTuple(that)) => {
                     Some(source_tuple_to_source_tuple(
+                    &this.cfg_attributes,
                         from_error_enum_name,
                         &this.name,
                         error_enum_name,
@@ -480,17 +506,20 @@ fn impl_froms(
 //************************************************************************//
 
 fn name_to_name(
+    this_cfg_attributes: &Vec<Attribute>,
     this_enum_name: &Ident,
     this_enum_variant_name: &Ident,
     that_enum_name: &Ident,
     that_enum_variant_name: &Ident,
 ) -> TokenStream {
     quote::quote! {
+        #(#this_cfg_attributes)*
         #this_enum_name::#this_enum_variant_name =>  #that_enum_name::#that_enum_variant_name,
     }
 }
 
 fn struct_to_struct(
+    this_cfg_attributes: &Vec<Attribute>,
     this_enum_name: &Ident,
     this_variant_name: &Ident,
     this_enum_fields: &Vec<AstInlineErrorVariantField>,
@@ -501,33 +530,39 @@ fn struct_to_struct(
     let this_field_names = this_enum_fields.iter().map(|e| &e.name);
     let that_field_names = that_enum_fields.iter().map(|e| &e.name);
     quote::quote! {
+        #(#this_cfg_attributes)*
         #this_enum_name::#this_variant_name { #(#this_field_names),*  } =>  #that_enum_name::#that_variant_name { #(#that_field_names),*  },
     }
 }
 
 fn source_tuple_to_source_tuple(
+    this_cfg_attributes: &Vec<Attribute>,
     this_enum_name: &Ident,
     this_enum_variant_name: &Ident,
     that_enum_name: &Ident,
     that_enum_variant_name: &Ident,
 ) -> TokenStream {
     quote::quote! {
+        #(#this_cfg_attributes)*
         #this_enum_name::#this_enum_variant_name(source) =>  #that_enum_name::#that_enum_variant_name(source),
     }
 }
 
 fn source_tuple_to_source_only_struct(
+    this_cfg_attributes: &Vec<Attribute>,
     this_enum_name: &Ident,
     this_enum_variant_name: &Ident,
     that_enum_name: &Ident,
     that_enum_variant_name: &Ident,
 ) -> TokenStream {
     quote::quote! {
+        #(#this_cfg_attributes)*
         #this_enum_name::#this_enum_variant_name(source) =>  #that_enum_name::#that_enum_variant_name { source },
     }
 }
 
 fn source_struct_to_source_tuple(
+    this_cfg_attributes: &Vec<Attribute>,
     this_enum_name: &Ident,
     this_enum_variant_name: &Ident,
     this_enum_fields: &Vec<AstInlineErrorVariantField>,
@@ -535,11 +570,13 @@ fn source_struct_to_source_tuple(
     that_enum_variant_name: &Ident,
 ) -> TokenStream {
     quote::quote! {
+        #(#this_cfg_attributes)*
         #this_enum_name::#this_enum_variant_name { source, .. } =>  #that_enum_name::#that_enum_variant_name(source),
     }
 }
 
 fn source_struct_to_source_struct(
+    this_cfg_attributes: &Vec<Attribute>,
     this_enum_name: &Ident,
     this_enum_variant_name: &Ident,
     this_enum_fields: &Vec<AstInlineErrorVariantField>,
@@ -550,12 +587,14 @@ fn source_struct_to_source_struct(
     let this_field_names = this_enum_fields.iter().map(|e| &e.name);
     let that_field_names = that_enum_fields.iter().map(|e| &e.name);
     quote::quote! {
+        #(#this_cfg_attributes)*
         #this_enum_name::#this_enum_variant_name { source, #(#this_field_names),*  } =>  #that_enum_name::#that_variant_name { source, #(#that_field_names),* },
     }
 }
 
 pub(crate) trait Common {
     fn attributes(&self) -> &Vec<Attribute>;
+    fn cfg_attributes(&self) -> &Vec<Attribute>;
     fn display(&self) -> Option<&DisplayAttribute>;
     fn name(&self) -> &Ident;
     fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>>;
@@ -581,6 +620,14 @@ impl Common for ErrorVariant {
             ErrorVariant::Struct(e) => e.attributes(),
             ErrorVariant::SourceStruct(e) => e.attributes(),
             ErrorVariant::SourceTuple(e) => e.attributes(),
+        }
+    }
+    fn cfg_attributes(&self) -> &Vec<Attribute> {
+        match self {
+            ErrorVariant::Named(e) => e.cfg_attributes(),
+            ErrorVariant::Struct(e) => e.cfg_attributes(),
+            ErrorVariant::SourceStruct(e) => e.cfg_attributes(),
+            ErrorVariant::SourceTuple(e) => e.cfg_attributes(),
         }
     }
     fn display(&self) -> Option<&DisplayAttribute> {
@@ -620,6 +667,7 @@ impl Common for ErrorVariant {
 #[derive(Clone)]
 pub(crate) struct Named {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) cfg_attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
 }
@@ -627,6 +675,9 @@ pub(crate) struct Named {
 impl Common for Named {
     fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
+    }
+    fn cfg_attributes(&self) -> &Vec<Attribute> {
+        &self.cfg_attributes
     }
     fn display(&self) -> Option<&DisplayAttribute> {
         self.display.as_ref()
@@ -645,6 +696,7 @@ impl Common for Named {
 #[derive(Clone)]
 pub(crate) struct Struct {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) cfg_attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
     // Dev Note: This field will never be empty. Otherwise it should just be a [Named]
@@ -654,6 +706,9 @@ pub(crate) struct Struct {
 impl Common for Struct {
     fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
+    }
+    fn cfg_attributes(&self) -> &Vec<Attribute> {
+        &self.cfg_attributes
     }
     fn display(&self) -> Option<&DisplayAttribute> {
         self.display.as_ref()
@@ -672,6 +727,7 @@ impl Common for Struct {
 #[derive(Clone)]
 pub(crate) struct SourceStruct {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) cfg_attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
     pub(crate) source_type: syn::TypePath,
@@ -682,6 +738,9 @@ pub(crate) struct SourceStruct {
 impl Common for SourceStruct {
     fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
+    }
+    fn cfg_attributes(&self) -> &Vec<Attribute> {
+        &self.cfg_attributes
     }
     fn display(&self) -> Option<&DisplayAttribute> {
         self.display.as_ref()
@@ -700,6 +759,7 @@ impl Common for SourceStruct {
 #[derive(Clone)]
 pub(crate) struct SourceTuple {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) cfg_attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
     pub(crate) source_type: syn::TypePath,
@@ -708,6 +768,9 @@ pub(crate) struct SourceTuple {
 impl Common for SourceTuple {
     fn attributes(&self) -> &Vec<Attribute> {
         &self.attributes
+    }
+    fn cfg_attributes(&self) -> &Vec<Attribute> {
+        &self.cfg_attributes
     }
     fn display(&self) -> Option<&DisplayAttribute> {
         self.display.as_ref()

@@ -173,6 +173,7 @@ impl Parse for RefError {
 #[derive(Clone)]
 pub(crate) struct AstErrorVariant {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) cfg_attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
     // Dev Note: `Some(Vec::new())` == `{}`, `Some(Vec::new(..))` == `{..}`, `None` == ``. `{}` means inline struct if has source as well.
@@ -184,7 +185,8 @@ pub(crate) struct AstErrorVariant {
 
 impl Parse for AstErrorVariant {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mut attributes = input.call(Attribute::parse_outer)?;
+        let attributes = input.call(Attribute::parse_outer)?;
+        let (mut attributes, cfg_attributes) = extract_cfg(attributes);
         let display = extract_display_attribute(&mut attributes)?;
         let name = input.parse::<Ident>()?;
         let content: syn::Result<_> = (|| {
@@ -221,6 +223,7 @@ impl Parse for AstErrorVariant {
             Err(_) => {
                 return Ok(AstErrorVariant {
                     attributes,
+                    cfg_attributes,
                     display,
                     name,
                     fields: None,
@@ -237,6 +240,7 @@ impl Parse for AstErrorVariant {
         let fields = Some(fields);
         Ok(AstErrorVariant {
             attributes,
+            cfg_attributes,
             display,
             name,
             fields,
@@ -302,10 +306,7 @@ impl Parse for DisableArg {
             Vec::new()
         };
 
-        Ok(DisableArg {
-            name,
-            refs
-        })
+        Ok(DisableArg { name, refs })
     }
 }
 
@@ -348,14 +349,18 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
             }
 
             let punc = match syn::parse::Parser::parse2(
-                &|input: ParseStream| Punctuated::<DisableArg, token::Comma>::parse_terminated(input),
+                &|input: ParseStream| {
+                    Punctuated::<DisableArg, token::Comma>::parse_terminated(input)
+                },
                 list.tokens.clone(),
             ) {
                 Ok(okay) => okay,
-                Err(_) => return Err(syn::parse::Error::new(
-                    list.tokens.span(),
-                    format!("Invalid syntax for `{}` attribute.", DISABLE_ATTRIBUTE_NAME),
-                )),
+                Err(_) => {
+                    return Err(syn::parse::Error::new(
+                        list.tokens.span(),
+                        format!("Invalid syntax for `{}` attribute.", DISABLE_ATTRIBUTE_NAME),
+                    ))
+                }
             };
             let mut from = None;
             let mut display = false;
@@ -485,7 +490,6 @@ fn extract_display_attribute(
     if to_remove.is_empty() {
         return Ok(Some(display));
     }
-
     let mut index = 0;
     attributes.retain(|_| {
         let retain = !&to_remove.contains(&index);
@@ -513,6 +517,44 @@ fn display_tokens(attribute: &Attribute) -> Option<DisplayAttribute> {
             return None;
         }
     };
+}
+
+/// old and new
+fn extract_cfg(attributes: Vec<Attribute>) -> (Vec<Attribute>, Vec<Attribute>) {
+    let mut to_remove = Vec::new();
+    for (index, attribute) in attributes.iter().enumerate() {
+        match &attribute.meta {
+            syn::Meta::NameValue(_) => {},
+            syn::Meta::Path(_) => {},
+            syn::Meta::List(meta_list) => {
+                if meta_list
+                    .path
+                    .get_ident()
+                    .is_some_and(|e| e.to_string() == "cfg")
+                {
+                    to_remove.push(index);
+                }
+            }
+        };
+    }
+
+    let mut cfgs = Vec::new();
+    // let mut index: usize = usize::MAX;
+    let mut index = 0;
+    let attributes = attributes
+        .into_iter()
+        .filter_map(|e| {
+            // index = index.wrapping_add(1);
+            if to_remove.contains(&index) {
+                index += 1;
+                cfgs.push(e);
+                return None;
+            }
+            index += 1;
+            Some(e)
+        })
+        .collect::<Vec<_>>();
+    (attributes, cfgs)
 }
 
 #[derive(Clone, PartialEq)]

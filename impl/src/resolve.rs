@@ -110,7 +110,7 @@ fn resolve_builders_helper<'a>(
             if ref_part.generic_refs.len() != ref_error_enum_builder.generics.len() {
                 Err(syn::parse::Error::new_spanned(
                     &ref_part.name,
-                    format!("A reference to {} was declared with {} generic param(s), but the original defintion takes {}.", ref_part.name, ref_part.generic_refs.len(), ref_error_enum_builder.generics.len()),
+                    format!("A reference to {} was declared with {} generic param(s), but the original definition takes {}.", ref_part.name, ref_part.generic_refs.len(), ref_error_enum_builder.generics.len()),
                 ))?;
             }
             let mut error_variants = Vec::new();
@@ -166,6 +166,7 @@ fn resolve_builders_helper<'a>(
                     };
                     error_variants.push(AstErrorVariant {
                         attributes: error_variant.attributes.clone(),
+                        cfg_attributes: error_variant.cfg_attributes.clone(),
                         display: error_variant.display.clone(),
                         name: error_variant.name.clone(),
                         fields: new_fields,
@@ -280,6 +281,7 @@ impl Eq for ErrorEnumBuilder {}
 fn reshape(this: AstErrorVariant) -> ErrorVariant {
     let AstErrorVariant {
         attributes,
+        cfg_attributes,
         display,
         name,
         fields,
@@ -291,6 +293,7 @@ fn reshape(this: AstErrorVariant) -> ErrorVariant {
         (Some(fields), Some(source_type)) => {
             return ErrorVariant::SourceStruct(SourceStruct {
                 attributes,
+                cfg_attributes,
                 display,
                 name,
                 source_type,
@@ -301,6 +304,7 @@ fn reshape(this: AstErrorVariant) -> ErrorVariant {
         (Some(fields), None) => {
             return ErrorVariant::Struct(Struct {
                 attributes,
+                cfg_attributes,
                 display,
                 name,
                 fields,
@@ -310,6 +314,7 @@ fn reshape(this: AstErrorVariant) -> ErrorVariant {
         (None, Some(source_type)) => {
             return ErrorVariant::SourceTuple(SourceTuple {
                 attributes,
+                cfg_attributes,
                 display,
                 name,
                 source_type,
@@ -319,6 +324,7 @@ fn reshape(this: AstErrorVariant) -> ErrorVariant {
         (None, None) => {
             return ErrorVariant::Named(Named {
                 attributes,
+                cfg_attributes,
                 display,
                 name,
             });
