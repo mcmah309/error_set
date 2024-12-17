@@ -2,7 +2,7 @@
 name = "error_set_impl"
 edition = "2021"
 description = "Implementation of the proc macro for the error_set crate."
-version = "0.8.2"
+version = "0.8.3"
 license = "Apache-2.0"
 documentation = "https://docs.rs/error_set"
 repository = "https://github.com/mcmah309/error_set"
