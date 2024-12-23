@@ -18,14 +18,14 @@ mod sealed {
 )]
 pub trait ResultTrail<T, E>: sealed::Sealed {
     /// If [Err], logging context as an "error".
-    fn trail_error(self, context: impl Display) -> Result<T, E>;
+    fn error_trail(self, context: impl Display) -> Result<T, E>;
     /// If [Err], logging context as an "warn".
-    fn trail_warn(self, context: impl Display) -> Result<T, E>;
+    fn warn_trail(self, context: impl Display) -> Result<T, E>;
 
     /// If [Err], lazily logging the result of [f] as an "error".
-    fn trail_error_with<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
+    fn lazy_error_trail<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
     /// If [Err], lazily logging the result of [f] as an "warn".
-    fn trail_warn_with<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
+    fn lazy_warn_trail<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
 }
 
 /// For logging a [Option] when [None] is encountered.
@@ -40,14 +40,14 @@ pub trait ResultTrail<T, E>: sealed::Sealed {
 )]
 pub trait OptionTrail<T>: sealed::Sealed {
     /// If [None], logging context as an "error".
-    fn trail_error(self, context: impl Display) -> Option<T>;
+    fn error_trail(self, context: impl Display) -> Option<T>;
     /// If [None], logging context as an "warn".
-    fn trail_warn(self, context: impl Display) -> Option<T>;
+    fn warn_trail(self, context: impl Display) -> Option<T>;
 
     /// Consumes the [Option]. If [None], lazily logging the result of [f] as an "error".
-    fn trail_error_end_with<F: FnOnce() -> D, D: Display>(self, f: F);
+    fn lazy_error_trail<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
     /// Consumes the [Option]. If [None], lazily logging the result of [f] as an "warn".
-    fn trail_warn_end_with<F: FnOnce() -> D, D: Display>(self, f: F);
+    fn lazy_warn_trail<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
 }
 
 /// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
@@ -63,17 +63,10 @@ pub trait OptionTrail<T>: sealed::Sealed {
 pub trait ResultTrailDisplay<T, E: Display>: sealed::Sealed {
     /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "error".
     /// Represents a bad state in which the current process cannot continue.
-    fn trail_error_end(self) -> Option<T>;
+    fn error_trail_end(self) -> Option<T>;
     /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "warn".
     /// Represents a bad state in which the current process can continue.
-    fn trail_warn_end(self) -> Option<T>;
-
-    /// Consumes the [Err] of a Result. If [Err], lazily logging the result of [f] as an "error".
-    /// Represents a bad state in which the current process cannot continue.
-    fn trail_error_end_with<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
-    /// Consumes the [Err] of a Result. If [Err], lazily logging the result of [f] as an "warn".
-    /// Represents a bad state in which the current process can continue.
-    fn trail_warn_end_with<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
+    fn warn_trail_end(self) -> Option<T>;
 }
 
 //************************************************************************//
@@ -81,7 +74,7 @@ pub trait ResultTrailDisplay<T, E: Display>: sealed::Sealed {
 impl<T, E> sealed::Sealed for Result<T, E> {}
 impl<T, E> ResultTrail<T, E> for Result<T, E> {
     #[inline]
-    fn trail_error(self, context: impl Display) -> Result<T, E> {
+    fn error_trail(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
             #[cfg(feature = "tracing")]
             tracing::error!("{}", context);
@@ -92,7 +85,7 @@ impl<T, E> ResultTrail<T, E> for Result<T, E> {
     }
 
     #[inline]
-    fn trail_warn(self, context: impl Display) -> Result<T, E> {
+    fn warn_trail(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
             #[cfg(feature = "tracing")]
             tracing::warn!("{}", context);
@@ -105,7 +98,7 @@ impl<T, E> ResultTrail<T, E> for Result<T, E> {
     //************************************************************************//
 
     #[inline]
-    fn trail_error_with<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E> {
+    fn lazy_error_trail<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E> {
         if let Err(err) = &self {
             #[cfg(feature = "tracing")]
             tracing::error!("{}", f(&err));
@@ -116,7 +109,7 @@ impl<T, E> ResultTrail<T, E> for Result<T, E> {
     }
 
     #[inline]
-    fn trail_warn_with<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E> {
+    fn lazy_warn_trail<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E> {
         if let Err(err) = &self {
             #[cfg(feature = "tracing")]
             tracing::warn!("{}", f(&err));
@@ -131,7 +124,7 @@ impl<T, E> ResultTrail<T, E> for Result<T, E> {
 
 impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
     #[inline]
-    fn trail_error_end(self) -> Option<T> {
+    fn error_trail_end(self) -> Option<T> {
         match self {
             Ok(value) => Some(value),
             Err(err) => {
@@ -145,7 +138,7 @@ impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
     }
 
     #[inline]
-    fn trail_warn_end(self) -> Option<T> {
+    fn warn_trail_end(self) -> Option<T> {
         match self {
             Ok(value) => Some(value),
             Err(err) => {
@@ -157,35 +150,6 @@ impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
             }
         }
     }
-
-    //************************************************************************//
-
-    #[inline]
-    fn trail_error_end_with<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
-        match self {
-            Ok(value) => Some(value),
-            Err(err) => {
-                #[cfg(feature = "tracing")]
-                tracing::error!("{}", f());
-                #[cfg(feature = "log")]
-                log::error!("{}", f());
-                None
-            }
-        }
-    }
-
-    fn trail_warn_end_with<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
-        match self {
-            Ok(value) => Some(value),
-            Err(err) => {
-                #[cfg(feature = "tracing")]
-                tracing::warn!("{}", f());
-                #[cfg(feature = "log")]
-                log::warn!("{}", f());
-                None
-            }
-        }
-    }
 }
 
 //************************************************************************//
@@ -193,7 +157,7 @@ impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
 impl<T> sealed::Sealed for Option<T> {}
 impl<T> OptionTrail<T> for Option<T> {
     #[inline]
-    fn trail_error(self, context: impl Display) -> Option<T> {
+    fn error_trail(self, context: impl Display) -> Option<T> {
         if self.is_none() {
             #[cfg(feature = "tracing")]
             tracing::error!("{}", context);
@@ -204,7 +168,7 @@ impl<T> OptionTrail<T> for Option<T> {
     }
 
     #[inline]
-    fn trail_warn(self, context: impl Display) -> Option<T> {
+    fn warn_trail(self, context: impl Display) -> Option<T> {
         if self.is_none() {
             #[cfg(feature = "tracing")]
             tracing::warn!("{}", context);
@@ -217,22 +181,24 @@ impl<T> OptionTrail<T> for Option<T> {
     //************************************************************************//
 
     #[inline]
-    fn trail_error_end_with<F: FnOnce() -> D, D: Display>(self, f: F) {
+    fn lazy_error_trail<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
         if self.is_none() {
             #[cfg(feature = "tracing")]
             tracing::error!("{}", f());
             #[cfg(feature = "log")]
             log::error!("{}", f());
         }
+        self
     }
 
     #[inline]
-    fn trail_warn_end_with<F: FnOnce() -> D, D: Display>(self, f: F) {
+    fn lazy_warn_trail<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T> {
         if self.is_none() {
             #[cfg(feature = "tracing")]
             tracing::warn!("{}", f());
             #[cfg(feature = "log")]
             log::warn!("{}", f());
         }
+        self
     }
 }
