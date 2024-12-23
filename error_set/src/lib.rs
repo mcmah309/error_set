@@ -1,6 +1,6 @@
 #![cfg_attr(not(any(test, feature = "tracing", feature = "log")), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../../README.md")]
 
 #[cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))]
 mod context;
@@ -26,6 +26,8 @@ compile_error!("Features 'log' and 'context_stub' cannot be enabled at the same 
 compile_error!("Features 'defmt' and 'context_stub' cannot be enabled at the same time.");
 
 pub use error_set_impl::*;
+#[cfg(any(feature = "tracing", feature = "log", feature = "context_stub", feature = "defmt"))]
+pub use err_trail::*;
 
 pub trait CoerceResult<T, E1> {
     fn coerce<E2: From<E1>>(self) -> Result<T, E2>;

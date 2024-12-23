@@ -8,6 +8,7 @@ mod sealed {
 }
 
 /// For logging a [Result] when an [Err] is encountered.
+#[deprecated(note = "Use `ErrContext` instead")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait ResultContext<T, E>: sealed::Sealed {
     /// Log the context as an "error" if the Result is an [Err].
@@ -45,6 +46,7 @@ pub trait ResultContext<T, E>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Debug] format when an [Err] is encountered.
+#[deprecated(note = "Use `ErrContextDisplay` instead")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait ConsumeDebug<T>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
@@ -60,6 +62,7 @@ pub trait ConsumeDebug<T>: sealed::Sealed {
 }
 
 /// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
+#[deprecated(note = "Use `ErrContextDisplay` instead")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait ConsumeDisplay<T>: sealed::Sealed {
     /// Consumes the [Err] of a Result. if [Err], logging as an "error".
@@ -75,6 +78,7 @@ pub trait ConsumeDisplay<T>: sealed::Sealed {
 }
 
 /// For logging when a [None] is encountered.
+#[deprecated(note = "Use `NoneContext` instead")]
 #[cfg_attr(docsrs, doc(cfg(any(feature = "tracing", feature = "log", feature = "defmt", feature = "context_stub"))))]
 pub trait OptionContext<T>: sealed::Sealed {
     /// Log the context as an "error" if the Option is [None].
@@ -101,6 +105,7 @@ pub trait OptionContext<T>: sealed::Sealed {
 }
 
 impl<T, E> sealed::Sealed for Result<T, E> {}
+#[allow(deprecated)]
 impl<T, E> ResultContext<T, E> for Result<T, E> {
     #[inline]
     fn error(self, context: impl Display) -> Result<T, E> {
@@ -287,6 +292,7 @@ impl<T, E> ResultContext<T, E> for Result<T, E> {
     }
 }
 
+#[allow(deprecated)]
 impl<T, E> ConsumeDebug<T> for Result<T, E>
 where
     E: Debug,
@@ -362,6 +368,7 @@ where
     }
 }
 
+#[allow(deprecated)]
 impl<T, E> ConsumeDisplay<T> for Result<T, E>
 where
     E: Display,
@@ -440,6 +447,7 @@ where
 //************************************************************************//
 
 impl<T> sealed::Sealed for Option<T> {}
+#[allow(deprecated)]
 impl<T> OptionContext<T> for Option<T> {
     #[inline]
     fn error(self, context: impl Display) -> Option<T> {

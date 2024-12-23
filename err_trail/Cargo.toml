@@ -1,0 +1,28 @@
+[package]
+name = "err_trail"
+description = "Add context to errors through logging"
+version = "0.8.3"
+edition = "2021"
+license = "Apache-2.0"
+documentation = "https://docs.rs/err_trail"
+repository = "https://github.com/mcmah309/error_set"
+
+[dependencies]
+tracing = { version = "0.1", optional = true }
+log = { version = "0.4", optional = true }
+defmt = { version = "0.3", optional = true }
+
+[dev-dependencies]
+tracing-test = { version = "0.2", features = ["no-env-filter"] }
+lazy_static = "1"
+
+[features]
+default = ["stub"]
+# Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+tracing = ["dep:tracing"]
+# Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+log = ["dep:log"]
+# Enables support for the defmt crate, which works with no_std. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+defmt = ["dep:defmt"]
+# Enables support for the log/tracing/defmt api, without pulling in any crates. Allowing a downstream to choose the appropriate crate.
+stub = []
