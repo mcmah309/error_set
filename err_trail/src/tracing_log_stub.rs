@@ -13,10 +13,10 @@ mod sealed {
         feature = "tracing",
         feature = "log",
         feature = "defmt",
-        feature = "context_stub"
+        feature = "stub"
     )))
 )]
-pub trait ResultTrail<T, E>: sealed::Sealed {
+pub trait ErrContext<T, E>: sealed::Sealed {
     /// If [Err], logging context as an "error".
     fn error_context(self, context: impl Display) -> Result<T, E>;
     /// If [Err], logging context as an "warn".
@@ -35,10 +35,10 @@ pub trait ResultTrail<T, E>: sealed::Sealed {
         feature = "tracing",
         feature = "log",
         feature = "defmt",
-        feature = "context_stub"
+        feature = "stub"
     )))
 )]
-pub trait OptionTrail<T>: sealed::Sealed {
+pub trait NoneContext<T>: sealed::Sealed {
     /// If [None], logging context as an "error".
     fn error_context(self, context: impl Display) -> Option<T>;
     /// If [None], logging context as an "warn".
@@ -57,22 +57,22 @@ pub trait OptionTrail<T>: sealed::Sealed {
         feature = "tracing",
         feature = "log",
         feature = "defmt",
-        feature = "context_stub"
+        feature = "stub"
     )))
 )]
-pub trait ResultTrailDisplay<T, E: Display>: sealed::Sealed {
+pub trait ErrContextDisplay<T, E: Display>: sealed::Sealed {
     /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "error".
     /// Represents a bad state in which the current process cannot continue.
-    fn error_context_end(self) -> Option<T>;
+    fn consume_as_error(self) -> Option<T>;
     /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "warn".
     /// Represents a bad state in which the current process can continue.
-    fn warn_context_end(self) -> Option<T>;
+    fn consume_as_warn(self) -> Option<T>;
 }
 
 //************************************************************************//
 
 impl<T, E> sealed::Sealed for Result<T, E> {}
-impl<T, E> ResultTrail<T, E> for Result<T, E> {
+impl<T, E> ErrContext<T, E> for Result<T, E> {
     #[inline]
     fn error_context(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
@@ -122,9 +122,9 @@ impl<T, E> ResultTrail<T, E> for Result<T, E> {
 
 //************************************************************************//
 
-impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
+impl<T, E: Display> ErrContextDisplay<T, E> for Result<T, E> {
     #[inline]
-    fn error_context_end(self) -> Option<T> {
+    fn consume_as_error(self) -> Option<T> {
         match self {
             Ok(value) => Some(value),
             Err(err) => {
@@ -138,7 +138,7 @@ impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
     }
 
     #[inline]
-    fn warn_context_end(self) -> Option<T> {
+    fn consume_as_warn(self) -> Option<T> {
         match self {
             Ok(value) => Some(value),
             Err(err) => {
@@ -155,7 +155,7 @@ impl<T, E: Display> ResultTrailDisplay<T, E> for Result<T, E> {
 //************************************************************************//
 
 impl<T> sealed::Sealed for Option<T> {}
-impl<T> OptionTrail<T> for Option<T> {
+impl<T> NoneContext<T> for Option<T> {
     #[inline]
     fn error_context(self, context: impl Display) -> Option<T> {
         if self.is_none() {

@@ -9,10 +9,12 @@ log = { version = "0.4", optional = true }
 defmt = { version = "0.3", optional = true }
 
 [features]
-default = []
+default = ["stub"]
 # Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
 tracing = ["dep:tracing"]
 # Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
 log = ["dep:log"]
 # Enables support for the defmt crate, which works with no_std. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
 defmt = ["dep:defmt"]
+# Enables support for the log/tracing/defmt api, without pulling in any crates. Allowing a downstream to choose the appropriate crate.
+stub = []
