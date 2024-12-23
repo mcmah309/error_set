@@ -9,9 +9,8 @@ use syn::{Attribute, Ident, TypeParam};
 
 /// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
 /// all error sets with the full expansion.
-pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
+pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<(Vec<ErrorEnum>, Vec<Ident>)> {
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
-
     for declaration in error_set.set_items.into_iter() {
         let AstErrorDeclaration {
             attributes,
@@ -37,9 +36,38 @@ pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
         }
         error_enum_builders.push(error_enum_builder);
     }
+    
+    // let mut x = ref_part.name.clone();
+    // let span = x.span().resolved_at(error_enum_builder.error_name.span());
+    // x.set_span(span);
+    // all_ref_parts.push(x);
+    let mut all_ref_parts = error_enum_builders.iter().map(|e| &e.ref_parts_to_resolve).flatten().map(|e| 
+    {
+        e.name.clone()
+        
+    }).collect::<Vec<_>>();
+    for part in all_ref_parts.iter_mut() {
+        for error_enum_builder in error_enum_builders.iter() {
+            if error_enum_builder.error_name == *part {
+                // return Err(syn::parse::Error::new_spanned(
+                //     part.clone(),
+                //     "asgsgsgf.",
+                // ));
+                // part.set_span(part.span().located_at(error_enum_builder.error_name.span()));
+                // part.set_span(part.span().resolved_at(error_enum_builder.error_name.span()));
+                // part.set_span(error_enum_builder.error_name.span().located_at(part.span()));
+                // part.set_span(error_enum_builder.error_name.span().resolved_at(part.span()));
+
+                // part.set_span(part.span().join(error_enum_builder.error_name.span()).unwrap());
+
+                // let span = error_enum_builder.error_name.span();
+                // span.unwrap().end()
+            }
+        }
+    }
     let error_enums = resolve_builders(error_enum_builders)?;
 
-    Ok(error_enums)
+    Ok((error_enums, all_ref_parts))
 }
 
 fn resolve_builders(mut error_enum_builders: Vec<ErrorEnumBuilder>) -> syn::Result<Vec<ErrorEnum>> {

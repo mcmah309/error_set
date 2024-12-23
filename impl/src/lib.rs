@@ -14,7 +14,7 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // let token_stream: proc_macro2::TokenStream = syn::parse_str("const int: i32 = 1;").unwrap();
     // return proc_macro::TokenStream::from(token_stream);
     let error_set = syn::parse_macro_input!(tokens as AstErrorSet);
-    let error_enums = match resolve(error_set) {
+    let (error_enums, all_ref_parts) = match resolve(error_set) {
         Ok(ok) => ok,
         Err(err) => {
             return err.into_compile_error().into();
@@ -23,5 +23,5 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     if let Err(err) = validate(&error_enums) {
         return err.into_compile_error().into();
     }
-    expand(error_enums).into()
+    expand(error_enums, all_ref_parts).into()
 }

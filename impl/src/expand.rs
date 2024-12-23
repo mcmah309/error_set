@@ -10,7 +10,7 @@ use syn::{Attribute, Ident, Lit, TypeParam};
 use crate::ast::{AstInlineErrorVariantField, Disabled, DisplayAttribute};
 
 /// Expand the [ErrorEnum]s into code.
-pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
+pub(crate) fn expand(error_enums: Vec<ErrorEnum>, all_ref_parts: Vec<Ident>) -> TokenStream {
     let mut token_stream = TokenStream::new();
     let mut graph: Vec<ErrorEnumGraphNode> = error_enums
         .into_iter()
@@ -54,6 +54,14 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
     for error_enum_node in graph.iter() {
         add_code_for_node(error_enum_node, &*graph, &mut token_stream);
     }
+
+    let ref_parts = quote! {
+        enum AllRefParts {
+            #(#all_ref_parts),*
+        }
+    };
+
+    token_stream.append_all(ref_parts);
     token_stream
 }
 
