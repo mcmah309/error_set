@@ -12,7 +12,7 @@ rust-version = "1.81"
 
 [dependencies]
 error_set_impl = { version = "=0.8.3", path = "../error_set_impl" }
-err_trail = {version = "=0.8.3", path = "../err_trail"}
+err_trail = {version = "=0.8.3", path = "../err_trail", default-features = false}
 
 # features
 tracing = { version = "0.1", optional = true }
