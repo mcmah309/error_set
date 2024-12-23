@@ -22,6 +22,7 @@ syn = { version = "2", default-features = false, features = [
 proc-macro2 = "1"
 quote = "1"
 indices = "0.3"
+regex = "1"
 
 [features]
 default = []

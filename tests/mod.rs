@@ -860,6 +860,36 @@ pub mod from_for_generic_and_regular {
         assert!(matches!(x, X::B(_)));
     }
 }
+
+#[cfg(test)]
+pub mod generics_nested {
+    use error_set::error_set;
+
+    #[derive(Debug)]
+    pub struct Wrapper<T: core::fmt::Debug + core::fmt::Display>(T);
+
+    impl<T: core::fmt::Debug + core::fmt::Display> std::fmt::Display for Wrapper<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "Wrapper({})", self.0)
+        }
+    }
+
+    error_set!{
+        X<H: core::fmt::Debug + core::fmt::Display> = {
+            A {
+                a: Wrapper<H>
+            }
+        };
+        Z<T: core::fmt::Debug + core::fmt::Display> = X<T>;
+    }
+
+    #[test]
+    fn test() {
+        let _x = X::A { a: Wrapper(1) };
+        let _z = Z::A { a: Wrapper(1) };
+    }
+}
+
 #[cfg(test)]
 pub mod should_not_compile_tests {
 
