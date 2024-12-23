@@ -9,12 +9,7 @@ mod sealed {
 /// For logging a [Result] when [Err] is encountered.
 #[cfg_attr(
     docsrs,
-    doc(cfg(any(
-        feature = "tracing",
-        feature = "log",
-        feature = "defmt",
-        feature = "stub"
-    )))
+    doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
 )]
 pub trait ErrContext<T, E>: sealed::Sealed {
     /// If [Err], logging context as an "error".
@@ -31,12 +26,7 @@ pub trait ErrContext<T, E>: sealed::Sealed {
 /// For logging a [Option] when [None] is encountered.
 #[cfg_attr(
     docsrs,
-    doc(cfg(any(
-        feature = "tracing",
-        feature = "log",
-        feature = "defmt",
-        feature = "stub"
-    )))
+    doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
 )]
 pub trait NoneContext<T>: sealed::Sealed {
     /// If [None], logging context as an "error".
@@ -53,12 +43,7 @@ pub trait NoneContext<T>: sealed::Sealed {
 /// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
 #[cfg_attr(
     docsrs,
-    doc(cfg(any(
-        feature = "tracing",
-        feature = "log",
-        feature = "defmt",
-        feature = "stub"
-    )))
+    doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
 )]
 pub trait ErrContextDisplay<T, E: Display>: sealed::Sealed {
     /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "error".

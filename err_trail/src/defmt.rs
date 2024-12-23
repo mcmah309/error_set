@@ -8,7 +8,7 @@ mod sealed {
 
 /// For logging a [Result] when [Err] is encountered.
 #[cfg_attr(docsrs, doc(cfg(feature = "defmt")))]
-pub trait ErrContext<T, E>: sealed::Sealed {
+pub trait ErrContextDefmt<T, E>: sealed::Sealed {
     /// If [Err], log context as "error".
     fn error_context(self, context: impl Format) -> Result<T, E>;
     /// If [Err], log context as "warn".
@@ -22,7 +22,7 @@ pub trait ErrContext<T, E>: sealed::Sealed {
 
 /// For consuming a [Result]'s [Err] in [Format] when [Err] is encountered.
 #[cfg_attr(docsrs, doc(cfg(feature = "defmt")))]
-pub trait ErrContextConsume<T, E: Format>: sealed::Sealed {
+pub trait ErrContextConsumeDefmt<T, E: Format>: sealed::Sealed {
     /// Consume [Err] of a [Result]. Log as "error".
     fn consume_as_error(self) -> Option<T>;
     /// Consume [Err] of a [Result]. Log as "warn".
@@ -31,7 +31,7 @@ pub trait ErrContextConsume<T, E: Format>: sealed::Sealed {
 
 /// For logging an [Option] when [None] is encountered.
 #[cfg_attr(docsrs, doc(cfg(feature = "defmt")))]
-pub trait NoneContext<T>: sealed::Sealed {
+pub trait NoneContextDefmt<T>: sealed::Sealed {
     /// If [None], log context as "error".
     fn error_context(self, context: impl Format) -> Option<T>;
     /// If [None], log context as "warn".
@@ -46,7 +46,7 @@ pub trait NoneContext<T>: sealed::Sealed {
 //************************************************************************//
 
 impl<T, E> sealed::Sealed for Result<T, E> {}
-impl<T, E> ErrContext<T, E> for Result<T, E> {
+impl<T, E> ErrContextDefmt<T, E> for Result<T, E> {
     #[inline]
     fn error_context(self, context: impl Format) -> Result<T, E> {
         if self.is_err() {
@@ -80,7 +80,7 @@ impl<T, E> ErrContext<T, E> for Result<T, E> {
     }
 }
 
-impl<T, E: Format> ErrContextConsume<T, E> for Result<T, E> {
+impl<T, E: Format> ErrContextConsumeDefmt<T, E> for Result<T, E> {
     #[inline]
     fn consume_as_error(self) -> Option<T> {
         match self {
@@ -107,7 +107,7 @@ impl<T, E: Format> ErrContextConsume<T, E> for Result<T, E> {
 //************************************************************************//
 
 impl<T> sealed::Sealed for Option<T> {}
-impl<T> NoneContext<T> for Option<T> {
+impl<T> NoneContextDefmt<T> for Option<T> {
     #[inline]
     fn error_context(self, context: impl Format) -> Option<T> {
         if self.is_none() {
