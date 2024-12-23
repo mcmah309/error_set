@@ -1,10 +1,11 @@
 use proc_macro2::TokenStream;
 use syn::{
     braced, parenthesized,
-    parse::{Parse, ParseStream},
+    parse::{Parse, ParseBuffer, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
-    token, Attribute, Ident, Result, TypeParam,
+    token::{self},
+    Attribute, Ident, Result, TypeParam,
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
@@ -18,14 +19,34 @@ pub(crate) struct AstErrorSet {
 impl Parse for AstErrorSet {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut set_items = Vec::new();
+
         while !input.is_empty() {
-            let set_item = input.parse::<AstErrorDeclaration>()?;
+            let fork = input.fork();
+            let set_item = match input.parse::<AstErrorDeclaration>() {
+                Ok(value) => value,
+                Err(error) => {
+                    if input.is_empty() {
+                        return Err(syn::Error::new(last_token_span(fork), error.to_string()));
+                    } else {
+                        return Err(error);
+                    }
+                }
+            };
             set_items.push(set_item);
-            if input.parse::<token::Semi>().is_err() {
-                return Err(syn::Error::new(
-                    input.span(),
-                    "Missing ending `;` for the set.",
-                ));
+            if input.peek(token::Semi) {
+                input.parse::<token::Semi>().unwrap();
+            } else {
+                if input.is_empty() {
+                    return Err(syn::Error::new(
+                        last_token_span(fork),
+                        "Expected a `;` after an error definition.",
+                    ));
+                } else {
+                    return Err(syn::Error::new(
+                        input.span(),
+                        "Expected a `;` after an error definition.",
+                    ));
+                }
             }
         }
         Ok(AstErrorSet { set_items })
@@ -72,19 +93,17 @@ impl Parse for AstErrorDeclaration {
         while !input.is_empty() {
             let part = input.parse::<AstInlineOrRefError>()?;
             parts.push(part);
-            if input.is_empty() {
+            if input.peek(token::OrOr) {
+                input.parse::<token::OrOr>().unwrap();
+                continue;
+            } else if input.peek(token::Semi) {
                 break;
-            }
-            if !input.peek(token::Semi) && !input.peek(token::OrOr) {
+            } else {
                 return Err(syn::Error::new(
                     input.span(),
-                    "Expected `;` or `||` to be next.",
+                    "Expected `||` or `;` to be next.",
                 ));
             }
-            if input.peek(token::Semi) {
-                break;
-            }
-            input.parse::<token::OrOr>().unwrap();
         }
         if parts.is_empty() {
             return Err(syn::Error::new(
@@ -116,13 +135,16 @@ impl Parse for AstInlineOrRefError {
                 Err(err) => Err(err),
             };
         }
-        match input.parse::<RefError>() {
-            Ok(ref_error) => Ok(AstInlineOrRefError::Ref(ref_error)),
-            Err(err) => Err(syn::parse::Error::new(
-                err.span(),
-                "Expected the error variants to be inline or a reference to another error enum.",
-            )),
+        if input.peek(Ident) {
+            return match input.parse::<RefError>() {
+                Ok(ref_error) => Ok(AstInlineOrRefError::Ref(ref_error)),
+                Err(err) => Err(err),
+            };
         }
+        return Err(syn::parse::Error::new(
+            input.span(),
+            "Expected the next token to be the start of an inline error variant ('{...}') or a reference to another error enum.",
+        ));
     }
 }
 
@@ -524,8 +546,8 @@ fn extract_cfg(attributes: Vec<Attribute>) -> (Vec<Attribute>, Vec<Attribute>) {
     let mut to_remove = Vec::new();
     for (index, attribute) in attributes.iter().enumerate() {
         match &attribute.meta {
-            syn::Meta::NameValue(_) => {},
-            syn::Meta::Path(_) => {},
+            syn::Meta::NameValue(_) => {}
+            syn::Meta::Path(_) => {}
             syn::Meta::List(meta_list) => {
                 if meta_list
                     .path
@@ -570,3 +592,18 @@ impl Parse for AstInlineErrorVariantField {
 }
 
 impl Eq for AstInlineErrorVariantField {}
+
+//************************************************************************//
+
+fn last_token_span(input: ParseBuffer) -> proc_macro2::Span {
+    let last_token = input.cursor().token_stream().into_iter().last();
+    let Some(last_token) = last_token else {
+        return proc_macro2::Span::call_site();
+    };
+    match last_token {
+        proc_macro2::TokenTree::Group(group) => group.span_close(),
+        proc_macro2::TokenTree::Ident(ident) => ident.span(),
+        proc_macro2::TokenTree::Punct(punct) => punct.span(),
+        proc_macro2::TokenTree::Literal(literal) => literal.span(),
+    }
+}
