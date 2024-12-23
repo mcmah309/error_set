@@ -1,7 +1,11 @@
 [package]
 name = "err_trail"
-version = "0.1.0"
+description = "Add context to errors through logging"
+version = "0.8.3"
 edition = "2021"
+license = "Apache-2.0"
+documentation = "https://docs.rs/err_trail"
+repository = "https://github.com/mcmah309/error_set"
 
 [dependencies]
 tracing = { version = "0.1", optional = true }
