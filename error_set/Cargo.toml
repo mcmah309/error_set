@@ -12,7 +12,7 @@ rust-version = "1.81"
 
 [dependencies]
 error_set_impl = { version = "=0.8.3", path = "../error_set_impl" }
-err_trail = {version = "=0.8.3", path = "../err_trail", default-features = false}
+err_trail = {version = "=0.8.3", path = "../err_trail", default-features = false, optional = true }
 
 # features
 tracing = { version = "0.1", optional = true }
@@ -23,7 +23,6 @@ defmt = { version = "0.3", optional = true }
 trybuild = "^1.0.91"
 tracing-test = { version = "0.2", features = ["no-env-filter"] }
 lazy_static = "1"
-
 
 [features]
 default = []

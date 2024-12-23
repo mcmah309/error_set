@@ -1,2 +1,2 @@
 [workspace]
-members = ["error_set", "error_set_impl", "error_set/test_no_std", "err_trail"]
+members = ["error_set", "error_set_impl", "err_trail"]
