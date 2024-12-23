@@ -1,6 +1,6 @@
 #![cfg_attr(not(any(test, feature = "tracing", feature = "log")), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../../README.md")]
 
 #[cfg(any(feature = "tracing", feature = "log", feature = "context_stub"))]
 mod context;
