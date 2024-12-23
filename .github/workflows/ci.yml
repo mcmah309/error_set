@@ -22,8 +22,10 @@ jobs:
         toolchain: stable
         profile: minimal
         override: true
-    - name: Build
-      run: cargo build --verbose
+    - name: Build error_set
+      run: cd error_set && cargo build --verbose
+    - name: Build err_trail
+      run: cd err_trail && cargo build --verbose
     - name: Run std tests
       run: cargo test --verbose --tests
     - name: Run no_std tests
