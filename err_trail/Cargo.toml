@@ -1,0 +1,18 @@
+[package]
+name = "err_trail"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tracing = { version = "0.1", optional = true }
+log = { version = "0.4", optional = true }
+defmt = { version = "0.3", optional = true }
+
+[features]
+default = []
+# Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+tracing = ["dep:tracing"]
+# Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+log = ["dep:log"]
+# Enables support for the defmt crate, which works with no_std. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
+defmt = ["dep:defmt"]
