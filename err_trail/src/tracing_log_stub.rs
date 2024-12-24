@@ -11,7 +11,7 @@ mod sealed {
     docsrs,
     doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
 )]
-pub trait ErrContext<T, E>: sealed::Sealed {
+pub trait ErrContext<T, E: Display>: sealed::Sealed {
     /// If [Err], logging context as an "error".
     fn error_context(self, context: impl Display) -> Result<T, E>;
     /// If [Err], logging context as an "warn".
@@ -21,6 +21,13 @@ pub trait ErrContext<T, E>: sealed::Sealed {
     fn with_error_context<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
     /// If [Err], lazily logging the result of [f] as an "warn".
     fn with_warn_context<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
+
+    /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "error".
+    /// Represents a bad state in which the current process cannot continue.
+    fn consume_as_error(self) -> Option<T>;
+    /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "warn".
+    /// Represents a bad state in which the current process can continue.
+    fn consume_as_warn(self) -> Option<T>;
 }
 
 /// For logging a [Option] when [None] is encountered.
@@ -40,24 +47,10 @@ pub trait NoneContext<T>: sealed::Sealed {
     fn with_warn_context<F: FnOnce() -> D, D: Display>(self, f: F) -> Option<T>;
 }
 
-/// For logging a [Result]'s [Err] in the [Display] format when an [Err] is encountered.
-#[cfg_attr(
-    docsrs,
-    doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
-)]
-pub trait ErrContextDisplay<T, E: Display>: sealed::Sealed {
-    /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "error".
-    /// Represents a bad state in which the current process cannot continue.
-    fn consume_as_error(self) -> Option<T>;
-    /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "warn".
-    /// Represents a bad state in which the current process can continue.
-    fn consume_as_warn(self) -> Option<T>;
-}
-
 //************************************************************************//
 
 impl<T, E> sealed::Sealed for Result<T, E> {}
-impl<T, E> ErrContext<T, E> for Result<T, E> {
+impl<T, E: Display> ErrContext<T, E> for Result<T, E> {
     #[inline]
     fn error_context(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
@@ -103,11 +96,7 @@ impl<T, E> ErrContext<T, E> for Result<T, E> {
         }
         self
     }
-}
 
-//************************************************************************//
-
-impl<T, E: Display> ErrContextDisplay<T, E> for Result<T, E> {
     #[inline]
     fn consume_as_error(self) -> Option<T> {
         match self {
