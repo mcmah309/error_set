@@ -336,7 +336,7 @@ fn impl_froms(
         if froms_to_disable_idents.contains(&&from_error_enum.error_name) {
             continue;
         }
-        let mut all_cfg_attributes = Vec::new();
+        let mut all_cfg_attributes = HashSet::new();
         let mut error_branch_tokens = TokenStream::new();
         let from_error_enum_name = &from_error_enum.error_name;
         for (from_error_enum_variant, error_enum_variant) in variant_mappings {
@@ -363,8 +363,8 @@ fn impl_froms(
                     "Not a valid conversion target\n\nfrom:\n\n{from}\n\nto:\n\n{to}"
                 );
             }
-            all_cfg_attributes.append(&mut from_error_enum_variant.cfg_attributes().clone());
-            all_cfg_attributes.append(&mut error_enum_variant.cfg_attributes().clone());
+            all_cfg_attributes.extend(from_error_enum_variant.cfg_attributes().clone());
+            all_cfg_attributes.extend(error_enum_variant.cfg_attributes().clone());
             let arm: Option<TokenStream> = match (from_error_enum_variant, error_enum_variant) {
                 (ErrorVariant::Named(this), ErrorVariant::Named(that)) => Some(name_to_name(
                     from_error_enum_name,
@@ -446,6 +446,7 @@ fn impl_froms(
         }
         let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
         let (from_impl_generics, from_ty_generics) = generic_tokens(&from_error_enum.generics);
+        let all_cfg_attributes = all_cfg_attributes.iter();
         token_stream.append_all(quote::quote! {
             #(#all_cfg_attributes)*
             impl #impl_generics From<#from_error_enum_name #from_ty_generics> for #error_enum_name #ty_generics {
