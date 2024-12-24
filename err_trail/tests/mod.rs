@@ -1,7 +1,7 @@
 #[cfg(feature = "tracing")]
 #[cfg(test)]
 mod tracing {
-    use err_trail::{ErrContext, ErrContextDisplay, NoneContext};
+    use err_trail::{ErrContext, NoneContext};
     use tracing_test::traced_test;
 
     #[traced_test]
@@ -98,7 +98,7 @@ mod tracing {
 #[cfg(feature = "log")]
 #[cfg(test)]
 mod log {
-    use err_trail::{ErrContext, ErrContextDisplay, NoneContext};
+    use err_trail::{ErrContext, NoneContext};
     use lazy_static::lazy_static;
     use log::{Level, Metadata, Record};
     use std::sync::{Arc, Mutex};
