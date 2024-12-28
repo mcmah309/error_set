@@ -18,11 +18,18 @@ pub trait ErrContextDefmt<T, E>: sealed::Sealed {
     fn with_error_context<F: FnOnce(&E) -> D, D: Format>(self, f: F) -> Result<T, E>;
     /// If [Err], lazily log result of [f] as "warn".
     fn with_warn_context<F: FnOnce(&E) -> D, D: Format>(self, f: F) -> Result<T, E>;
+
+    /// Consumes the [Err] of a Result. If [Err], lazily logging the result of [f] as an "error".
+    /// Represents a bad state in which the current process cannot continue.
+    fn consume_with_error<F: FnOnce(&E) -> D, D: Format>(self, f: F) -> Option<T>;
+    /// Consumes the [Err] of a Result. If [Err], lazily logging the result of [f] as an "warn".
+    /// Represents a bad state in which the current process can continue.
+    fn consume_with_warn<F: FnOnce(&E) -> D, D: Format>(self, f: F) -> Option<T>;
 }
 
 /// For consuming a [Result]'s [Err] in [Format] when [Err] is encountered.
 #[cfg_attr(docsrs, doc(cfg(feature = "defmt")))]
-pub trait ErrContextConsumeDefmt<T, E: Format>: sealed::Sealed {
+pub trait ErrContextDisplayDefmt<T, E: Format>: sealed::Sealed {
     /// Consume [Err] of a [Result]. Log as "error".
     fn consume_as_error(self) -> Option<T>;
     /// Consume [Err] of a [Result]. Log as "warn".
@@ -78,9 +85,31 @@ impl<T, E> ErrContextDefmt<T, E> for Result<T, E> {
         }
         self
     }
+
+    #[inline]
+    fn consume_with_error<F: FnOnce(&E) -> D, D: Format>(self, f: F) -> Option<T> {
+        match self {
+            Ok(value) => Some(value),
+            Err(err) => {
+                defmt::error!("{}", f(&err));
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_with_warn<F: FnOnce(&E) -> D, D: Format>(self, f: F) -> Option<T> {
+        match self {
+            Ok(value) => Some(value),
+            Err(err) => {
+                defmt::warn!("{}", f(&err));
+                None
+            }
+        }
+    }
 }
 
-impl<T, E: Format> ErrContextConsumeDefmt<T, E> for Result<T, E> {
+impl<T, E: Format> ErrContextDisplayDefmt<T, E> for Result<T, E> {
     #[inline]
     fn consume_as_error(self) -> Option<T> {
         match self {

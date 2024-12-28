@@ -1,7 +1,7 @@
 #[cfg(feature = "tracing")]
 #[cfg(test)]
 mod tracing {
-    use err_trail::{ErrContext, NoneContext};
+    use err_trail::{ErrContext, ErrContextDisplay, NoneContext};
     use tracing_test::traced_test;
 
     #[traced_test]
@@ -38,6 +38,24 @@ mod tracing {
         let _ = result.with_warn_context(|e| format!("A warning occurred: `{}`", e));
 
         assert!(logs_contain("A warning occurred: `warning`"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_consume_with_error() {
+        let result: Result<(), &str> = Err("");
+        let _ = result.consume_with_error(|_| "consumed with error");
+
+        assert!(logs_contain("consumed with error"));
+    }
+
+    #[traced_test]
+    #[test]
+    fn test_consume_with_warn() {
+        let result: Result<(), &str> = Err("");
+        let _ = result.consume_with_warn(|_| "consumed with warn");
+
+        assert!(logs_contain("consumed with warn"));
     }
 
     #[traced_test]
@@ -98,7 +116,7 @@ mod tracing {
 #[cfg(feature = "log")]
 #[cfg(test)]
 mod log {
-    use err_trail::{ErrContext, NoneContext};
+    use err_trail::{ErrContext, ErrContextDisplay, NoneContext};
     use lazy_static::lazy_static;
     use log::{Level, Metadata, Record};
     use std::sync::{Arc, Mutex};
@@ -178,6 +196,24 @@ mod log {
         let _ = result.with_warn_context(|e| format!("A warning occurred: `{}`", e));
 
         assert!(logs_contain("A warning occurred: `warning`"));
+    }
+
+    #[test]
+    fn test_consume_with_error() {
+        clear_logs();
+        let result: Result<(), &str> = Err("");
+        let _ = result.consume_with_error(|_| "consumed with error");
+
+        assert!(logs_contain("consumed with error"));
+    }
+
+    #[test]
+    fn test_consume_with_warn() {
+        clear_logs();
+        let result: Result<(), &str> = Err("");
+        let _ = result.consume_with_warn(|_| "consumed with warn");
+
+        assert!(logs_contain("consumed with warn"));
     }
 
     #[test]

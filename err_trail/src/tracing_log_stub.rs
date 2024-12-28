@@ -11,7 +11,7 @@ mod sealed {
     docsrs,
     doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
 )]
-pub trait ErrContext<T, E: Display>: sealed::Sealed {
+pub trait ErrContext<T, E>: sealed::Sealed {
     /// If [Err], logging context as an "error".
     fn error_context(self, context: impl Display) -> Result<T, E>;
     /// If [Err], logging context as an "warn".
@@ -22,6 +22,20 @@ pub trait ErrContext<T, E: Display>: sealed::Sealed {
     /// If [Err], lazily logging the result of [f] as an "warn".
     fn with_warn_context<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Result<T, E>;
 
+    /// Consumes the [Err] of a Result. If [Err], lazily logging the result of [f] as an "error".
+    /// Represents a bad state in which the current process cannot continue.
+    fn consume_with_error<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Option<T>;
+    /// Consumes the [Err] of a Result. If [Err], lazily logging the result of [f] as an "warn".
+    /// Represents a bad state in which the current process can continue.
+    fn consume_with_warn<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Option<T>;
+}
+
+/// For logging a [Result] when [Err] is encountered and [E] is [Display]
+#[cfg_attr(
+    docsrs,
+    doc(cfg(any(feature = "tracing", feature = "log", feature = "stub")))
+)]
+pub trait ErrContextDisplay<T,E: Display>: ErrContext<T,E> + sealed::Sealed {
     /// Consumes the [Err] of a Result. If [Err], logging the display of the error as an "error".
     /// Represents a bad state in which the current process cannot continue.
     fn consume_as_error(self) -> Option<T>;
@@ -50,7 +64,7 @@ pub trait NoneContext<T>: sealed::Sealed {
 //************************************************************************//
 
 impl<T, E> sealed::Sealed for Result<T, E> {}
-impl<T, E: Display> ErrContext<T, E> for Result<T, E> {
+impl<T, E> ErrContext<T, E> for Result<T, E> {
     #[inline]
     fn error_context(self, context: impl Display) -> Result<T, E> {
         if self.is_err() {
@@ -97,7 +111,41 @@ impl<T, E: Display> ErrContext<T, E> for Result<T, E> {
         self
     }
 
+    //************************************************************************//
+
     #[inline]
+    fn consume_with_error<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(value) => Some(value),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::error!("{}", f(&err));
+                #[cfg(feature = "log")]
+                log::error!("{}", f(&err));
+                None
+            }
+        }
+    }
+
+    #[inline]
+    fn consume_with_warn<F: FnOnce(&E) -> D, D: Display>(self, f: F) -> Option<T> {
+        match self {
+            Ok(value) => Some(value),
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::warn!("{}", f(&err));
+                #[cfg(feature = "log")]
+                log::warn!("{}", f(&err));
+                None
+            }
+        }
+    }
+}
+
+//************************************************************************//
+
+impl<T, E: Display> ErrContextDisplay<T, E> for Result<T, E> {
+        #[inline]
     fn consume_as_error(self) -> Option<T> {
         match self {
             Ok(value) => Some(value),
