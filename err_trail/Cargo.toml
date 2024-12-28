@@ -26,3 +26,8 @@ log = ["dep:log"]
 defmt = ["dep:defmt"]
 # Enables support for the log/tracing/defmt api, without pulling in any crates. Allowing a downstream to choose the appropriate crate.
 stub = []
+
+[package.metadata.docs.rs]
+all-features = false
+features = ["tracing"]
+rustdoc-args = ["--cfg", "docsrs"]
