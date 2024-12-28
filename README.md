@@ -601,17 +601,17 @@ Enables support for the `tracing` or `log` or `defmt` crates. Methods are added 
 ```rust
 let result: Result<(), &str> = Err("operation failed");
 
-let value: Result<(), &str> = result.error("If `Err`, this message is logged as error via tracing/log/defmt");
-let value: Result<(), &str> = result.warn("If `Err`, this message is logged as warn via tracing/log/defmt");
-let value: Result<(), &str> = result.with_debug(|err| format!("If `Err`, this message is logged as debug via tracing/log/defmt: {}", err));
-let value: Option<()> = result.consume_info(); // If `Err`, the `Err` is logged as info via tracing/log/defmt
-let value: Option<()> = result.consume_with_trace(|err| format!("If `Err`, this message is logged as trace via tracing/log/defmt: {}", err));
+let value: Result<(), &str> = result.error_context("If `Err`, this message is logged as error via tracing/log/defmt");
+let value: Result<(), &str> = result.warn_context("If `Err`, this message is logged as warn via tracing/log/defmt");
+let value: Result<(), &str> = result.with_error_context(|err| format!("If `Err`, this message is logged as error via tracing/log/defmt: {}", err));
+let value: Option<()> = result.consume_as_error(); // If `Err`, the `Err` is logged as error via tracing/log/defmt
+let value: Option<()> = result.consume_with_warn(|err| format!("If `Err`, this message is logged as warn via tracing/log/defmt: {}", err));
 // ...etc.
 ```
 This is useful tracing context around errors. e.g.
 ```rust
-let val = func().warn("`func` failed, here is some extra context like variable values")?;
-let val = func().consume_warn();
+let val = func().warn_context("`func` failed, here is some extra context like variable values")?;
+let val = func().consume_as_warn();
 ```
 rather than
 ```rust
