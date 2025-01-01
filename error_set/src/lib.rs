@@ -25,7 +25,7 @@ compile_error!("Features 'log' and 'context_stub' cannot be enabled at the same 
 #[cfg(all(feature = "defmt", feature = "context_stub"))]
 compile_error!("Features 'defmt' and 'context_stub' cannot be enabled at the same time.");
 
-pub use declare_impl::error_set;
+pub use set_impl::error_set;
 #[cfg(any(feature = "tracing", feature = "log", feature = "context_stub", feature = "defmt"))]
 pub use err_trail::*;
 
