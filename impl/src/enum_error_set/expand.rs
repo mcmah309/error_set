@@ -7,7 +7,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
 use syn::{Attribute, Ident, Lit, TypeParam};
 
-use crate::ast::{AstInlineErrorVariantField, Disabled, DisplayAttribute};
+use crate::enum_error_set::ast::{AstInlineErrorVariantField, Disabled, DisplayAttribute};
 
 /// Expand the [ErrorEnum]s into code.
 pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {

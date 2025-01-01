@@ -11,7 +11,7 @@ repository = "https://github.com/mcmah309/error_set"
 rust-version = "1.81"
 
 [dependencies]
-error_set_impl = { version = "=0.8.5", path = "../error_set_impl" }
+declare_impl = { version = "=0.8.5", path = "../impl", default-features = false, features = ["error_set"]}
 err_trail = {version = "=0.8.5", path = "../err_trail", default-features = false, optional = true }
 
 # features

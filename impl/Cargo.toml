@@ -1,7 +1,7 @@
 [package]
-name = "error_set_impl"
+name = "declare_impl"
 edition = "2021"
-description = "Implementation of the proc macro for the error_set crate."
+description = "Implementation of the proc macros for declare."
 version = "0.8.5"
 license = "Apache-2.0"
 documentation = "https://docs.rs/error_set"
@@ -25,6 +25,7 @@ indices = "0.3"
 regex = "1"
 
 [features]
-default = []
+default = ["error_set"]
+error_set = []
 # For developing and debugging the macro for possible issues. Do not expose.
 dev = []

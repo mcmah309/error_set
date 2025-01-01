@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::ast::{
+use crate::enum_error_set::ast::{
     AstErrorDeclaration, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, Disabled,
     RefError,
 };
-use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
+use crate::enum_error_set::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
 use quote::ToTokens;
 use syn::{Attribute, Ident, TypeParam};
@@ -28,12 +28,12 @@ pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
 
         for part in parts.into_iter() {
             match part {
-                crate::ast::AstInlineOrRefError::Inline(inline_part) => {
+                crate::enum_error_set::ast::AstInlineOrRefError::Inline(inline_part) => {
                     error_enum_builder
                         .error_variants
                         .extend(inline_part.error_variants.into_iter());
                 }
-                crate::ast::AstInlineOrRefError::Ref(ref_part) => {
+                crate::enum_error_set::ast::AstInlineOrRefError::Ref(ref_part) => {
                     error_enum_builder.add_ref_part(ref_part);
                 }
             }
