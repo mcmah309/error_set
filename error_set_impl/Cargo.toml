@@ -23,6 +23,7 @@ proc-macro2 = "1"
 quote = "1"
 indices = "0.3"
 regex = "1"
+view-types = "0.0.1"
 
 [features]
 default = []

@@ -4,7 +4,7 @@ use crate::ast::{
     AstErrorDeclaration, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, Disabled,
     RefError,
 };
-use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
+use crate::expand::{ErrorEnum, ErrorVariant, ErrorVariantKind};
 
 use quote::ToTokens;
 use syn::{Attribute, Ident, TypeParam};
@@ -309,43 +309,51 @@ fn reshape(this: AstErrorVariant) -> ErrorVariant {
     match (fields, source_type) {
         // e.g. `Variant(std::io::Error) {}` or `Variant(std::io::Error) {...}`
         (Some(fields), Some(source_type)) => {
-            return ErrorVariant::SourceStruct(SourceStruct {
+            return ErrorVariant {
                 attributes,
                 cfg_attributes,
                 display,
                 name,
-                source_type,
-                fields,
-            });
+                source_type: Some(source_type),
+                fields: Some(fields),
+                kind: ErrorVariantKind::SourceStruct
+            };
         }
-        // e.g. `Variant(std::io::Error)`
+        // e.g. `Variant {...}`
         (Some(fields), None) => {
-            return ErrorVariant::Struct(Struct {
+            return ErrorVariant {
                 attributes,
                 cfg_attributes,
                 display,
                 name,
-                fields,
-            });
+                fields: Some(fields),
+                source_type: None,
+                kind: ErrorVariantKind::Struct
+            };
         }
         // e.g. `Variant(std::io::Error)`
         (None, Some(source_type)) => {
-            return ErrorVariant::SourceTuple(SourceTuple {
+            return ErrorVariant {
                 attributes,
                 cfg_attributes,
                 display,
                 name,
-                source_type,
-            });
+                fields: None,
+                source_type: Some(source_type),
+                kind: ErrorVariantKind::SourceTuple
+            };
         }
         // e.g. `Variant {}`
         (None, None) => {
-            return ErrorVariant::Named(Named {
+            return ErrorVariant {
                 attributes,
                 cfg_attributes,
                 display,
                 name,
-            });
+                fields: None,
+                source_type: None,
+                kind: ErrorVariantKind::Named
+            };
         }
     }
 }
