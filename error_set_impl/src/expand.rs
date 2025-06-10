@@ -86,7 +86,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     for variant in error_variants {
         match variant.kind {
             ErrorVariantKind::Named => {
-                let named = variant.as_named_ref();
+                let named = variant.as_named();
                 let attributes = &named.attributes;
                 let cfg_attributes = &named.cfg_attributes;
                 let name = &named.name;
@@ -97,7 +97,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 });
             }
             ErrorVariantKind::Struct => {
-                let r#struct = variant.as_struct_ref().unwrap();
+                let r#struct = variant.as_struct().unwrap();
                 let attributes = &r#struct.attributes;
                 let cfg_attributes = &r#struct.cfg_attributes;
                 let name = &r#struct.name;
@@ -113,7 +113,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 });
             }
             ErrorVariantKind::SourceStruct => {
-                let source_struct = variant.as_source_struct_ref().unwrap();
+                let source_struct = variant.as_source_struct().unwrap();
                 let attributes = &source_struct.attributes;
                 let cfg_attributes = &source_struct.cfg_attributes;
                 let name = &source_struct.name;
@@ -131,7 +131,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 });
             }
             ErrorVariantKind::SourceTuple => {
-                let source_tuple = variant.as_source_tuple_ref().unwrap();
+                let source_tuple = variant.as_source_tuple().unwrap();
                 let attributes = &source_tuple.attributes;
                 let cfg_attributes = &source_tuple.cfg_attributes;
                 let name = &source_tuple.name;
@@ -275,7 +275,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
 
         match variant.kind {
             ErrorVariantKind::Named => {
-                let named = variant.as_named_ref();
+                let named = variant.as_named();
                 let cfg_attributes = &named.cfg_attributes;
                 error_variant_tokens.append_all(quote::quote! {
                     #(#cfg_attributes)*
@@ -283,7 +283,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 });
             }
             ErrorVariantKind::Struct => {
-                let r#struct = variant.as_struct_ref().unwrap();
+                let r#struct = variant.as_struct().unwrap();
                 let cfg_attributes = &r#struct.cfg_attributes;
                 let field_names = r#struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
@@ -292,7 +292,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 });
             }
             ErrorVariantKind::SourceStruct => {
-                let source_struct = variant.as_source_struct_ref().unwrap();
+                let source_struct = variant.as_source_struct().unwrap();
                 let cfg_attributes = &source_struct.cfg_attributes;
                 let field_names = source_struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
@@ -301,7 +301,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 });
             }
             ErrorVariantKind::SourceTuple => {
-                let source_tuple = variant.as_source_tuple_ref().unwrap();
+                let source_tuple = variant.as_source_tuple().unwrap();
                 let cfg_attributes = &source_tuple.cfg_attributes;
                 error_variant_tokens.append_all(quote::quote! {
                     #(#cfg_attributes)*
@@ -376,8 +376,8 @@ fn impl_froms(
             all_cfg_attributes.extend(error_enum_variant.cfg_attributes.clone());
             let arm: Option<TokenStream> = match (&from_error_enum_variant.kind, &error_enum_variant.kind) {
                 (ErrorVariantKind::Named, ErrorVariantKind::Named) => {
-                    let this = from_error_enum_variant.as_named_ref();
-                    let that = error_enum_variant.as_named_ref();
+                    let this = from_error_enum_variant.as_named();
+                    let that = error_enum_variant.as_named();
                     Some(name_to_name(
                     from_error_enum_name,
                     &this.name,
@@ -389,8 +389,8 @@ fn impl_froms(
                 (ErrorVariantKind::Named, ErrorVariantKind::SourceTuple) => None,
                 (ErrorVariantKind::Struct, ErrorVariantKind::Named) => None,
                 (ErrorVariantKind::Struct, ErrorVariantKind::Struct) => {
-                    let this = from_error_enum_variant.as_struct_ref().unwrap();
-                    let that = error_enum_variant.as_struct_ref().unwrap();
+                    let this = from_error_enum_variant.as_struct().unwrap();
+                    let that = error_enum_variant.as_struct().unwrap();
                     Some(struct_to_struct(
                     from_error_enum_name,
                     &this.name,
@@ -404,8 +404,8 @@ fn impl_froms(
                 (ErrorVariantKind::SourceStruct, ErrorVariantKind::Named) => None,
                 (ErrorVariantKind::SourceStruct, ErrorVariantKind::Struct) => None,
                 (ErrorVariantKind::SourceStruct, ErrorVariantKind::SourceStruct) => {
-                    let this = from_error_enum_variant.as_source_struct_ref().unwrap();
-                    let that = error_enum_variant.as_source_struct_ref().unwrap();
+                    let this = from_error_enum_variant.as_source_struct().unwrap();
+                    let that = error_enum_variant.as_source_struct().unwrap();
                     Some(source_struct_to_source_struct(
                         from_error_enum_name,
                         &this.name,
@@ -416,8 +416,8 @@ fn impl_froms(
                     ))
                 }
                 (ErrorVariantKind::SourceStruct, ErrorVariantKind::SourceTuple) => {
-                    let this = from_error_enum_variant.as_source_struct_ref().unwrap();
-                    let that = error_enum_variant.as_source_tuple_ref().unwrap();
+                    let this = from_error_enum_variant.as_source_struct().unwrap();
+                    let that = error_enum_variant.as_source_tuple().unwrap();
                     Some(source_struct_to_source_tuple(
                         from_error_enum_name,
                         &this.name,
@@ -429,8 +429,8 @@ fn impl_froms(
                 (ErrorVariantKind::SourceTuple, ErrorVariantKind::Named) => None,
                 (ErrorVariantKind::SourceTuple, ErrorVariantKind::Struct) => None,
                 (ErrorVariantKind::SourceTuple, ErrorVariantKind::SourceStruct) => {
-                    let this = from_error_enum_variant.as_source_tuple_ref().unwrap();
-                    let that = error_enum_variant.as_source_struct_ref().unwrap();
+                    let this = from_error_enum_variant.as_source_tuple().unwrap();
+                    let that = error_enum_variant.as_source_struct().unwrap();
                     if that.fields.is_empty() {
                         Some(source_tuple_to_source_only_struct(
                             from_error_enum_name,
@@ -443,8 +443,8 @@ fn impl_froms(
                     }
                 }
                 (ErrorVariantKind::SourceTuple, ErrorVariantKind::SourceTuple) => {
-                    let this = from_error_enum_variant.as_source_tuple_ref().unwrap();
-                    let that = error_enum_variant.as_source_tuple_ref().unwrap();
+                    let this = from_error_enum_variant.as_source_tuple().unwrap();
+                    let that = error_enum_variant.as_source_tuple().unwrap();
                     Some(source_tuple_to_source_tuple(
                         from_error_enum_name,
                         &this.name,
@@ -628,7 +628,7 @@ pub(crate) enum ErrorVariantKind {
 }
 
 #[views(
-    fragment all {
+    frag all {
         attributes,
         cfg_attributes,
         display,
