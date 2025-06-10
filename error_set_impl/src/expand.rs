@@ -583,200 +583,50 @@ fn source_struct_to_source_struct(
     }
 }
 
-pub(crate) trait Common {
-    fn attributes(&self) -> &Vec<Attribute>;
-    fn cfg_attributes(&self) -> &Vec<Attribute>;
-    fn display(&self) -> Option<&DisplayAttribute>;
-    fn name(&self) -> &Ident;
-    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>>;
-    fn source_type(&self) -> Option<&syn::TypePath>;
-}
-
-#[derive(Clone)]
-pub(crate) enum ErrorVariant {
+#[view_types::views(
+    frag all {
+        attributes,
+        cfg_attributes,
+        display,
+        name,
+    }
     /// e.g. `ErrorVariantNamed,`
-    Named(Named),
+    #[derive(Clone)]
+    pub(crate) view Named {
+        ..all,
+    }
     /// e.g. `ErrorVariantNamed {...}`
-    Struct(Struct),
+    #[derive(Clone)]
+    pub(crate) view Struct {
+        ..all,
+        Some(fields)
+    }
     /// e.g. `ErrorVariantNamed(std::io::Error) {...}`
-    SourceStruct(SourceStruct),
-    /// e.g. `ErrorVariantNamed(std::io::Error)`
-    SourceTuple(SourceTuple),
-}
-
-impl Common for ErrorVariant {
-    fn attributes(&self) -> &Vec<Attribute> {
-        match self {
-            ErrorVariant::Named(e) => e.attributes(),
-            ErrorVariant::Struct(e) => e.attributes(),
-            ErrorVariant::SourceStruct(e) => e.attributes(),
-            ErrorVariant::SourceTuple(e) => e.attributes(),
-        }
+    #[derive(Clone)]
+    pub(crate) view SourceStruct {
+        ..all,
+        Some(fields),
+        Some(source_type),
     }
-    fn cfg_attributes(&self) -> &Vec<Attribute> {
-        match self {
-            ErrorVariant::Named(e) => e.cfg_attributes(),
-            ErrorVariant::Struct(e) => e.cfg_attributes(),
-            ErrorVariant::SourceStruct(e) => e.cfg_attributes(),
-            ErrorVariant::SourceTuple(e) => e.cfg_attributes(),
-        }
+     /// e.g. `ErrorVariantNamed(std::io::Error)`
+    #[derive(Clone)]
+    pub(crate) view SourceTuple {
+        ..all,
+        Some(source_type),
     }
-    fn display(&self) -> Option<&DisplayAttribute> {
-        match self {
-            ErrorVariant::Named(e) => e.display(),
-            ErrorVariant::Struct(e) => e.display(),
-            ErrorVariant::SourceStruct(e) => e.display(),
-            ErrorVariant::SourceTuple(e) => e.display(),
-        }
-    }
-    fn name(&self) -> &Ident {
-        match self {
-            ErrorVariant::Named(e) => e.name(),
-            ErrorVariant::Struct(e) => e.name(),
-            ErrorVariant::SourceStruct(e) => e.name(),
-            ErrorVariant::SourceTuple(e) => e.name(),
-        }
-    }
-    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
-        match self {
-            ErrorVariant::Named(e) => e.fields(),
-            ErrorVariant::Struct(e) => e.fields(),
-            ErrorVariant::SourceStruct(e) => e.fields(),
-            ErrorVariant::SourceTuple(e) => e.fields(),
-        }
-    }
-    fn source_type(&self) -> Option<&syn::TypePath> {
-        match self {
-            ErrorVariant::Named(e) => e.source_type(),
-            ErrorVariant::Struct(e) => e.source_type(),
-            ErrorVariant::SourceStruct(e) => e.source_type(),
-            ErrorVariant::SourceTuple(e) => e.source_type(),
-        }
-    }
-}
-
+)]
+#[Variant(
+    #[derive(Clone)]
+)]
 #[derive(Clone)]
-pub(crate) struct Named {
+pub(crate) struct Error {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) cfg_attributes: Vec<Attribute>,
     pub(crate) display: Option<DisplayAttribute>,
     pub(crate) name: Ident,
+    pub(crate) fields: Option<Vec<AstInlineErrorVariantField>>,
+    pub(crate) source_type: Option<syn::TypePath>,
 }
-
-impl Common for Named {
-    fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
-    fn cfg_attributes(&self) -> &Vec<Attribute> {
-        &self.cfg_attributes
-    }
-    fn display(&self) -> Option<&DisplayAttribute> {
-        self.display.as_ref()
-    }
-    fn name(&self) -> &Ident {
-        &self.name
-    }
-    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
-        None
-    }
-    fn source_type(&self) -> Option<&syn::TypePath> {
-        None
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct Struct {
-    pub(crate) attributes: Vec<Attribute>,
-    pub(crate) cfg_attributes: Vec<Attribute>,
-    pub(crate) display: Option<DisplayAttribute>,
-    pub(crate) name: Ident,
-    // Dev Note: This field will never be empty. Otherwise it should just be a [Named]
-    pub(crate) fields: Vec<AstInlineErrorVariantField>,
-}
-
-impl Common for Struct {
-    fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
-    fn cfg_attributes(&self) -> &Vec<Attribute> {
-        &self.cfg_attributes
-    }
-    fn display(&self) -> Option<&DisplayAttribute> {
-        self.display.as_ref()
-    }
-    fn name(&self) -> &Ident {
-        &self.name
-    }
-    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
-        Some(&self.fields)
-    }
-    fn source_type(&self) -> Option<&syn::TypePath> {
-        None
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct SourceStruct {
-    pub(crate) attributes: Vec<Attribute>,
-    pub(crate) cfg_attributes: Vec<Attribute>,
-    pub(crate) display: Option<DisplayAttribute>,
-    pub(crate) name: Ident,
-    pub(crate) source_type: syn::TypePath,
-    // Dev Note: This field can be empty
-    pub(crate) fields: Vec<AstInlineErrorVariantField>,
-}
-
-impl Common for SourceStruct {
-    fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
-    fn cfg_attributes(&self) -> &Vec<Attribute> {
-        &self.cfg_attributes
-    }
-    fn display(&self) -> Option<&DisplayAttribute> {
-        self.display.as_ref()
-    }
-    fn name(&self) -> &Ident {
-        &self.name
-    }
-    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
-        Some(&self.fields)
-    }
-    fn source_type(&self) -> Option<&syn::TypePath> {
-        Some(&self.source_type)
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct SourceTuple {
-    pub(crate) attributes: Vec<Attribute>,
-    pub(crate) cfg_attributes: Vec<Attribute>,
-    pub(crate) display: Option<DisplayAttribute>,
-    pub(crate) name: Ident,
-    pub(crate) source_type: syn::TypePath,
-}
-
-impl Common for SourceTuple {
-    fn attributes(&self) -> &Vec<Attribute> {
-        &self.attributes
-    }
-    fn cfg_attributes(&self) -> &Vec<Attribute> {
-        &self.cfg_attributes
-    }
-    fn display(&self) -> Option<&DisplayAttribute> {
-        self.display.as_ref()
-    }
-    fn name(&self) -> &Ident {
-        &self.name
-    }
-    fn fields(&self) -> Option<&Vec<AstInlineErrorVariantField>> {
-        None
-    }
-    fn source_type(&self) -> Option<&syn::TypePath> {
-        Some(&self.source_type)
-    }
-}
-
 //************************************************************************//
 #[derive(Clone)]
 struct ErrorEnumGraphNode {

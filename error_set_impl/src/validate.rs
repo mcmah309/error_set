@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use syn::Ident;
 
-use crate::expand::{Common, ErrorEnum};
+use crate::expand::ErrorEnum;
 
 /// Additional validation logic
 pub fn validate(error_enums: &Vec<ErrorEnum>) -> Result<(), syn::Error> {
