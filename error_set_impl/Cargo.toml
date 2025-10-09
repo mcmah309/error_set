@@ -1,6 +1,6 @@
 [package]
 name = "error_set_impl"
-edition = "2021"
+edition = "2024"
 description = "Implementation of the proc macro for the error_set crate."
 version = "0.8.5"
 license = "Apache-2.0"
