@@ -173,7 +173,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             let cfg_attributes = &variant.cfg_attributes();
             source_match_branches.append_all(quote::quote! {
                 #(#cfg_attributes)*
-                #enum_name::#name(ref source) => source.source(),
+                #enum_name::#name(source) => source.source(),
             });
         } else if is_source_struct_type(variant) {
             has_source_match_branches = true;
@@ -181,7 +181,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             let cfg_attributes = &variant.cfg_attributes();
             source_match_branches.append_all(quote::quote! {
                 #(#cfg_attributes)*
-                #enum_name::#name { ref source, .. } => source.source(),
+                #enum_name::#name { source, .. } => source.source(),
             });
         }
     }
@@ -281,7 +281,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 let field_names = r#struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
                     #(#cfg_attributes)*
-                    #enum_name::#name { #(ref #field_names),*  } =>  #right_side,
+                    #enum_name::#name { #(#field_names),*  } =>  #right_side,
                 });
             }
             ErrorVariant::SourceStruct(source_struct) => {
@@ -289,14 +289,14 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
                 let field_names = source_struct.fields.iter().map(|e| &e.name);
                 error_variant_tokens.append_all(quote::quote! {
                     #(#cfg_attributes)*
-                    #enum_name::#name { ref source, #(ref #field_names),* } =>  #right_side,
+                    #enum_name::#name { source, #(#field_names),* } =>  #right_side,
                 });
             }
             ErrorVariant::SourceTuple(source_tuple) => {
                 let cfg_attributes = &source_tuple.cfg_attributes;
                 error_variant_tokens.append_all(quote::quote! {
                     #(#cfg_attributes)*
-                    #enum_name::#name(ref source) =>  #right_side,
+                    #enum_name::#name(source) =>  #right_side,
                 });
             }
         }
@@ -306,7 +306,7 @@ fn impl_display(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenSt
         impl #impl_generics core::fmt::Display for #enum_name #ty_generics {
             #[inline]
             fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-                match *self {
+                match &*self {
                     #error_variant_tokens
                 }
             }
