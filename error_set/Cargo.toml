@@ -15,9 +15,9 @@ error_set_impl = { version = "=0.8.5", path = "../error_set_impl" }
 err_trail = {version = "=0.8.5", path = "../err_trail", default-features = false, optional = true }
 
 # features
-tracing = { version = "0.1", optional = true }
-log = { version = "0.4", optional = true }
-defmt = { version = "0.3", optional = true }
+tracing = { version = "0.1", optional = true, default-features = false }
+log = { version = "0.4", optional = true, default-features = false }
+defmt = { version = "0.3", optional = true, default-features = false }
 
 [dev-dependencies]
 trybuild = "^1.0.91"
