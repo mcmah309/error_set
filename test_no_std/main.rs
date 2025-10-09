@@ -1,9 +1,10 @@
 #![no_std]
 #![no_main]
 
-use error_set::{error_set, CoerceResult, ResultContext, ConsumeDebug, ConsumeDisplay};
-use exit_no_std::exit;
 use core::fmt::Write;
+use err_trail::{ErrContext, ErrContextDisplay};
+use error_set::{error_set, CoerceResult};
+use exit_no_std::exit;
 
 #[no_mangle]
 fn main() -> i32 {
@@ -80,8 +81,7 @@ impl core::fmt::Debug for TestError {
 }
 
 fn readme_example() {
-    let book_section_parsing_error: BookSectionParsingError =
-    BookSectionParsingError::MissingName;
+    let book_section_parsing_error: BookSectionParsingError = BookSectionParsingError::MissingName;
     let book_parsing_error: BookParsingError = book_section_parsing_error.into();
     assert!(matches!(book_parsing_error, BookParsingError::MissingName));
     let media_error: MediaError = book_parsing_error.into();
@@ -116,12 +116,8 @@ error_set! {
     };
 }
 
-
 fn display() {
-    let x: AuthError2 = AuthError2::UserDoesNotExist {
-        name: 1,
-        role: 30,
-    };
+    let x: AuthError2 = AuthError2::UserDoesNotExist { name: 1, role: 30 };
     let mut buf: heapless::String<300> = heapless::String::new();
     write!(buf, "{}", x).unwrap();
     assert_eq!(buf.as_str(), "User does not exist");
@@ -150,6 +146,5 @@ fn display() {
 fn log() {
     let x: Result<u32, &str> = Err("error value");
     let _: Result<u32, &str> = x.error("context around");
-    let _: Option<u32> = ConsumeDebug::consume_info(x);
-    let _: Option<u32> = ConsumeDisplay::consume_trace(x);
+    let _: Option<u32> = x.consume_info();
 }

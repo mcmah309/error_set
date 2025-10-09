@@ -6,36 +6,36 @@ mod tracing {
 
     #[traced_test]
     #[test]
-    fn test_error_context() {
+    fn test_error() {
         let result: Result<(), &str> = Err("error");
-        let _ = result.error_context("An error occurred");
+        let _ = result.error("An error occurred");
 
         assert!(logs_contain("An error occurred"));
     }
 
     #[traced_test]
     #[test]
-    fn test_warn_context() {
+    fn test_warn() {
         let result: Result<(), &str> = Err("warning");
-        let _ = result.warn_context("A warning occurred");
+        let _ = result.warn("A warning occurred");
 
         assert!(logs_contain("A warning occurred"));
     }
 
     #[traced_test]
     #[test]
-    fn test_with_error_context() {
+    fn test_with_error() {
         let result: Result<(), &str> = Err("error");
-        let _ = result.with_error_context(|e| format!("An error occurred: `{}`", e));
+        let _ = result.with_error(|e| format!("An error occurred: `{}`", e));
 
         assert!(logs_contain("An error occurred: `error`"));
     }
 
     #[traced_test]
     #[test]
-    fn test_with_warn_context() {
+    fn test_with_warn() {
         let result: Result<(), &str> = Err("warning");
-        let _ = result.with_warn_context(|e| format!("A warning occurred: `{}`", e));
+        let _ = result.with_warn(|e| format!("A warning occurred: `{}`", e));
 
         assert!(logs_contain("A warning occurred: `warning`"));
     }
@@ -62,7 +62,7 @@ mod tracing {
     #[test]
     fn test_consume_as_error() {
         let result: Result<(), &str> = Err("consumed error");
-        let _ = result.consume_as_error();
+        let _ = result.consume_error();
 
         assert!(logs_contain("consumed error"));
     }
@@ -71,151 +71,151 @@ mod tracing {
     #[test]
     fn test_consume_as_warn() {
         let result: Result<(), &str> = Err("consumed warning");
-        let _ = result.consume_as_warn();
+        let _ = result.consume_warn();
 
         assert!(logs_contain("consumed warning"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_error_context() {
+    fn test_option_error() {
         let option: Option<()> = None;
-        let _ = option.error_context("Option was none");
+        let _ = option.error("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_warn_context() {
+    fn test_option_warn() {
         let option: Option<()> = None;
-        let _ = option.warn_context("Option was none");
+        let _ = option.warn("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_with_error_context() {
+    fn test_option_with_error() {
         let option: Option<()> = None;
-        let _ = option.with_error_context(|| "Lazy error context");
+        let _ = option.with_error(|| "Lazy error context");
 
         assert!(logs_contain("Lazy error context"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_with_warn_context() {
+    fn test_option_with_warn() {
         let option: Option<()> = None;
-        let _ = option.with_warn_context(|| "Lazy warn context");
+        let _ = option.with_warn(|| "Lazy warn context");
 
         assert!(logs_contain("Lazy warn context"));
     }
 
     #[traced_test]
     #[test]
-    fn test_info_context() {
+    fn test_info() {
         let result: Result<(), &str> = Err("info");
-        let _ = result.info_context("An info occurred");
+        let _ = result.info("An info occurred");
 
         assert!(logs_contain("An info occurred"));
     }
 
     #[traced_test]
     #[test]
-    fn test_debug_context() {
+    fn test_debug() {
         let result: Result<(), &str> = Err("debug");
-        let _ = result.debug_context("A debug occurred");
+        let _ = result.debug("A debug occurred");
 
         assert!(logs_contain("A debug occurred"));
     }
 
     #[traced_test]
     #[test]
-    fn test_trace_context() {
+    fn test_trace() {
         let result: Result<(), &str> = Err("trace");
-        let _ = result.trace_context("A trace occurred");
+        let _ = result.trace("A trace occurred");
 
         assert!(logs_contain("A trace occurred"));
     }
 
     #[traced_test]
     #[test]
-    fn test_with_info_context() {
+    fn test_with_info() {
         let result: Result<(), &str> = Err("info");
-        let _ = result.with_info_context(|e| format!("An info occurred: `{}`", e));
+        let _ = result.with_info(|e| format!("An info occurred: `{}`", e));
 
         assert!(logs_contain("An info occurred: `info`"));
     }
 
     #[traced_test]
     #[test]
-    fn test_with_debug_context() {
+    fn test_with_debug() {
         let result: Result<(), &str> = Err("debug");
-        let _ = result.with_debug_context(|e| format!("A debug occurred: `{}`", e));
+        let _ = result.with_debug(|e| format!("A debug occurred: `{}`", e));
 
         assert!(logs_contain("A debug occurred: `debug`"));
     }
 
     #[traced_test]
     #[test]
-    fn test_with_trace_context() {
+    fn test_with_trace() {
         let result: Result<(), &str> = Err("trace");
-        let _ = result.with_trace_context(|e| format!("A trace occurred: `{}`", e));
+        let _ = result.with_trace(|e| format!("A trace occurred: `{}`", e));
 
         assert!(logs_contain("A trace occurred: `trace`"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_info_context() {
+    fn test_option_info() {
         let option: Option<()> = None;
-        let _ = option.info_context("Option was none");
+        let _ = option.info("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_debug_context() {
+    fn test_option_debug() {
         let option: Option<()> = None;
-        let _ = option.debug_context("Option was none");
+        let _ = option.debug("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_trace_context() {
+    fn test_option_trace() {
         let option: Option<()> = None;
-        let _ = option.trace_context("Option was none");
+        let _ = option.trace("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_with_info_context() {
+    fn test_option_with_info() {
         let option: Option<()> = None;
-        let _ = option.with_info_context(|| "Lazy info context");
+        let _ = option.with_info(|| "Lazy info context");
 
         assert!(logs_contain("Lazy info context"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_with_debug_context() {
+    fn test_option_with_debug() {
         let option: Option<()> = None;
-        let _ = option.with_debug_context(|| "Lazy debug context");
+        let _ = option.with_debug(|| "Lazy debug context");
 
         assert!(logs_contain("Lazy debug context"));
     }
 
     #[traced_test]
     #[test]
-    fn test_option_with_trace_context() {
+    fn test_option_with_trace() {
         let option: Option<()> = None;
-        let _ = option.with_trace_context(|| "Lazy trace context");
+        let _ = option.with_trace(|| "Lazy trace context");
 
         assert!(logs_contain("Lazy trace context"));
     }
@@ -271,37 +271,37 @@ mod log {
     }
 
     #[test]
-    fn test_error_context() {
+    fn test_error() {
         clear_logs();
         let result: Result<(), &str> = Err("error");
-        let _ = result.error_context("An error occurred");
+        let _ = result.error("An error occurred");
 
         assert!(logs_contain("An error occurred"));
     }
 
     #[test]
-    fn test_warn_context() {
+    fn test_warn() {
         clear_logs();
         let result: Result<(), &str> = Err("warning");
-        let _ = result.warn_context("A warning occurred");
+        let _ = result.warn("A warning occurred");
 
         assert!(logs_contain("A warning occurred"));
     }
 
     #[test]
-    fn test_with_error_context() {
+    fn test_with_error() {
         clear_logs();
         let result: Result<(), &str> = Err("error");
-        let _ = result.with_error_context(|e| format!("An error occurred: `{}`", e));
+        let _ = result.with_error(|e| format!("An error occurred: `{}`", e));
 
         assert!(logs_contain("An error occurred: `error`"));
     }
 
     #[test]
-    fn test_with_warn_context() {
+    fn test_with_warn() {
         clear_logs();
         let result: Result<(), &str> = Err("warning");
-        let _ = result.with_warn_context(|e| format!("A warning occurred: `{}`", e));
+        let _ = result.with_warn(|e| format!("A warning occurred: `{}`", e));
 
         assert!(logs_contain("A warning occurred: `warning`"));
     }
@@ -328,7 +328,7 @@ mod log {
     fn test_consume_as_error() {
         clear_logs();
         let result: Result<(), &str> = Err("consumed error");
-        let _ = result.consume_as_error();
+        let _ = result.consume_error();
 
         assert!(logs_contain("consumed error"));
     }
@@ -337,151 +337,151 @@ mod log {
     fn test_consume_as_warn() {
         clear_logs();
         let result: Result<(), &str> = Err("consumed warning");
-        let _ = result.consume_as_warn();
+        let _ = result.consume_warn();
 
         assert!(logs_contain("consumed warning"));
     }
 
     #[test]
-    fn test_option_error_context() {
+    fn test_option_error() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.error_context("Option was none");
+        let _ = option.error("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[test]
-    fn test_option_warn_context() {
+    fn test_option_warn() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.warn_context("Option was none");
+        let _ = option.warn("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[test]
-    fn test_option_with_error_context() {
+    fn test_option_with_error() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.with_error_context(|| "Lazy error context");
+        let _ = option.with_error(|| "Lazy error context");
 
         assert!(logs_contain("Lazy error context"));
     }
 
     #[test]
-    fn test_option_with_warn_context() {
+    fn test_option_with_warn() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.with_warn_context(|| "Lazy warn context");
+        let _ = option.with_warn(|| "Lazy warn context");
 
         assert!(logs_contain("Lazy warn context"));
     }
 
     #[test]
-    fn test_info_context() {
+    fn test_info() {
         clear_logs();
         let result: Result<(), &str> = Err("info");
-        let _ = result.info_context("An info occurred");
+        let _ = result.info("An info occurred");
 
         assert!(logs_contain("An info occurred"));
     }
 
     #[test]
-    fn test_debug_context() {
+    fn test_debug() {
         clear_logs();
         let result: Result<(), &str> = Err("debug");
-        let _ = result.debug_context("A debug occurred");
+        let _ = result.debug("A debug occurred");
 
         assert!(logs_contain("A debug occurred"));
     }
 
     #[test]
-    fn test_trace_context() {
+    fn test_trace() {
         clear_logs();
         let result: Result<(), &str> = Err("trace");
-        let _ = result.trace_context("A trace occurred");
+        let _ = result.trace("A trace occurred");
 
         assert!(logs_contain("A trace occurred"));
     }
 
     #[test]
-    fn test_with_info_context() {
+    fn test_with_info() {
         clear_logs();
         let result: Result<(), &str> = Err("info");
-        let _ = result.with_info_context(|e| format!("An info occurred: `{}`", e));
+        let _ = result.with_info(|e| format!("An info occurred: `{}`", e));
 
         assert!(logs_contain("An info occurred: `info`"));
     }
 
     #[test]
-    fn test_with_debug_context() {
+    fn test_with_debug() {
         clear_logs();
         let result: Result<(), &str> = Err("debug");
-        let _ = result.with_debug_context(|e| format!("A debug occurred: `{}`", e));
+        let _ = result.with_debug(|e| format!("A debug occurred: `{}`", e));
 
         assert!(logs_contain("A debug occurred: `debug`"));
     }
 
     #[test]
-    fn test_with_trace_context() {
+    fn test_with_trace() {
         clear_logs();
         let result: Result<(), &str> = Err("trace");
-        let _ = result.with_trace_context(|e| format!("A trace occurred: `{}`", e));
+        let _ = result.with_trace(|e| format!("A trace occurred: `{}`", e));
 
         assert!(logs_contain("A trace occurred: `trace`"));
     }
 
     #[test]
-    fn test_option_info_context() {
+    fn test_option_info() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.info_context("Option was none");
+        let _ = option.info("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[test]
-    fn test_option_debug_context() {
+    fn test_option_debug() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.debug_context("Option was none");
+        let _ = option.debug("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[test]
-    fn test_option_trace_context() {
+    fn test_option_trace() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.trace_context("Option was none");
+        let _ = option.trace("Option was none");
 
         assert!(logs_contain("Option was none"));
     }
 
     #[test]
-    fn test_option_with_info_context() {
+    fn test_option_with_info() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.with_info_context(|| "Lazy info context");
+        let _ = option.with_info(|| "Lazy info context");
 
         assert!(logs_contain("Lazy info context"));
     }
 
     #[test]
-    fn test_option_with_debug_context() {
+    fn test_option_with_debug() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.with_debug_context(|| "Lazy debug context");
+        let _ = option.with_debug(|| "Lazy debug context");
 
         assert!(logs_contain("Lazy debug context"));
     }
 
     #[test]
-    fn test_option_with_trace_context() {
+    fn test_option_with_trace() {
         clear_logs();
         let option: Option<()> = None;
-        let _ = option.with_trace_context(|| "Lazy trace context");
+        let _ = option.with_trace(|| "Lazy trace context");
 
         assert!(logs_contain("Lazy trace context"));
     }

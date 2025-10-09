@@ -12,12 +12,6 @@ rust-version = "1.81"
 
 [dependencies]
 error_set_impl = { version = "=0.8.5", path = "../error_set_impl" }
-err_trail = {version = "=0.8.5", path = "../err_trail", default-features = false, optional = true }
-
-# features
-tracing = { version = "0.1", optional = true, default-features = false }
-log = { version = "0.4", optional = true, default-features = false }
-defmt = { version = "0.3", optional = true, default-features = false }
 
 [dev-dependencies]
 trybuild = "^1.0.91"
@@ -26,16 +20,7 @@ lazy_static = "1"
 
 [features]
 default = []
-# Enables support for the tracing crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
-tracing = ["dep:tracing", "err_trail/tracing"]
-# Enables support for the log crate. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
-log = ["dep:log", "err_trail/log"]
-# Enables support for the defmt crate, which works with no_std. Adds methods to `Result` that are applied on `Err` - e.g. `result.warn(...)`.
-defmt = ["dep:defmt", "err_trail/defmt"]
-# Enables support for the log/tracing/defmt api, without pulling in any crates. Allowing a downstream to choose the appropriate crate.
-context_stub = ["err_trail/stub"]
 
 [package.metadata.docs.rs]
 all-features = false
-features = ["tracing"]
 rustdoc-args = ["--cfg", "docsrs"]

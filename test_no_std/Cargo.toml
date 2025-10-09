@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-error_set = { path = "../", features = ["defmt"] }
+error_set = { path = "../error_set" }
+err_trail = { path = "../err_trail" }
 heapless = "0.8"
 exit-no-std = "0.2.1"
 
