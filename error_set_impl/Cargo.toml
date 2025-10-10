@@ -11,7 +11,8 @@ repository = "https://github.com/mcmah309/error_set"
 proc-macro = true
 
 [dependencies]
-syn = { version = "2", default-features = false, features = [
+syn = { version = "2", features = [
+    "full",
     "parsing",
     "derive",
     "printing",
