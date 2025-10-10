@@ -1,5 +1,3 @@
-use std::cell::OnceCell;
-
 use proc_macro2::TokenStream;
 use syn::{
     Attribute, Ident, ItemStruct, Result, TypeParam, Visibility, braced, parenthesized,
@@ -287,6 +285,7 @@ impl Parse for AstErrorVariant {
                 if source.len() == 1 {
                     let mut source = source.into_iter();
                     source_type = source.next();
+                    // shorthand syntax used - `(SourceName)` instead of `SourceName(SourceName)`
                     if name.is_none() {
                         fn capitalize(s: &str) -> String {
                             let mut c = s.chars();
