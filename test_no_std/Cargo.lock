@@ -25,18 +25,18 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "err_trail"
-version = "0.8.5"
+version = "0.9.0"
 
 [[package]]
 name = "error_set"
-version = "0.8.5"
+version = "0.9.0"
 dependencies = [
  "error_set_impl",
 ]
 
 [[package]]
 name = "error_set_impl"
-version = "0.8.5"
+version = "0.9.0"
 dependencies = [
  "proc-macro2",
  "quote",
