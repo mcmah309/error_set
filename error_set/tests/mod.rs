@@ -850,7 +850,7 @@ pub mod generics {
 }
 
 #[cfg(test)]
-pub mod disable {
+pub mod skip {
     use std::{
         error::Error,
         fmt::{Debug, Display},
@@ -866,17 +866,17 @@ pub mod disable {
             FmtError(std::fmt::Error),
             IoError(std::io::Error),
         }
-        #[disable(From(std::io::Error,U))]
+        #[skip(From(std::io::Error,U))]
         W := V || U
-        #[disable(From)]
+        #[skip(From)]
         X := {
             A
         }
-        #[disable(Display,Error)]
+        #[skip(Display,Error)]
         Y := {
             A,
         }
-        #[disable(Debug)]
+        #[skip(Debug)]
         Z := {
             A,
         }
@@ -953,7 +953,7 @@ pub mod from_for_generic_and_regular {
     use error_set::error_set;
 
     error_set! {
-        #[disable(From(E))]
+        #[skip(From(E))]
         X<E: core::error::Error + core::fmt::Debug + core::fmt::Display> := Y || Z<E>
         Y := {
             A,

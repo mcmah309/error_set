@@ -8,7 +8,7 @@ use syn::{
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
-const DISABLE_ATTRIBUTE_NAME: &str = "disable";
+const DISABLE_ATTRIBUTE_NAME: &str = "skip";
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {

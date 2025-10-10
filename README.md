@@ -518,15 +518,14 @@ fn main() {
 Redeclaring the same variant in a different set and changing the display message, does not
 effect the conversion between sets.
 
-### Disable
+### Disabling Automatic Trait Implementations
 
-error_set auto-implements `From`, `Display`, `Debug`, and `Error` for a set. If it is ever desired to disable
-this. Add `#[disable(..)]` to the set. e.g.
+error_set auto-implemets `From`, `Display`, `Debug`, and `Error` for a set. If it is ever desired to disable this. Add `#[skip(..)]` to the set. e.g.
 ```rust
 use std::fmt::{Display, Debug};
 
 error_set::error_set! {
-    #[disable(Display,Debug)]
+    #[skip(Display,Debug)]
     X := {
         A,
     }
@@ -554,7 +553,7 @@ error_set::error_set! {
         FmtError(std::fmt::Error),
         IoError(std::io::Error),
     }
-    #[disable(From(std::io::Error, U))]
+    #[skip(From(std::io::Error, U))]
     W := V || U
 }
 ```
