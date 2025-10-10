@@ -39,27 +39,55 @@ impl Parse for AstErrorSet {
 
 #[derive(Clone)]
 pub(crate) enum AstErrorKind {
+    Struct(AstErrorStruct),
     Enum(AstErrorEnumDeclaration),
-    Struct(ItemStruct),
 }
 
 impl Parse for AstErrorKind {
     fn parse(input: ParseStream) -> Result<Self> {
-        if input.peek(syn::Token![struct]) {
-            let mut item_struct = input.parse::<ItemStruct>()?;
-            match item_struct.vis {
-                syn::Visibility::Public(_) => {}
-                syn::Visibility::Restricted(_) => {}
-                syn::Visibility::Inherited => {
-                    item_struct.vis = syn::Visibility::Public(Pub {
-                        span: item_struct.vis.span(),
-                    })
-                }
-            };
-            return Ok(AstErrorKind::Struct(item_struct));
+        let fork = input.fork();
+        let _ = fork.call(Attribute::parse_outer);
+        let _ = fork.parse::<Visibility>();
+        if fork.peek(syn::Token![struct]) {
+            let error_struct = input.parse::<AstErrorStruct>()?;
+            return Ok(AstErrorKind::Struct(error_struct));
         }
         let enum_decl = input.parse::<AstErrorEnumDeclaration>()?;
         return Ok(AstErrorKind::Enum(enum_decl));
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct AstErrorStruct {
+    pub(crate) r#struct: ItemStruct,
+    pub(crate) display: Option<DisplayAttribute>,
+}
+
+impl Parse for AstErrorStruct {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut item_struct = input.parse::<ItemStruct>()?;
+        for field in &item_struct.fields {
+            if field.ident.is_none() {
+                return Err(syn::Error::new(
+                    field.span(),
+                    "Tuple structs are not currently supported, use named fields.", // todo
+                ));
+            }
+        }
+        match item_struct.vis {
+            syn::Visibility::Public(_) => {}
+            syn::Visibility::Restricted(_) => {}
+            syn::Visibility::Inherited => {
+                item_struct.vis = syn::Visibility::Public(Pub {
+                    span: item_struct.vis.span(),
+                })
+            }
+        };
+        let display = extract_display_attribute(&mut item_struct.attrs)?;
+        Ok(AstErrorStruct {
+            r#struct: item_struct,
+            display,
+        })
     }
 }
 

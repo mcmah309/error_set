@@ -37,5 +37,5 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     if let Err(err) = validate(&error_enums) {
         return err.into_compile_error().into();
     }
-    expand(error_enums).into()
+    expand(error_enums, error_struct_decls).into()
 }

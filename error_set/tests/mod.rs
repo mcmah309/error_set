@@ -135,7 +135,7 @@ pub mod multiple_error_sources_of_same_type {
 
 #[cfg(test)]
 pub mod readme_example {
-    use error_set::{error_set, CoerceResult};
+    use error_set::{CoerceResult, error_set};
 
     error_set! {
         /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
@@ -188,7 +188,7 @@ pub mod readme_example {
 
 #[cfg(test)]
 pub mod readme_example_full_expansion {
-    use error_set::{error_set, CoerceResult};
+    use error_set::{CoerceResult, error_set};
 
     error_set! {
         /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
@@ -258,7 +258,7 @@ pub mod readme_example_full_expansion {
 
 #[cfg(test)]
 pub mod documentation {
-    use error_set::{error_set, CoerceResult};
+    use error_set::{CoerceResult, error_set};
 
     error_set! {
         /// This is a MediaError doc
@@ -449,12 +449,16 @@ pub mod value_variants2 {
 
 #[cfg(test)]
 pub mod error_struct_and_enums {
+    use std::{error::Error, fmt::{Debug, Display}};
+
     use error_set::error_set;
 
     error_set! {
-        struct Struct {
+        // #[derive(Clone)]
+        #[display("Hello {source}, {}", field)]
+        struct Struct<T: Display + Debug> {
             source: std::io::Error,
-            field: String,
+            field: T,
         }
 
         enum AuthError {
@@ -512,6 +516,14 @@ pub mod error_struct_and_enums {
             x.to_string(),
             "The provided credentials are invalid".to_string()
         );
+
+        let x = Struct {
+            source: std::io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory 1"),
+            field: "This is a field".to_string(),
+        };
+        let source = x.source();
+        assert!(source.is_some());
+        assert_eq!(x.to_string(), "Hello oops out of memory 1, This is a field".to_string());
     }
 }
 
@@ -699,7 +711,7 @@ pub mod inline_source_error {
             //A
         } || AuthError
 
-        
+
     }
 
     #[test]
@@ -945,7 +957,7 @@ pub mod generics_nested {
         }
     }
 
-    error_set!{
+    error_set! {
         X<H: core::fmt::Debug + core::fmt::Display> := {
             A {
                 a: Wrapper<H>

@@ -4,13 +4,16 @@
 use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
-use quote::{quote, TokenStreamExt};
-use syn::{Attribute, Ident, Lit, TypeParam, Visibility};
+use quote::{TokenStreamExt, quote};
+use syn::{Attribute, Ident, ItemStruct, Lit, TypeParam, Visibility};
 
-use crate::ast::{AstInlineErrorVariantField, Disabled, DisplayAttribute};
+use crate::ast::{AstErrorStruct, AstInlineErrorVariantField, Disabled, DisplayAttribute};
 
 /// Expand the [ErrorEnum]s into code.
-pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
+pub(crate) fn expand(
+    error_enums: Vec<ErrorEnum>,
+    error_structs: Vec<AstErrorStruct>,
+) -> TokenStream {
     let mut token_stream = TokenStream::new();
     let mut graph: Vec<ErrorEnumGraphNode> = error_enums
         .into_iter()
@@ -54,7 +57,106 @@ pub(crate) fn expand(error_enums: Vec<ErrorEnum>) -> TokenStream {
     for error_enum_node in graph.iter() {
         add_code_for_node(error_enum_node, &*graph, &mut token_stream);
     }
+    for error_struct in error_structs {
+        add_struct_error(error_struct, &mut token_stream);
+    }
     token_stream
+}
+
+fn add_struct_error(error_struct: AstErrorStruct, token_stream: &mut TokenStream) {
+    let AstErrorStruct { r#struct, display } = error_struct;
+    let ItemStruct {
+        attrs,
+        vis,
+        struct_token,
+        ident: struct_name,
+        generics,
+        fields,
+        semi_token,
+    } = &r#struct;
+    let (impl_generics, ty_generics, where_generics) = &generics.split_for_impl();
+    let debug = quote! { #[derive(Debug)] };
+    token_stream.append_all(quote! {
+        #(#attrs)*
+        #debug
+        #vis #struct_token #struct_name #impl_generics #where_generics #fields
+    });
+
+    let mut has_source_field = false;
+    for field in fields.iter() {
+        if field
+            .ident
+            .as_ref()
+            .is_some_and(|e| e.to_string() == "source")
+        {
+            has_source_field = true;
+            break;
+        }
+    }
+    if has_source_field {
+        token_stream.append_all(quote! {
+            #[allow(unused_qualifications)]
+            impl #impl_generics core::error::Error for #struct_name #ty_generics {
+                fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+                    Some(&self.source)
+                }
+            }
+        });
+    } else {
+        token_stream.append_all(quote! {
+            impl #impl_generics core::error::Error for #struct_name #ty_generics {
+
+            }
+        });
+    }
+
+    if let Some(display) = display {
+        let field_names = fields.iter().filter_map(|e| e.ident.as_ref());
+        let tokens = &display.tokens;
+        let display_write_tokens: TokenStream;
+        // e.g. `opaque` (no point in using this here but keeping functionality is consistent with enum variants)
+        if is_opaque(tokens.clone()) {
+            display_write_tokens = quote::quote! {
+                write!(f, "{}", stringify!(#struct_name))
+            };
+        } else if let Some(string) = extract_string_if_str_literal(tokens.clone()) {
+            // e.g. `"{}"`
+            if is_format_str(&string) {
+                display_write_tokens = quote::quote! {
+                    write!(f, #tokens)
+                };
+            } else {
+                // e.g. `"literal str"`
+                display_write_tokens = quote::quote! {
+                    write!(f, "{}", #tokens)
+                };
+            }
+        } else {
+            // e.g. `"field: {}", source.field`
+            display_write_tokens = quote::quote! {
+                write!(f, #tokens)
+            };
+        }
+        token_stream.append_all(quote! {
+            impl #impl_generics core::fmt::Display for #struct_name #ty_generics {
+                #[allow(unused_qualifications)]
+                #[inline]
+                fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                    let #struct_name { #(#field_names),* } = &self;
+                    #display_write_tokens
+                }
+            }
+        });
+    } else {
+        token_stream.append_all(quote! {
+            impl #impl_generics core::fmt::Display for #struct_name #ty_generics {
+                #[inline]
+                fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+                    write!(f, "{}", stringify!(#struct_name))
+                }
+            }
+        });
+    }
 }
 
 fn add_code_for_node(
