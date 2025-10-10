@@ -310,7 +310,7 @@ fn main() {
 The typical project approach is to have one `errors.rs` file with a single `error_set`. This keeps
 all the errors in one place and allows your IDE to autocomplete `crate::errors::` with of all errors.
 But `error_set!` can also be used for quick errors "unions", no longer requiring users to 
-hand write `From<..>` or use `.map_err(..)` for these simple cases.
+handwrite `From<..>` or use `.map_err(..)` for these simple cases.
 e.g.
 ```rust
 use std::collections::HashMap;
@@ -516,11 +516,11 @@ fn main() {
 </details>
 
 Redeclaring the same variant in a different set and changing the display message, does not
-effect the conversion between sets.
+affect the conversion between sets.
 
 ### Disabling Automatic Trait Implementations
 
-error_set auto-implemets `From`, `Display`, `Debug`, and `Error` for a set. If it is ever desired to disable this. Add `#[skip(..)]` to the set. e.g.
+error_set auto-implements `From`, `Display`, `Debug`, and `Error` for a set. If it is ever desired to disable this. Add `#[skip(..)]` to the set. e.g.
 ```rust
 use std::fmt::{Display, Debug};
 
@@ -750,12 +750,12 @@ But without `:=` one cannot do set aggregation.
 
 #### `err_trail`
 
-[err_trail](https://github.com/mcmah309/error_set/tree/master/err_trail) is a great way to handle context of errors as they propogate through the callstack in a `eros`/`anyhow` way. See the link for more info.
+[err_trail](https://github.com/mcmah309/error_set/tree/master/err_trail) is a great way to handle context of errors as they propagate through the callstack in a `eros`/`anyhow` way. See the link for more info.
 
 
 #### `eros`
 
-[eros](https://github.com/mcmah309/eros) is another great way to handle context as errors propogate through the callstack and capture `Backtrace`. This crate is aware of the `TracedError` type (also aliased `TE`) from this crate. This type adds a `Backtrace` to the error.
+[eros](https://github.com/mcmah309/eros) is another great way to handle context as errors propagate through the callstack and capture `Backtrace`. This crate is aware of the `TracedError` type (also aliased `TE`) from this crate. This type adds a `Backtrace` to the error.
 
 ```rust
 use eros::TracedError;
@@ -812,7 +812,7 @@ impl From<std::io::Error>for Error {
 
 </details>
 
-> If one does not need the "context" functionality provided by `eros`, the default features flags can be disabled and only the `backtrace` feature flag enabled for `Backtrace`.
+> If one does not need the "context" functionality provided by `eros`, the default features flags can be disabled, leaving only the `backtrace` feature flag enabled.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
@@ -871,7 +871,7 @@ error_set! {
 
 With `error_set` there is no need to maintain a web of nested wrapped enums (with `#[from]`), since there is no nesting, and all the `From` implementations are automatically generated if one error type is a subset of another.
 
-Like `anyhow`, `error_set` remains open to capturing the context around errors. To accomplish this, it uses the help of [err_trail](https://github.com/mcmah309/error_set/tree/master/err_trail) or [eros](https://github.com/mcmah309/eros) crate. See the respective READMEs for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types all together.
+Like `anyhow`, `error_set` remains open to capturing the context around errors. To accomplish this, it uses the help of [err_trail](https://github.com/mcmah309/error_set/tree/master/err_trail) or [eros](https://github.com/mcmah309/eros) crate. See the respective READMEs for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` is likely a good choice for you. It's straightforward and skips the need to define error types altogether.
 
 For libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy
 as projects grow. This may even result in "mega enums". `error_set` can help here where others can't.
