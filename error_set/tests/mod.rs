@@ -1140,8 +1140,3 @@ pub mod should_not_compile_tests {
         t.compile_fail("tests/trybuild/recursive_dependency.rs");
     }
 }
-
-
-mod x {
-
-}

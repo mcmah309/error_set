@@ -14,7 +14,8 @@ Instead of defining various enums/structs for errors and hand rolling relations,
 use error_set::error_set;
 
 error_set! {
-    /// The syntax below aggregates the referenced error variants
+    /// The syntax below aggregates the referenced error variants.
+    /// Notice `:=`. This symbol comes from mathematics and means "is defined as".
     MediaError := DownloadError || BookParsingError
 
     /// Since all variants in [DownloadError] are in [MediaError], a
@@ -46,7 +47,8 @@ error_set! {
   <summary>Cargo Expand</summary>
 
 ```rust
-#[doc = " The syntax below aggregates the referenced error variants"]
+#[doc = " The syntax below aggregates the referenced error variants."]
+#[doc = " Notice `:=`. This symbol comes from mathematics and means \"is defined as\"."]
 #[derive(Debug)]
 pub enum MediaError {
     InvalidUrl, #[doc = " The `From` trait for `std::io::Error` will also be automatically derived"]
@@ -65,8 +67,7 @@ impl core::error::Error for MediaError {
         
             }
     }
-
-    }
+}
 impl core::fmt::Display for MediaError {
     #[inline]
     fn fmt(&self,f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -81,8 +82,7 @@ impl core::fmt::Display for MediaError {
         
             }
     }
-
-    }
+}
 impl From<DownloadError>for MediaError {
     fn from(error:DownloadError) -> Self {
         match error {
@@ -91,8 +91,7 @@ impl From<DownloadError>for MediaError {
         
             }
     }
-
-    }
+}
 impl From<BookParsingError>for MediaError {
     fn from(error:BookParsingError) -> Self {
         match error {
@@ -106,8 +105,7 @@ impl From<BookParsingError>for MediaError {
         
             }
     }
-
-    }
+}
 impl From<BookSectionParsingError>for MediaError {
     fn from(error:BookSectionParsingError) -> Self {
         match error {
@@ -120,14 +118,12 @@ impl From<BookSectionParsingError>for MediaError {
         
             }
     }
-
-    }
+}
 impl From<std::io::Error>for MediaError {
     fn from(error:std::io::Error) -> Self {
         MediaError::IoError(error)
     }
-
-    }
+}
 #[doc = " Since all variants in [DownloadError] are in [MediaError], a"]
 #[doc = " [DownloadError] can be turned into a [MediaError] with just `.into()` or `?`."]
 #[derive(Debug)]
@@ -145,8 +141,7 @@ impl core::error::Error for DownloadError {
         
             }
     }
-
-    }
+}
 impl core::fmt::Display for DownloadError {
     #[inline]
     fn fmt(&self,f: &mut core::fmt::Formatter) -> core::fmt::Result {
@@ -156,14 +151,12 @@ impl core::fmt::Display for DownloadError {
         
             }
     }
-
-    }
+}
 impl From<std::io::Error>for DownloadError {
     fn from(error:std::io::Error) -> Self {
         DownloadError::IoError(error)
     }
-
-    }
+}
 #[doc = " Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived"]
 #[derive(Clone)]
 #[derive(Debug)]
@@ -188,8 +181,7 @@ impl core::fmt::Display for BookParsingError {
         
             }
     }
-
-    }
+}
 impl From<BookSectionParsingError>for BookParsingError {
     fn from(error:BookSectionParsingError) -> Self {
         match error {
@@ -202,8 +194,7 @@ impl From<BookSectionParsingError>for BookParsingError {
         
             }
     }
-
-    }
+}
 #[derive(Debug)]
 pub enum BookSectionParsingError {
     #[doc = " Inline structs are also supported"]
@@ -225,8 +216,7 @@ impl core::fmt::Display for BookSectionParsingError {
         
             }
     }
-
-    }
+}
 ```
 </details>
 
@@ -608,6 +598,223 @@ error_set::error_set! {
 }
 ```
 
+### Automatic From's For Boxing
+
+`From` implementations are automatically generated for boxed sources.
+
+```rust
+error_set::error_set! {
+    Error := {
+        Variant(Box<std::io::Error>)
+    }
+}
+```
+
+<details>
+
+  <summary>Generated Code</summary>
+
+```rust
+#[derive(Debug)]
+pub enum Error {
+    Variant(Box<std::io::Error>),
+}
+#[allow(unused_qualifications)]
+impl core::error::Error for Error {
+    fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
+        match self {
+            Error::Variant(source) => source.source(), 
+            #[allow(unreachable_patterns)]
+            _ => None,
+        
+            }
+    }
+}
+impl core::fmt::Display for Error {
+    #[inline]
+    fn fmt(&self,f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match& *self {
+            Error::Variant(source) => write!(f,"{}",source),
+        
+            }
+    }
+}
+impl From<Box<std::io::Error> >for Error {
+    fn from(error:Box<std::io::Error>) -> Self {
+        Error::Variant(error)
+    }
+}
+impl From<std::io::Error>for Error {
+    fn from(error:std::io::Error) -> Self {
+        Error::Variant(Box::new(error))
+    }
+}
+```
+
+</details>
+
+### Error Variant Shorthand
+
+The error variant shorthand syntax exists for quickly writing wrapped error enum variants.
+
+```rust
+use std::io;
+
+error_set::error_set! {
+    Error := {
+        (io::Error), // The source type here is used to determine the enum variant name.
+        // IoError(io::Error), // This is equivalent to the above syntax. No variant name needed.
+    }
+}
+```
+
+### Error Structs and Enums
+
+Error structs are also supported
+
+```rust
+error_set::error_set! {
+    #[display("This is the display message for the struct. field value {field}")]
+    struct ErrorStruct {
+        source: std::io::Error, // reserved field name for structs derived from a source.
+        field: String,
+    }
+}
+```
+
+<details>
+
+  <summary>Generated Code</summary>
+
+```rust
+#[derive(Debug)]
+pub struct ErrorStruct {
+    source:std::io::Error,field:String,
+}
+#[allow(unused_qualifications)]
+impl core::error::Error for ErrorStruct {
+    fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
+        Some(&self.source)
+    }
+
+    }
+impl core::fmt::Display for ErrorStruct {
+    #[allow(unused_qualifications)]
+    #[inline]
+    fn fmt(&self,f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        let ErrorStruct {
+            source,field
+        } =  &self;
+        write!(f,"This is the display message for the struct. field value {field}")
+    }
+}
+```
+
+</details>
+
+Error enum are also supported
+
+```rust
+error_set::error_set! {
+    enum ErrorEnum {
+        Variant1,
+        Variant2,
+    }
+}
+```
+
+In fact, this is just a different syntax for
+
+```rust
+error_set::error_set! {
+    ErrorEnum := {
+        Variant1,
+        Variant2,
+    }
+}
+```
+Or even more verbose
+```rust
+error_set::error_set! {
+    enum ErrorEnum := {
+        Variant1,
+        Variant2,
+    }
+}
+```
+But without `:=` one cannot do set aggregation.
+
+
+> By default all structs and enums are `pub`
+
+### Handling Context
+
+#### `err_trail`
+
+[err_trail](https://github.com/mcmah309/error_set/tree/master/err_trail) is a great way to handle context of errors as they propogate through the callstack in a `eros`/`anyhow` way. See the link for more info.
+
+
+#### `eros`
+
+[eros](https://github.com/mcmah309/eros) is another great way to handle context as errors propogate through the callstack and capture `Backtrace`. This crate is aware of the `TracedError` type (also aliased `TE`) from this crate. This type adds a `Backtrace` to the error.
+
+```rust
+use eros::TracedError;
+
+error_set::error_set! {
+    Error := {
+        Variant(TracedError<std::io::Error>)
+    }
+}
+```
+
+<details>
+
+  <summary>Generated Code</summary>
+
+```rust
+use eros::TracedError;
+
+#[derive(Debug)]
+pub enum Error {
+    Variant(TracedError<std::io::Error>),
+}
+#[allow(unused_qualifications)]
+impl core::error::Error for Error {
+    fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
+        match self {
+            Error::Variant(source) => source.source(), 
+            #[allow(unreachable_patterns)]
+            _ => None,
+        
+            }
+    }
+}
+impl core::fmt::Display for Error {
+    #[inline]
+    fn fmt(&self,f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        match& *self {
+            Error::Variant(source) => write!(f,"{}",source),
+        
+            }
+    }
+}
+impl From<TracedError<std::io::Error> >for Error {
+    fn from(error:TracedError<std::io::Error>) -> Self {
+        Error::Variant(error)
+    }
+}
+impl From<std::io::Error>for Error {
+    fn from(error:std::io::Error) -> Self {
+        Error::Variant(eros::TracedError::new(error)) // `Backtrace` will be captured here
+    }
+}
+```
+
+</details>
+
+> If one does not need the "context" functionality provided by `eros`, the default features flags can be disabled and only the `backtrace` feature flag enabled for `Backtrace`.
+
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
 `error_set` is a unique approach with some of the same features of `thiserror` and `anyhow`, while solving a few more problems
@@ -695,7 +902,4 @@ By using `error_set`, your project can maintain clear and precise error definiti
 
 ### no_std
 
-This crate supports `#![no_std]`. 
-
-Cavets:
- - `tracing`/`log` features are not supported, but `defmt` is supported.
+This crate supports `#![no_std]`.
