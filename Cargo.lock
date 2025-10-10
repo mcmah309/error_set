@@ -363,7 +363,7 @@ checksum = "f50f87999591d322fe5c51d415253bf2a5bff237d3fce59c843c46795747bc65"
 
 [[package]]
 name = "err_trail"
-version = "0.8.5"
+version = "0.9.0-rc.0"
 dependencies = [
  "defmt",
  "flaky_test",
@@ -385,7 +385,7 @@ dependencies = [
 
 [[package]]
 name = "error_set"
-version = "0.8.5"
+version = "0.9.0-rc.0"
 dependencies = [
  "eros",
  "error_set_impl",
@@ -397,7 +397,7 @@ dependencies = [
 
 [[package]]
 name = "error_set_impl"
-version = "0.8.5"
+version = "0.9.0-rc.0"
 dependencies = [
  "proc-macro2",
  "quote",
