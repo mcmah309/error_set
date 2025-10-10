@@ -449,7 +449,10 @@ pub mod value_variants2 {
 
 #[cfg(test)]
 pub mod error_struct_and_enums {
-    use std::{error::Error, fmt::{Debug, Display}};
+    use std::{
+        error::Error,
+        fmt::{Debug, Display},
+    };
 
     use error_set::error_set;
 
@@ -523,7 +526,35 @@ pub mod error_struct_and_enums {
         };
         let source = x.source();
         assert!(source.is_some());
-        assert_eq!(x.to_string(), "Hello oops out of memory 1, This is a field".to_string());
+        assert_eq!(
+            x.to_string(),
+            "Hello oops out of memory 1, This is a field".to_string()
+        );
+    }
+}
+
+#[cfg(test)]
+pub mod error_enum_variant_shorthand {
+    use std::{fmt::Error, io};
+
+    use error_set::error_set;
+
+    error_set! {
+        enum AuthError {
+            (io::Error) {
+                role: u32,
+            },
+            (Error),
+        }
+    }
+
+    #[test]
+    fn test() {
+        let x = AuthError::IoError {
+            source: io::Error::new(std::io::ErrorKind::OutOfMemory, "oops out of memory 1"),
+            role: 1,
+        };
+        let y = AuthError::Error(Error::default());
     }
 }
 

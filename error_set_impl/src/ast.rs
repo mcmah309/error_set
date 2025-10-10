@@ -1,3 +1,5 @@
+use std::cell::OnceCell;
+
 use proc_macro2::TokenStream;
 use syn::{
     Attribute, Ident, ItemStruct, Result, TypeParam, Visibility, braced, parenthesized,
@@ -262,8 +264,6 @@ pub(crate) struct AstErrorVariant {
     // Dev Note: `Some(Vec::new())` == `{}`, `Some(Vec::new(..))` == `{..}`, `None` == ``. `{}` means inline struct if has source as well.
     pub(crate) fields: Option<Vec<AstInlineErrorVariantField>>,
     pub(crate) source_type: Option<syn::TypePath>,
-    #[allow(dead_code)] // todo remove when this is implemented
-    pub(crate) backtrace_type: Option<syn::TypePath>,
 }
 
 impl Parse for AstErrorVariant {
@@ -271,41 +271,65 @@ impl Parse for AstErrorVariant {
         let attributes = input.call(Attribute::parse_outer)?;
         let (mut attributes, cfg_attributes) = extract_cfg(attributes);
         let display = extract_display_attribute(&mut attributes)?;
-        let name = input.parse::<Ident>()?;
-        let content: syn::Result<_> = (|| {
+        let mut name = input.parse::<Ident>().ok();
+        let mut source_type = None;
+        let source_content: syn::Result<_> = (|| {
             let content;
             parenthesized!(content in input);
             return Ok(content);
         })();
-        let mut source_type = None;
-        let mut backtrace_type = None;
-        if let Ok(content) = content {
-            let source_and_backtrace = content.parse_terminated(
+        if let Ok(content) = source_content {
+            let source = content.parse_terminated(
                 |input: ParseStream| input.parse::<syn::TypePath>(),
                 token::Comma,
             );
-            if let Ok(source_and_backtrace) = source_and_backtrace {
-                if source_and_backtrace.len() <= 2 {
-                    let mut source_and_backtrace = source_and_backtrace.into_iter();
-                    source_type = source_and_backtrace.next();
-                    backtrace_type = source_and_backtrace.next();
+            if let Ok(source) = source {
+                if source.len() == 1 {
+                    let mut source = source.into_iter();
+                    source_type = source.next();
+                    if name.is_none() {
+                        fn capitalize(s: &str) -> String {
+                            let mut c = s.chars();
+                            match c.next() {
+                                None => String::new(),
+                                Some(first) => {
+                                    first.to_uppercase().collect::<String>() + c.as_str()
+                                }
+                            }
+                        }
+                        let mut parts = Vec::new();
+                        let source_type = source_type.as_ref().unwrap();
+                        for part in &source_type.path.segments {
+                            parts.push(capitalize(&*part.ident.to_string()))
+                        }
+                        name = Some(Ident::new(&parts.join(""), source_type.span()));
+                    }
                 } else {
                     return Err(syn::parse::Error::new(
-                        source_and_backtrace.span(),
+                        source.span(),
                         format!(
-                            "Expected at most two elements - a source error type and a backtrace. Recieved {}.",
-                            source_and_backtrace.len()
+                            "Expected one element - a source error type. Recieved {}.",
+                            source.len()
                         ),
                     ));
                 }
             }
         }
-        let content: syn::Result<_> = (|| {
+        let name = match name {
+            Some(name) => name,
+            None => {
+                return Err(syn::parse::Error::new(
+                    input.span(),
+                    "Expected an error variant name (`ErrorVariant`) or a wrapper shorthand (`(ErrorVariant)`).",
+                ));
+            }
+        };
+        let field_content: syn::Result<_> = (|| {
             let content;
             syn::braced!(content in input);
             return Ok(content);
         })();
-        let content = match content {
+        let content = match field_content {
             Err(_) => {
                 return Ok(AstErrorVariant {
                     attributes,
@@ -314,7 +338,6 @@ impl Parse for AstErrorVariant {
                     name,
                     fields: None,
                     source_type,
-                    backtrace_type,
                 });
             }
             Ok(content) => content,
@@ -331,7 +354,6 @@ impl Parse for AstErrorVariant {
             name,
             fields,
             source_type,
-            backtrace_type,
         })
     }
 }

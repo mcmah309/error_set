@@ -192,7 +192,6 @@ fn resolve_builders_helper<'a>(
                         name: error_variant.name.clone(),
                         fields: new_fields,
                         source_type: error_variant.source_type.clone(),
-                        backtrace_type: error_variant.backtrace_type.clone(),
                     });
                 }
                 &error_variants
@@ -316,7 +315,6 @@ fn reshape(this: AstErrorVariant) -> ErrorVariant {
         name,
         fields,
         source_type,
-        backtrace_type: _,
     } = this;
     match (fields, source_type) {
         // e.g. `Variant(std::io::Error) {}` or `Variant(std::io::Error) {...}`
