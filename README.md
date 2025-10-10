@@ -764,7 +764,7 @@ use eros::TracedError;
 
 error_set::error_set! {
     Error := {
-        Variant(TracedError<std::io::Error>)
+        Variant(TracedError<std::io::Error>) // Same as `Variant(TE<std::io::Error>)`
     }
 }
 ```
