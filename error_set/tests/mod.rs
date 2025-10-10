@@ -3,19 +3,19 @@ pub mod regular {
     use error_set::error_set;
 
     error_set! {
-        SetLevelError = {
+        SetLevelError := {
             MissingNameArg,
             MissingPublishTimeArg,
             MissingDescriptionArg,
-        };
-        MagazineParsingError = {
+        }
+        MagazineParsingError := {
             MissingNameArg,
-        };
-        BookParsingError = {
+        }
+        BookParsingError := {
             MissingNameArg,
             MissingPublishTimeArg,
             MissingDescriptionArg,
-        };
+        }
     }
 
     #[test]
@@ -38,14 +38,14 @@ pub mod empty_set {
     use error_set::error_set;
 
     error_set! {
-        SetLevelError = {
+        SetLevelError := {
             EmptySet1,
             EmptySet2,
             MissingDescriptionArg,
-        };
-        BookParsingError = {
+        }
+        BookParsingError := {
             MissingDescriptionArg,
-        };
+        }
     }
 
     #[test]
@@ -62,10 +62,10 @@ pub mod only_empty_set {
     use error_set::error_set;
 
     error_set! {
-        SetLevelError = {
+        SetLevelError := {
             EmptySet1,
             EmptySet2,
-        };
+        }
     }
 
     #[test]
@@ -80,15 +80,15 @@ pub mod error_sources_of_same_name {
     use error_set::error_set;
 
     error_set! {
-        SetLevelError = {
+        SetLevelError := {
             IoError(std::io::Error),
-        };
-        X = {
+        }
+        X := {
             IoError(std::io::Error),
-        };
-        Y = {
+        }
+        Y := {
             IoError(std::io::Error),
-        };
+        }
     }
 
     #[test]
@@ -107,17 +107,17 @@ pub mod multiple_error_sources_of_same_type {
     use error_set::error_set;
 
     error_set! {
-        X = {
+        X := {
             IoError(std::io::Error),
             IoError2(std::io::Error),
-        };
-        Y = {
+        }
+        Y := {
             IoError2(std::io::Error),
             IoError(std::io::Error),
-        };
-        Z = {
+        }
+        Z := {
             IoError(std::io::Error),
-        };
+        }
     }
 
     #[test]
@@ -139,30 +139,30 @@ pub mod readme_example {
 
     error_set! {
         /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
-        MediaError = DownloadError || BookParsingError;
+        MediaError := DownloadError || BookParsingError
         /// Since this all of the variants in [DownloadError] are in [MediaError], this can be turned
         /// into a [MediaError] with just `.into()` or `?`. Note restating variants directly,
         /// instead of using `||`, also works
-        DownloadError = {
+        DownloadError := {
             InvalidUrl,
             /// The `From` trait for `std::io::Error` will also be automatically derived
             IoError(std::io::Error),
-        };
+        }
         /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived,
         /// but one can always add more like below
         #[derive(Clone)]
-        BookParsingError = {
+        BookParsingError := {
             #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
             MissingBookDescription,
-        } || BookSectionParsingError; // Note the aggregation here as well
-        BookSectionParsingError = {
+        } || BookSectionParsingError // Note the aggregation here as well
+        BookSectionParsingError := {
             /// Inline structs are also supported
             #[display("Display messages can also reference fields, like {field}")]
             MissingField {
                 field: String
             },
             NoContent,
-        };
+        }
     }
 
     #[test]
@@ -192,7 +192,7 @@ pub mod readme_example_full_expansion {
 
     error_set! {
         /// This a doc comment. The syntax below aggregates the referenced errors into the generated enum
-        MediaError = {
+        MediaError := {
             InvalidUrl,
             /// The `From` trait for `std::io::Error` will also be automatically derived
             IoError(std::io::Error),
@@ -203,19 +203,19 @@ pub mod readme_example_full_expansion {
                 field: String
             },
             NoContent,
-        };
+        }
         /// Since this all of the variants in [DownloadError] are in [MediaError], this can be turned
         /// into a [MediaError] with just `.into()` or `?`. Note restating variants directly,
         /// instead of using `||`, also works
-        DownloadError = {
+        DownloadError := {
             InvalidUrl,
             /// The `From` trait for `std::io::Error` will also be automatically derived
             IoError(std::io::Error),
-        };
+        }
         /// Traits like `Debug`, `Display`, `Error`, and `From` are all automatically derived,
         /// but one can always add more like below
         #[derive(Clone)]
-        BookParsingError = {
+        BookParsingError := {
             #[display("Easily add custom display messages that work just like the `format!` macro {}", i32::MAX)]
             MissingBookDescription,
             /// Inline structs are also supported
@@ -224,15 +224,15 @@ pub mod readme_example_full_expansion {
                 field: String
             },
             NoContent,
-        };
-        BookSectionParsingError = {
+        }
+        BookSectionParsingError := {
             /// Inline structs are also supported
             #[display("Display messages can also reference fields, like {field}")]
             MissingField {
                 field: String
             },
             NoContent,
-        };
+        }
     }
 
     #[test]
@@ -262,36 +262,36 @@ pub mod documentation {
 
     error_set! {
         /// This is a MediaError doc
-        MediaError = {
+        MediaError := {
             /// This is a variant IoError doc
             IoError(std::io::Error)
-            } || BookParsingError || DownloadError || UploadError;
+            } || BookParsingError || DownloadError || UploadError
         /// This is a BookParsingError doc
-        BookParsingError = {
+        BookParsingError := {
             /// This is a variant MissingDescriptionArg doc
             MissingDescriptionArg
-        } || BookSectionParsingError;
+        } || BookSectionParsingError
         /// This is a BookSectionParsingError doc
         /// on two lines.
         #[derive(Clone)]
-        BookSectionParsingError = {
+        BookSectionParsingError := {
             /// This is a variant MissingNameArg doc
             MissingNameArg,
             /// This is a variant NoContents doc
             /// on two lines.
             NoContents,
-        };
+        }
         /// This is a DownloadError doc
-        DownloadError = {
+        DownloadError := {
             /// This is a variant CouldNotConnect doc
             CouldNotConnect,
             /// This is a variant OutOfMemory doc
             OutOfMemory(std::io::Error),
-        };
+        }
         /// This is a UploadError doc
-        UploadError = {
+        UploadError := {
             NoConnection(std::io::Error),
-        };
+        }
     }
 
     #[test]
@@ -320,36 +320,36 @@ pub mod value_variants1 {
     use error_set::error_set;
 
     error_set! {
-        X = {
+        X := {
             IoError(std::io::Error),
             #[display("My name is {}", name)]
             B {
                 name: String
             }
-        };
-        Y = {
+        }
+        Y := {
             A,
-        } || X || Z;
-        Z = {
+        } || X || Z
+        Z := {
             C {
                 val: i32
             },
             #[display("This is some new display")]
             D
-        };
-        XX = {
+        }
+        XX := {
             #[display("This message is different {}", name)]
             B {
                 name: String
             }
-        };
-        W = {
+        }
+        W := {
             #[display("error `{}` happened because `{}`", error, reason)]
             B {
                 error: usize,
                 reason: String
             }
-        };
+        }
     }
 
     #[test]
@@ -390,7 +390,7 @@ pub mod value_variants2 {
     use error_set::error_set;
 
     error_set! {
-        AuthError = {
+        AuthError := {
             #[display("1 User `{name}` with role}} `{{{role}` does not exist")]
             UserDoesNotExist1 {
                 name: String,
@@ -403,10 +403,10 @@ pub mod value_variants2 {
             },
             #[display("The provided credentials are invalid")]
             InvalidCredentials
-        };
-        LoginError = {
+        }
+        LoginError := {
             IoError(std::io::Error),
-        } || AuthError;
+        } || AuthError
     }
 
     #[test]
@@ -452,34 +452,34 @@ pub mod display_ref_error {
     use error_set::error_set;
 
     error_set! {
-        X = {
+        X := {
             #[display("X io error")]
             IoError(std::io::Error),
-        };
-        Y = {
+        }
+        Y := {
             #[display("Y io error: {}", source)]
             IoError(std::io::Error),
-        };
-        Y2 = {
+        }
+        Y2 := {
             #[display("Y2 io error type: {}", source.kind())]
             IoError(std::io::Error),
-        };
-        Z = {
+        }
+        Z := {
             #[display("Z io error: {0}")]
             IoError(std::io::Error),
-        };
-        YY = {
+        }
+        YY := {
             #[display("YY io error: {0}", source)]
             IoError(std::io::Error),
-        };
+        }
 
-        A = {
+        A := {
             #[display(opaque)]
             IoError(std::io::Error),
-        };
-        B = {
+        }
+        B := {
             IoError(std::io::Error),
-        };
+        }
     }
 
     #[test]
@@ -569,7 +569,7 @@ pub mod fields_with_unique_types {
     use error_set::error_set;
 
     error_set! {
-        AuthError = {
+        AuthError := {
             #[display("User `{name}` with role `{}` does not exist", role.1)]
             UserDoesNotExist1 {
                 name: &'static str,
@@ -581,10 +581,10 @@ pub mod fields_with_unique_types {
             },
             #[display("The provided credentials are invalid")]
             InvalidCredentials
-        };
-        LoginError = {
+        }
+        LoginError := {
             IoError(std::io::Error),
-        } || AuthError;
+        } || AuthError
     }
 
     #[test]
@@ -610,7 +610,7 @@ pub mod inline_source_error {
     use error_set::error_set;
 
     error_set! {
-        AuthError = {
+        AuthError := {
             SourceStruct1(std::fmt::Error) {},
 
             #[display("User `{name}` with role `{}` does not exist", role.1)]
@@ -624,11 +624,14 @@ pub mod inline_source_error {
             },
             #[display("The provided credentials are invalid")]
             InvalidCredentials
-        };
-        LoginError = {
+        }
+
+        LoginError := {
             IoError(std::io::Error),
             //A
-        } || AuthError;
+        } || AuthError
+
+        
     }
 
     #[test]
@@ -654,45 +657,45 @@ pub mod generics {
     use error_set::error_set;
 
     error_set! {
-        AuthError1<T: Debug> = {
+        AuthError1<T: Debug> := {
             SourceStruct(std::fmt::Error) {},
             DoesNotExist {
                 name: T,
                 role: u32,
             },
             InvalidCredentials
-        };
-        AuthError2<T: Debug> = {
+        }
+        AuthError2<T: Debug> := {
             SourceStruct(std::fmt::Error) {},
             DoesNotExist {
                 name: T,
                 role: u32,
             },
             InvalidCredentials
-        };
-        AuthError3<G: Debug> = {
+        }
+        AuthError3<G: Debug> := {
             SourceStruct(std::fmt::Error) {},
             DoesNotExist {
                 name: G,
                 role: u32,
             },
             InvalidCredentials
-        };
-        LoginError<T: Debug> = {
+        }
+        LoginError<T: Debug> := {
             IoError(std::io::Error),
-        } || AuthError1<T> || AuthError2<T>;
+        } || AuthError1<T> || AuthError2<T>
 
-        X<G: Debug> = {
+        X<G: Debug> := {
             A {
                 a: G
             }
-        };
-        Y<H: Debug> = {
+        }
+        Y<H: Debug> := {
             B {
                 b: H
             }
-        };
-        Z<T: Debug> = X<T> || Y<T>;
+        }
+        Z<T: Debug> := X<T> || Y<T>
     }
 
     #[test]
@@ -745,27 +748,27 @@ pub mod disable {
     use error_set::error_set;
 
     error_set! {
-        U = {
+        U := {
             IoError(std::io::Error),
-        };
-        V = {
+        }
+        V := {
             FmtError(std::fmt::Error),
             IoError(std::io::Error),
-        };
+        }
         #[disable(From(std::io::Error,U))]
-        W = V || U;
+        W := V || U
         #[disable(From)]
-        X = {
+        X := {
             A
-        };
+        }
         #[disable(Display,Error)]
-        Y = {
+        Y := {
             A,
-        };
+        }
         #[disable(Debug)]
-        Z = {
+        Z := {
             A,
-        };
+        }
     }
 
     impl From<U> for W {
@@ -840,13 +843,13 @@ pub mod from_for_generic_and_regular {
 
     error_set! {
         #[disable(From(E))]
-        X<E: core::error::Error + core::fmt::Debug + core::fmt::Display> = Y || Z<E>;
-        Y = {
+        X<E: core::error::Error + core::fmt::Debug + core::fmt::Display> := Y || Z<E>
+        Y := {
             A,
-        };
-        Z<E: core::error::Error + core::fmt::Debug + core::fmt::Display> = {
+        }
+        Z<E: core::error::Error + core::fmt::Debug + core::fmt::Display> := {
             B(E),
-        };
+        }
     }
 
     #[test]
@@ -875,12 +878,12 @@ pub mod generics_nested {
     }
 
     error_set!{
-        X<H: core::fmt::Debug + core::fmt::Display> = {
+        X<H: core::fmt::Debug + core::fmt::Display> := {
             A {
                 a: Wrapper<H>
             }
-        };
-        Z<T: core::fmt::Debug + core::fmt::Display> = X<T>;
+        }
+        Z<T: core::fmt::Debug + core::fmt::Display> := X<T>
     }
 
     #[test]

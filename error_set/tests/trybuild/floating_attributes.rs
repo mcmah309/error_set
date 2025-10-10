@@ -4,10 +4,10 @@ error_set! {
     /// Doc
     // comment
     /// Doc
-    X = {
+    X := {
         A,
         B
-    };
+    }
     /// Doc
     // comment
     /// Doc

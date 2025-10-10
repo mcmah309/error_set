@@ -1,15 +1,15 @@
 use error_set::error_set;
 
 error_set! {
-    X = {
+    X := {
         IoError(std::io::Error),
-    };
-    Y = {
+    }
+    Y := {
         DifferentName(std::io::Error),
-    };
-    Z = {
+    }
+    Z := {
         IoError(std::io::Error),
-    };
+    }
 }
 
 fn main() {

@@ -1,17 +1,17 @@
 use error_set::error_set;
 
 error_set! {
-    X = {
+    X := {
         IoError(std::io::Error),
         IoError2(std::io::Error),
-    };
-    Y = {
+    }
+    Y := {
         IoError2(std::io::Error),
         IoError(std::io::Error),
-    };
-    Z = {
+    }
+    Z := {
         IoError(std::io::Error),
-    };
+    }
 }
 
 fn main() {

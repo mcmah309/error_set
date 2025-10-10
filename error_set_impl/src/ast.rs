@@ -5,7 +5,7 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::{self},
-    Attribute, Ident, Result, TypeParam,
+    Attribute, Ident, Result, TypeParam, ItemStruct
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
@@ -13,7 +13,7 @@ const DISABLE_ATTRIBUTE_NAME: &str = "disable";
 
 #[derive(Clone)]
 pub(crate) struct AstErrorSet {
-    pub(crate) set_items: Vec<AstErrorDeclaration>,
+    pub(crate) set_items: Vec<AstErrorKind>,
 }
 
 impl Parse for AstErrorSet {
@@ -22,7 +22,7 @@ impl Parse for AstErrorSet {
 
         while !input.is_empty() {
             let fork = input.fork();
-            let set_item = match input.parse::<AstErrorDeclaration>() {
+            let set_item = match input.parse::<AstErrorKind>() {
                 Ok(value) => value,
                 Err(error) => {
                     if input.is_empty() {
@@ -33,28 +33,30 @@ impl Parse for AstErrorSet {
                 }
             };
             set_items.push(set_item);
-            if input.peek(token::Semi) {
-                input.parse::<token::Semi>().unwrap();
-            } else {
-                if input.is_empty() {
-                    return Err(syn::Error::new(
-                        last_token_span(fork),
-                        "Expected a `;` after an error definition.",
-                    ));
-                } else {
-                    return Err(syn::Error::new(
-                        input.span(),
-                        "Expected a `;` after an error definition.",
-                    ));
-                }
-            }
         }
         Ok(AstErrorSet { set_items })
     }
 }
 
 #[derive(Clone)]
-pub(crate) struct AstErrorDeclaration {
+pub(crate) enum AstErrorKind {
+    Enum(AstErrorEnumDeclaration),
+    Struct(ItemStruct),
+}
+
+impl Parse for AstErrorKind {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if input.peek(syn::Token![struct]) {
+            let item_struct = input.parse::<ItemStruct>()?;
+            return Ok(AstErrorKind::Struct(item_struct));
+        }
+        let enum_decl = input.parse::<AstErrorEnumDeclaration>()?;
+        Ok(AstErrorKind::Enum(enum_decl))
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct AstErrorEnumDeclaration {
     pub(crate) attributes: Vec<Attribute>,
     pub(crate) error_name: Ident,
     pub(crate) generics: Vec<TypeParam>,
@@ -62,7 +64,7 @@ pub(crate) struct AstErrorDeclaration {
     pub(crate) parts: Vec<AstInlineOrRefError>,
 }
 
-impl Parse for AstErrorDeclaration {
+impl Parse for AstErrorEnumDeclaration {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut attributes = input.call(Attribute::parse_outer)?;
         let disabled = extract_disabled(&mut attributes)?;
@@ -74,20 +76,21 @@ impl Parse for AstErrorDeclaration {
         }
         let save_position = input.fork();
         let error_name: Ident = input.parse()?;
-        if !input.peek(syn::Token![=]) && !input.peek(syn::Token![<]) {
+        if !(input.peek(syn::Token![:]) && input.peek2(syn::Token![=])) && !input.peek(syn::Token![<]) {
             return Err(syn::Error::new(
                 save_position.span(),
-                "Expected `=` or generic `<..>` to be next next.",
+                "Expected `:=` declaration or generic `<..>` to be next next.",
             ));
         }
         let generics = generics(&input)?;
         let last_position_save = input.fork();
-        if !input.peek(syn::Token![=]) {
+        if !(input.peek(syn::Token![:]) && input.peek2(syn::Token![=])) {
             return Err(syn::Error::new(
                 last_position_save.span(),
-                "Expected `=` to be next.",
+                "Expected `:=` declaration to be next.",
             ));
         }
+        input.parse::<syn::Token![:]>().unwrap();
         input.parse::<syn::Token![=]>().unwrap();
         let mut parts = Vec::new();
         while !input.is_empty() {
@@ -96,13 +99,9 @@ impl Parse for AstErrorDeclaration {
             if input.peek(token::OrOr) {
                 input.parse::<token::OrOr>().unwrap();
                 continue;
-            } else if input.peek(token::Semi) {
+            }
+            else {
                 break;
-            } else {
-                return Err(syn::Error::new(
-                    input.span(),
-                    "Expected `||` or `;` to be next.",
-                ));
             }
         }
         if parts.is_empty() {
@@ -111,7 +110,7 @@ impl Parse for AstErrorDeclaration {
                 "Missing error definitions",
             ));
         }
-        return Ok(AstErrorDeclaration {
+        return Ok(AstErrorEnumDeclaration {
             attributes,
             error_name,
             generics,

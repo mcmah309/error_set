@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AstErrorDeclaration, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, Disabled,
-    RefError,
+    AstErrorEnumDeclaration, AstErrorKind, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, Disabled, RefError
 };
 use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
@@ -12,10 +11,14 @@ use syn::{Attribute, Ident, TypeParam};
 /// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
 /// all error sets with the full expansion.
 pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
+    let enum_declarations = error_set.set_items.into_iter().filter_map(|e| match e {
+        AstErrorKind::Enum(ast_error_enum_declaration) => Some(ast_error_enum_declaration),
+        AstErrorKind::Struct(_item_struct) => None,
+    });
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
-    for declaration in error_set.set_items.into_iter() {
-        let AstErrorDeclaration {
+    for declaration in enum_declarations.into_iter() {
+        let AstErrorEnumDeclaration {
             attributes,
             error_name,
             generics,

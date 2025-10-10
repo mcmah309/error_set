@@ -27,7 +27,7 @@ pub extern "C" fn rust_eh_personality() {
 //************************************************************************//
 
 error_set! {
-    MediaError = {
+    MediaError := {
         IoError(self::TestError),
         MissingBookDescription,
         MissingName,
@@ -36,26 +36,26 @@ error_set! {
         MaximumUploadSizeReached,
         TimedOut,
         AuthenticationFailed,
-    };
-    BookParsingError = {
+    }
+    BookParsingError := {
         MissingBookDescription,
         IoError(self::TestError),
         MissingName,
         NoContents,
-    };
-    BookSectionParsingError = {
+    }
+    BookSectionParsingError := {
         MissingName,
         NoContents,
-    };
-    DownloadError = {
+    }
+    DownloadError := {
         InvalidUrl,
         IoError(self::TestError),
-    };
-    ParseUploadError = {
+    }
+    ParseUploadError := {
         MaximumUploadSizeReached,
         TimedOut,
         AuthenticationFailed,
-    };
+    }
 }
 
 pub struct TestError(u32);
@@ -96,7 +96,7 @@ fn readme_example() {
 // //************************************************************************//
 
 error_set! {
-    AuthError = {
+    AuthError := {
         A,
         #[display("User `{}` with role `{}` does not exist", name, role)]
         UserDoesNotExist {
@@ -106,14 +106,14 @@ error_set! {
         #[display("The provided credentials are invalid")]
         InvalidCredentials,
         TestError(TestError)
-    };
-    AuthError2 = {
+    }
+    AuthError2 := {
         #[display("User does not exist")]
         UserDoesNotExist {
             name: u32,
             role: u32,
         }
-    };
+    }
 }
 
 fn display() {

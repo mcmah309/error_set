@@ -3,33 +3,33 @@ use std::fmt::Debug;
 use error_set::error_set;
 
 error_set! {
-    AuthError1<T: Debug> = {
+    AuthError1<T: Debug> := {
         SourceStruct(std::fmt::Error) {},
         DoesNotExist {
             name: T,
             role: u32,
         },
         InvalidCredentials
-    };
-    AuthError2<T: Debug> = {
+    }
+    AuthError2<T: Debug> := {
         SourceStruct(std::fmt::Error) {},
         DoesNotExist {
             name: T,
             role: u32,
         },
         InvalidCredentials
-    };
-    AuthError3<G: Debug> = {
+    }
+    AuthError3<G: Debug> := {
         SourceStruct(std::fmt::Error) {},
         DoesNotExist {
             name: G,
             role: u32,
         },
         InvalidCredentials
-    };
-    LoginError = {
+    }
+    LoginError := {
         IoError(std::io::Error),
-    } || AuthError1 || AuthError2 || AuthError3;
+    } || AuthError1 || AuthError2 || AuthError3
 }
 
 pub fn main() {}

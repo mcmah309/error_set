@@ -1,12 +1,12 @@
 use error_set::error_set;
 
 error_set! {
-    X = {
+    X := {
         IoError2,
-    };
-    X = {
+    }
+    X := {
         IoError,
-    };
+    }
 }
 
 pub fn main() {}

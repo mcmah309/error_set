@@ -1,11 +1,13 @@
 use error_set::error_set;
 
 error_set! {
-    BookParsingError = {
+    BookParsingError := {
         MissingDescriptionArg
-    } || BookParsingError;
-    BookSectionParsingError = {
+    } || BookParsingError
+    BookSectionParsingError := {
         MissingNameArg,
         NoContents,
-    };
+    }
 }
+
+fn main() {}

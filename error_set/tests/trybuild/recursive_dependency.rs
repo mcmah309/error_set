@@ -1,21 +1,21 @@
 use error_set::error_set;
 
 error_set! {
-    MediaError = {
+    MediaError := {
         IoError(std::io::Error)
-        } || BookParsingError || DownloadError || UploadError;
-    BookParsingError = {
+        } || BookParsingError || DownloadError || UploadError
+    BookParsingError := {
         MissingDescriptionArg
-    } || BookSectionParsingError;
-    BookSectionParsingError = {
+    } || BookSectionParsingError
+    BookSectionParsingError := {
         MissingNameArg,
         NoContents,
-    } || BookParsingError;
-    DownloadError = {
+    } || BookParsingError
+    DownloadError := {
         CouldNotConnect,
         OutOfMemory(std::io::Error),
-    };
-    UploadError = {
+    }
+    UploadError := {
         NoConnection(std::io::Error),
-    };
+    }
 }
