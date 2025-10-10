@@ -15,6 +15,7 @@ defmt = { version = "1", optional = true }
 [dev-dependencies]
 tracing-test = { version = "0.2", features = ["no-env-filter"] }
 lazy_static = "1"
+flaky_test = "0.2"
 
 [features]
 default = ["stub"]
