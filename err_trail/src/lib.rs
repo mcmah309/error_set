@@ -1,5 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![allow(unused_variables)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![doc = include_str!("../README.md")]
 
 use core::fmt::Display;
 
@@ -15,7 +17,6 @@ mod sealed {
         feature = "tracing",
         feature = "log",
         feature = "defmt",
-        feature = "stub"
     )))
 )]
 pub trait ErrContext<T, E>: sealed::Sealed {
@@ -62,7 +63,6 @@ pub trait ErrContext<T, E>: sealed::Sealed {
         feature = "tracing",
         feature = "log",
         feature = "defmt",
-        feature = "stub"
     )))
 )]
 pub trait ErrContextDisplay<T, E: Display>: ErrContext<T, E> + sealed::Sealed {
@@ -87,7 +87,6 @@ pub trait ErrContextDisplay<T, E: Display>: ErrContext<T, E> + sealed::Sealed {
         feature = "tracing",
         feature = "log",
         feature = "defmt",
-        feature = "stub"
     )))
 )]
 pub trait NoneContext<T>: sealed::Sealed {
