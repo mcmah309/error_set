@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
 use quote::{TokenStreamExt, quote};
-use syn::{Attribute, Ident, ItemStruct, Lit, TypeParam, Visibility};
+use syn::{Attribute, Ident, ItemStruct, Lit, PathArguments, TypeParam, TypePath, Visibility};
 
 use crate::ast::{AstErrorStruct, AstInlineErrorVariantField, Disabled, DisplayAttribute};
 
@@ -582,6 +582,8 @@ fn impl_froms(
     // Add `From`'s for all valid variants that are wrappers around source errors.
     for error_variant in source_type_to_error_variants.values() {
         let source_type = error_variant.source_type();
+        let inner_source_type_if_concrete_box =
+            source_type.and_then(|e| maybe_extract_concrete_box_type(e));
         if is_source_tuple_type(error_variant) {
             let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
@@ -594,6 +596,16 @@ fn impl_froms(
                     }
                 }
             });
+            if let Some(inner_source_type_of_box) = inner_source_type_if_concrete_box {
+                token_stream.append_all(quote::quote! {
+                    #(#cfg_attributes)*
+                    impl #impl_generics From<#inner_source_type_of_box> for #error_enum_name #ty_generics {
+                        fn from(error: #inner_source_type_of_box) -> Self {
+                            #error_enum_name::#variant_name(Box::new(error))
+                        }
+                    }
+                });
+            }
         } else if is_source_only_struct_type(error_variant) {
             let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
@@ -606,6 +618,16 @@ fn impl_froms(
                     }
                 }
             });
+            if let Some(inner_source_type_of_box) = inner_source_type_if_concrete_box {
+                token_stream.append_all(quote::quote! {
+                    #(#cfg_attributes)*
+                    impl #impl_generics From<#inner_source_type_of_box> for #error_enum_name #ty_generics {
+                        fn from(error: #inner_source_type_of_box) -> Self {
+                            #error_enum_name::#variant_name { source: Box::new(error) }
+                        }
+                    }
+                });
+            }
         }
     }
 }
@@ -1092,3 +1114,33 @@ pub(crate) fn is_conversion_target(this: &ErrorVariant, that: &ErrorVariant) -> 
         _ => false,
     };
 }
+
+//************************************************************************//
+
+fn maybe_extract_concrete_box_type(ty: &TypePath) -> Option<&TypePath> {
+        let last_part = ty
+            .path
+            .segments
+            .last()
+            .expect("If segments exist there should be more than one.");
+        if last_part.ident.to_string() == "Box" {
+            match &last_part.arguments {
+                PathArguments::AngleBracketed(box_args) => {
+                    if box_args.args.len() != 1 {
+                        return None;
+                    }
+                    let box_arg = box_args.args.first().unwrap();
+                    match box_arg {
+                        syn::GenericArgument::Type(box_type) => match box_type {
+                            syn::Type::Path(valid_box_type) => Some(valid_box_type),
+                            _ => None,
+                        },
+                        _ => None,
+                    }
+                }
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
