@@ -613,7 +613,7 @@ fn impl_froms(
                             #(#cfg_attributes)*
                             impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
                                 fn from(error: #type_path) -> Self {
-                                    #error_enum_name::#variant_name(eros::TracedErrror::new(error))
+                                    #error_enum_name::#variant_name(eros::TracedError::new(error))
                                 }
                             }
                         });
