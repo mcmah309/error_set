@@ -448,6 +448,74 @@ pub mod value_variants2 {
 }
 
 #[cfg(test)]
+pub mod error_struct_and_enums {
+    use error_set::error_set;
+
+    error_set! {
+        struct Struct {
+            source: std::io::Error,
+            field: String,
+        }
+
+        enum AuthError {
+            #[display("1 User `{name}` with role}} `{{{role}` does not exist")]
+            UserDoesNotExist1 {
+                name: String,
+                role: u32,
+            },
+            #[display("2 User `{}` with role}} `{{{}` does not exist", name, role)]
+            UserDoesNotExist2 {
+                name: String,
+                role: u32,
+            },
+            #[display("The provided credentials are invalid")]
+            InvalidCredentials
+        }
+
+        pub enum LoginError := {
+            IoError(std::io::Error),
+        } || AuthError
+    }
+
+    #[test]
+    fn test() {
+        let x: AuthError = AuthError::UserDoesNotExist1 {
+            name: "john".to_string(),
+            role: 30,
+        };
+        assert_eq!(
+            x.to_string(),
+            "1 User `john` with role} `{30` does not exist".to_string()
+        );
+        let y: LoginError = x.into();
+        assert_eq!(
+            y.to_string(),
+            "1 User `john` with role} `{30` does not exist".to_string()
+        );
+
+        let x: AuthError = AuthError::UserDoesNotExist2 {
+            name: "john".to_string(),
+            role: 30,
+        };
+        assert_eq!(
+            x.to_string(),
+            "2 User `john` with role} `{30` does not exist".to_string()
+        );
+        let y: LoginError = x.into();
+        assert_eq!(
+            y.to_string(),
+            "2 User `john` with role} `{30` does not exist".to_string()
+        );
+
+        let x = AuthError::InvalidCredentials;
+        assert_eq!(
+            x.to_string(),
+            "The provided credentials are invalid".to_string()
+        );
+    }
+}
+
+#[cfg(test)]
 pub mod display_ref_error {
     use error_set::error_set;
 

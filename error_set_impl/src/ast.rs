@@ -1,11 +1,10 @@
 use proc_macro2::TokenStream;
 use syn::{
-    braced, parenthesized,
+    Attribute, Ident, ItemStruct, Result, TypeParam, Visibility, braced, parenthesized,
     parse::{Parse, ParseBuffer, ParseStream},
     punctuated::Punctuated,
     spanned::Spanned,
-    token::{self},
-    Attribute, Ident, Result, TypeParam, ItemStruct
+    token::{self, Pub},
 };
 
 const DISPLAY_ATTRIBUTE_NAME: &str = "display";
@@ -47,17 +46,27 @@ pub(crate) enum AstErrorKind {
 impl Parse for AstErrorKind {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(syn::Token![struct]) {
-            let item_struct = input.parse::<ItemStruct>()?;
+            let mut item_struct = input.parse::<ItemStruct>()?;
+            match item_struct.vis {
+                syn::Visibility::Public(_) => {}
+                syn::Visibility::Restricted(_) => {}
+                syn::Visibility::Inherited => {
+                    item_struct.vis = syn::Visibility::Public(Pub {
+                        span: item_struct.vis.span(),
+                    })
+                }
+            };
             return Ok(AstErrorKind::Struct(item_struct));
         }
         let enum_decl = input.parse::<AstErrorEnumDeclaration>()?;
-        Ok(AstErrorKind::Enum(enum_decl))
+        return Ok(AstErrorKind::Enum(enum_decl));
     }
 }
 
 #[derive(Clone)]
 pub(crate) struct AstErrorEnumDeclaration {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) vis: Visibility,
     pub(crate) error_name: Ident,
     pub(crate) generics: Vec<TypeParam>,
     pub(crate) disabled: Disabled,
@@ -71,52 +80,77 @@ impl Parse for AstErrorEnumDeclaration {
         if input.is_empty() {
             return Err(syn::Error::new(
                 input.span(),
-                    "Expected an error definition to be next after attributes. You may have a dangling doc comment.",
+                "Expected an error definition to be next after attributes. You may have a dangling doc comment.",
             ));
         }
-        let save_position = input.fork();
+        let vis = if input.peek(syn::Token![pub]) {
+            input.parse::<Visibility>()?
+        } else {
+            Visibility::Public(Pub { span: input.span() })
+        };
+        if input.peek(syn::Token![enum]) {
+            input.parse::<syn::Token![enum]>().unwrap();
+        }
         let error_name: Ident = input.parse()?;
-        if !(input.peek(syn::Token![:]) && input.peek2(syn::Token![=])) && !input.peek(syn::Token![<]) {
-            return Err(syn::Error::new(
-                save_position.span(),
-                "Expected `:=` declaration or generic `<..>` to be next next.",
-            ));
-        }
-        let generics = generics(&input)?;
+        let generics = if input.peek(syn::Token![<]) {
+            generics(&input)? // todo improve generic parsing to include where clauses
+        } else {
+            Vec::new()
+        };
         let last_position_save = input.fork();
-        if !(input.peek(syn::Token![:]) && input.peek2(syn::Token![=])) {
+        // enum set
+        if input.peek(syn::Token![:]) && input.peek2(syn::Token![=]) {
+            input.parse::<syn::Token![:]>().unwrap();
+            input.parse::<syn::Token![=]>().unwrap();
+            let mut parts = Vec::new();
+            while !input.is_empty() {
+                let part = input.parse::<AstInlineOrRefError>()?;
+                parts.push(part);
+                if input.peek(token::OrOr) {
+                    input.parse::<token::OrOr>().unwrap();
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            if parts.is_empty() {
+                return Err(syn::Error::new(
+                    last_position_save.span(),
+                    "Missing error definitions",
+                ));
+            }
+            return Ok(AstErrorEnumDeclaration {
+                attributes,
+                vis,
+                error_name,
+                generics,
+                disabled,
+                parts,
+            });
+        // normal enum
+        } else if input.peek(syn::token::Brace) {
+            let content;
+            braced!(content in input);
+            let error_variants = content.parse_terminated(
+                |input: ParseStream| input.parse::<AstErrorVariant>(),
+                token::Comma,
+            )?;
+            return Ok(AstErrorEnumDeclaration {
+                attributes,
+                vis,
+                error_name,
+                generics,
+                disabled,
+                parts: vec![AstInlineOrRefError::Inline(AstInlineError {
+                    error_variants,
+                })],
+            });
+        } else {
             return Err(syn::Error::new(
                 last_position_save.span(),
-                "Expected `:=` declaration to be next.",
+                "Expected set declartion (`:=`) or regular enum body (`{...}`) to be next.",
             ));
         }
-        input.parse::<syn::Token![:]>().unwrap();
-        input.parse::<syn::Token![=]>().unwrap();
-        let mut parts = Vec::new();
-        while !input.is_empty() {
-            let part = input.parse::<AstInlineOrRefError>()?;
-            parts.push(part);
-            if input.peek(token::OrOr) {
-                input.parse::<token::OrOr>().unwrap();
-                continue;
-            }
-            else {
-                break;
-            }
-        }
-        if parts.is_empty() {
-            return Err(syn::Error::new(
-                last_position_save.span(),
-                "Missing error definitions",
-            ));
-        }
-        return Ok(AstErrorEnumDeclaration {
-            attributes,
-            error_name,
-            generics,
-            disabled,
-            parts,
-        });
     }
 }
 
@@ -230,7 +264,10 @@ impl Parse for AstErrorVariant {
                 } else {
                     return Err(syn::parse::Error::new(
                         source_and_backtrace.span(),
-                        format!("Expected at most two elements - a source error type and a backtrace. Recieved {}.",source_and_backtrace.len() ),
+                        format!(
+                            "Expected at most two elements - a source error type and a backtrace. Recieved {}.",
+                            source_and_backtrace.len()
+                        ),
                     ));
                 }
             }
@@ -380,7 +417,7 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
                     return Err(syn::parse::Error::new(
                         list.tokens.span(),
                         format!("Invalid syntax for `{}` attribute.", DISABLE_ATTRIBUTE_NAME),
-                    ))
+                    ));
                 }
             };
             let mut from = None;
@@ -435,7 +472,7 @@ fn extract_disabled_helper(attribute: &Attribute) -> syn::Result<Option<Disabled
                             format!(
                                 "`{ident}` is not a valid option for `{DISABLE_ATTRIBUTE_NAME}`"
                             ),
-                        ))
+                        ));
                     }
                 }
             }

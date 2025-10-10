@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::ast::{
-    AstErrorEnumDeclaration, AstErrorKind, AstErrorSet, AstErrorVariant, AstInlineErrorVariantField, Disabled, RefError
+    AstErrorEnumDeclaration, AstErrorVariant, AstInlineErrorVariantField, Disabled, RefError,
 };
 use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
@@ -10,16 +10,15 @@ use syn::{Attribute, Ident, TypeParam};
 
 /// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
 /// all error sets with the full expansion.
-pub(crate) fn resolve(error_set: AstErrorSet) -> syn::Result<Vec<ErrorEnum>> {
-    let enum_declarations = error_set.set_items.into_iter().filter_map(|e| match e {
-        AstErrorKind::Enum(ast_error_enum_declaration) => Some(ast_error_enum_declaration),
-        AstErrorKind::Struct(_item_struct) => None,
-    });
+pub(crate) fn resolve(
+    error_enum_decls: Vec<AstErrorEnumDeclaration>,
+) -> syn::Result<Vec<ErrorEnum>> {
     let mut error_enum_builders: Vec<ErrorEnumBuilder> = Vec::new();
 
-    for declaration in enum_declarations.into_iter() {
+    for declaration in error_enum_decls.into_iter() {
         let AstErrorEnumDeclaration {
             attributes,
+            vis, // todo propogate vis
             error_name,
             generics,
             disabled,
@@ -110,12 +109,19 @@ fn resolve_builders_helper<'a>(
                 resolve_builders_helper(ref_error_enum_index, error_enum_builders, visited)?;
                 visited.pop();
             }
-            let [this_error_enum_builder, ref_error_enum_builder] = error_enum_builders.get_disjoint_mut([index, ref_error_enum_index]).unwrap();
+            let [this_error_enum_builder, ref_error_enum_builder] = error_enum_builders
+                .get_disjoint_mut([index, ref_error_enum_index])
+                .unwrap();
             // Let the ref declaration override the original generic declaration name to avoid collisions - `.. || X<T> ..`
             if ref_part.generic_refs.len() != ref_error_enum_builder.generics.len() {
                 Err(syn::parse::Error::new_spanned(
                     &ref_part.name,
-                    format!("A reference to {} was declared with {} generic param(s), but the original definition takes {}.", ref_part.name, ref_part.generic_refs.len(), ref_error_enum_builder.generics.len()),
+                    format!(
+                        "A reference to {} was declared with {} generic param(s), but the original definition takes {}.",
+                        ref_part.name,
+                        ref_part.generic_refs.len(),
+                        ref_error_enum_builder.generics.len()
+                    ),
                 ))?;
             }
             let mut error_variants = Vec::new();
