@@ -265,7 +265,7 @@ pub mod documentation {
         MediaError := {
             /// This is a variant IoError doc
             IoError(std::io::Error)
-            } || BookParsingError || DownloadError || UploadError
+        } || BookParsingError || DownloadError || UploadError
         /// This is a BookParsingError doc
         BookParsingError := {
             /// This is a variant MissingDescriptionArg doc
@@ -1139,4 +1139,9 @@ pub mod should_not_compile_tests {
         let t = trybuild::TestCases::new();
         t.compile_fail("tests/trybuild/recursive_dependency.rs");
     }
+}
+
+
+mod x {
+
 }
