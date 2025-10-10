@@ -107,8 +107,7 @@ fn resolve_builders_helper<'a>(
                 resolve_builders_helper(ref_error_enum_index, error_enum_builders, visited)?;
                 visited.pop();
             }
-            let (this_error_enum_builder, ref_error_enum_builder) =
-                indices::indices!(&mut *error_enum_builders, index, ref_error_enum_index);
+            let [this_error_enum_builder, ref_error_enum_builder] = error_enum_builders.get_disjoint_mut([index, ref_error_enum_index]).unwrap();
             // Let the ref declaration override the original generic declaration name to avoid collisions - `.. || X<T> ..`
             if ref_part.generic_refs.len() != ref_error_enum_builder.generics.len() {
                 Err(syn::parse::Error::new_spanned(
