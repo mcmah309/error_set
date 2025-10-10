@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use proc_macro2::TokenStream;
 use quote::{quote, TokenStreamExt};
-use syn::{Attribute, Ident, Lit, TypeParam};
+use syn::{Attribute, Ident, Lit, TypeParam, Visibility};
 
 use crate::ast::{AstInlineErrorVariantField, Disabled, DisplayAttribute};
 
@@ -140,6 +140,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
         }
     }
     let attributes = &error_enum.attributes;
+    let vis = &error_enum.vis;
     let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
     let debug = if error_enum.disabled.debug {
         quote! {}
@@ -149,7 +150,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
     token_stream.append_all(quote::quote! {
         #(#attributes)*
         #debug
-        pub enum #enum_name #impl_generics {
+        #vis enum #enum_name #impl_generics {
             #error_variant_tokens
         }
     });
@@ -827,6 +828,7 @@ impl ErrorEnumGraphNode {
 #[derive(Clone)]
 pub(crate) struct ErrorEnum {
     pub(crate) attributes: Vec<Attribute>,
+    pub(crate) vis: Visibility,
     pub(crate) error_name: Ident,
     pub(crate) generics: Vec<TypeParam>,
     pub(crate) disabled: Disabled,

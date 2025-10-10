@@ -6,7 +6,7 @@ use crate::ast::{
 use crate::expand::{ErrorEnum, ErrorVariant, Named, SourceStruct, SourceTuple, Struct};
 
 use quote::ToTokens;
-use syn::{Attribute, Ident, TypeParam};
+use syn::{Attribute, Ident, TypeParam, Visibility};
 
 /// Constructs [ErrorEnum]s from the ast, resolving any references to other sets. The returned result is
 /// all error sets with the full expansion.
@@ -26,7 +26,7 @@ pub(crate) fn resolve(
         } = declaration;
 
         let mut error_enum_builder =
-            ErrorEnumBuilder::new(error_name, attributes, generics, disabled);
+            ErrorEnumBuilder::new(error_name, attributes, vis, generics, disabled);
 
         for part in parts.into_iter() {
             match part {
@@ -238,6 +238,7 @@ pub(crate) fn does_occupy_the_same_space(this: &AstErrorVariant, other: &AstErro
 
 struct ErrorEnumBuilder {
     pub attributes: Vec<Attribute>,
+    pub vis: Visibility,
     pub error_name: Ident,
     pub generics: Vec<TypeParam>,
     pub disabled: Disabled,
@@ -250,11 +251,13 @@ impl ErrorEnumBuilder {
     fn new(
         error_name: Ident,
         attributes: Vec<Attribute>,
+        vis: Visibility,
         generics: Vec<TypeParam>,
         disabled: Disabled,
     ) -> Self {
         Self {
             attributes,
+            vis,
             error_name,
             generics,
             disabled,
@@ -276,6 +279,7 @@ impl From<ErrorEnumBuilder> for ErrorEnum {
         );
         ErrorEnum {
             attributes: value.attributes,
+            vis: value.vis,
             error_name: value.error_name,
             generics: value.generics,
             disabled: value.disabled,
