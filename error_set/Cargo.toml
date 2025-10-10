@@ -16,6 +16,7 @@ error_set_impl = { version = "=0.8.5", path = "../error_set_impl" }
 [dev-dependencies]
 trybuild = "=1.0.111"
 tracing-test = { version = "0.2", features = ["no-env-filter"] }
+eros = "0.2"
 
 [features]
 default = []

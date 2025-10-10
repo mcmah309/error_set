@@ -583,7 +583,7 @@ fn impl_froms(
     for error_variant in source_type_to_error_variants.values() {
         let source_type = error_variant.source_type();
         let inner_source_type_if_concrete_box =
-            source_type.and_then(|e| maybe_extract_concrete_box_type(e));
+            source_type.and_then(|e| maybe_extract_known_wrapper_types(e));
         if is_source_tuple_type(error_variant) {
             let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
             let variant_name = &error_variant.name();
@@ -596,15 +596,29 @@ fn impl_froms(
                     }
                 }
             });
-            if let Some(inner_source_type_of_box) = inner_source_type_if_concrete_box {
-                token_stream.append_all(quote::quote! {
-                    #(#cfg_attributes)*
-                    impl #impl_generics From<#inner_source_type_of_box> for #error_enum_name #ty_generics {
-                        fn from(error: #inner_source_type_of_box) -> Self {
-                            #error_enum_name::#variant_name(Box::new(error))
-                        }
+            if let Some(inner_known_wrapper_type) = inner_source_type_if_concrete_box {
+                match inner_known_wrapper_type {
+                    KnownWrapperTypes::Box(type_path) => {
+                        token_stream.append_all(quote::quote! {
+                            #(#cfg_attributes)*
+                            impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
+                                fn from(error: #type_path) -> Self {
+                                    #error_enum_name::#variant_name(Box::new(error))
+                                }
+                            }
+                        });
                     }
-                });
+                    KnownWrapperTypes::TracedError(type_path) => {
+                        token_stream.append_all(quote::quote! {
+                            #(#cfg_attributes)*
+                            impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
+                                fn from(error: #type_path) -> Self {
+                                    #error_enum_name::#variant_name(eros::TracedErrror::new(error))
+                                }
+                            }
+                        });
+                    }
+                };
             }
         } else if is_source_only_struct_type(error_variant) {
             let (impl_generics, ty_generics) = generic_tokens(&error_enum.generics);
@@ -618,15 +632,29 @@ fn impl_froms(
                     }
                 }
             });
-            if let Some(inner_source_type_of_box) = inner_source_type_if_concrete_box {
-                token_stream.append_all(quote::quote! {
-                    #(#cfg_attributes)*
-                    impl #impl_generics From<#inner_source_type_of_box> for #error_enum_name #ty_generics {
-                        fn from(error: #inner_source_type_of_box) -> Self {
-                            #error_enum_name::#variant_name { source: Box::new(error) }
-                        }
+            if let Some(inner_known_wrapper_type) = inner_source_type_if_concrete_box {
+                match inner_known_wrapper_type {
+                    KnownWrapperTypes::Box(type_path) => {
+                        token_stream.append_all(quote::quote! {
+                            #(#cfg_attributes)*
+                            impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
+                                fn from(error: #type_path) -> Self {
+                                    #error_enum_name::#variant_name { source: Box::new(error) }
+                                }
+                            }
+                        });
                     }
-                });
+                    KnownWrapperTypes::TracedError(type_path) => {
+                        token_stream.append_all(quote::quote! {
+                            #(#cfg_attributes)*
+                            impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
+                                fn from(error: #type_path) -> Self {
+                                    #error_enum_name::#variant_name { source: eros::TracedError::new(error) }
+                                }
+                            }
+                        });
+                    }
+                };
             }
         }
     }
@@ -1117,30 +1145,36 @@ pub(crate) fn is_conversion_target(this: &ErrorVariant, that: &ErrorVariant) -> 
 
 //************************************************************************//
 
-fn maybe_extract_concrete_box_type(ty: &TypePath) -> Option<&TypePath> {
-        let last_part = ty
-            .path
-            .segments
-            .last()
-            .expect("If segments exist there should be more than one.");
-        if last_part.ident.to_string() == "Box" {
-            match &last_part.arguments {
-                PathArguments::AngleBracketed(box_args) => {
-                    if box_args.args.len() != 1 {
-                        return None;
-                    }
-                    let box_arg = box_args.args.first().unwrap();
-                    match box_arg {
-                        syn::GenericArgument::Type(box_type) => match box_type {
-                            syn::Type::Path(valid_box_type) => Some(valid_box_type),
-                            _ => None,
-                        },
-                        _ => None,
-                    }
-                }
+fn maybe_extract_known_wrapper_types(ty: &TypePath) -> Option<KnownWrapperTypes<'_>> {
+    let last_part = ty
+        .path
+        .segments
+        .last()
+        .expect("If segments exist there should be more than one.");
+    let wrapper = match &*last_part.ident.to_string() {
+        "Box" => KnownWrapperTypes::Box,
+        "eros::TE" | "eros::TracedError" | "TE" | "TracedError" => KnownWrapperTypes::TracedError,
+        _ => return None,
+    };
+    match &last_part.arguments {
+        PathArguments::AngleBracketed(box_args) => {
+            if box_args.args.len() != 1 {
+                return None;
+            }
+            let box_arg = box_args.args.first().unwrap();
+            match box_arg {
+                syn::GenericArgument::Type(box_type) => match box_type {
+                    syn::Type::Path(valid_box_type) => Some(wrapper(valid_box_type)),
+                    _ => None,
+                },
                 _ => None,
             }
-        } else {
-            None
         }
+        _ => None,
     }
+}
+
+enum KnownWrapperTypes<'a> {
+    Box(&'a TypePath),
+    TracedError(&'a TypePath),
+}

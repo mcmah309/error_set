@@ -1050,6 +1050,52 @@ pub mod genarate_froms_for_concrete_box {
 }
 
 #[cfg(test)]
+pub mod traced_error {
+    use eros::TracedError;
+    use error_set::error_set;
+
+    error_set! {
+        AuthError := {
+            SourceStruct1(TracedError<std::fmt::Error>) {},
+
+            #[display("User `{name}` with role `{}` does not exist", role.1)]
+            UserDoesNotExist1(TracedError<std::io::Error>) {
+                name: &'static str,
+                role: (u32,String),
+            },
+        }
+
+        LoginError := {
+            IoError(std::io::Error),
+            //A
+        } || AuthError
+
+
+    }
+
+    #[test]
+    fn test() {
+        let fmt_error = std::fmt::Error::default();
+        let auth_error: AuthError = fmt_error.into();
+        matches!(auth_error, AuthError::SourceStruct1 { source: _ });
+        let login_error: LoginError = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let fmt_error = std::fmt::Error::default();
+        let login_error: LoginError = fmt_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+
+        let fmt_error = TracedError::new(std::fmt::Error::default());
+        let auth_error: AuthError = fmt_error.into();
+        matches!(auth_error, AuthError::SourceStruct1 { source: _ });
+        let login_error: LoginError = auth_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let fmt_error = TracedError::new(std::fmt::Error::default());
+        let login_error: LoginError = fmt_error.into();
+        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+    }
+}
+
+#[cfg(test)]
 pub mod should_not_compile_tests {
 
     #[test]

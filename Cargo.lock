@@ -62,6 +62,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "eros"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f50f87999591d322fe5c51d415253bf2a5bff237d3fce59c843c46795747bc65"
+
+[[package]]
 name = "err_trail"
 version = "0.8.5"
 dependencies = [
@@ -77,6 +83,7 @@ dependencies = [
 name = "error_set"
 version = "0.8.5"
 dependencies = [
+ "eros",
  "error_set_impl",
  "tracing-test",
  "trybuild",
