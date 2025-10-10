@@ -6,7 +6,7 @@ use err_trail::{ErrContext, ErrContextDisplay};
 use error_set::{error_set, CoerceResult};
 use exit_no_std::exit;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn main() -> i32 {
     readme_example();
     display();
@@ -19,7 +19,7 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     exit(1);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn rust_eh_personality() {
     exit(2);
 }
