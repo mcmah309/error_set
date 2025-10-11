@@ -812,8 +812,47 @@ fn traced_our_error_enum_result2() -> eros::Result<(), AnotherError> {
 fn main() {
     let error: TracedError<AnotherError> = traced_our_error_enum_result2().unwrap_err();
     assert!(matches!(error.inner(), AnotherError::IoError(_)));
+    println!("{:?}", error)
 }
 ```
+
+<details>
+
+  <summary>Output</summary>
+
+```console
+this is a raw io error
+
+Context:
+        - Here is some context
+        - More context
+
+Backtrace:
+   0: eros::generic_error::TracedError<T>::new
+             at /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eros-0.3.0/src/generic_error.rs:49:24
+   1: <E1 as eros::generic_error::IntoTraced<eros::generic_error::TracedError<E2>>>::into_traced
+             at /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eros-0.3.0/src/generic_error.rs:369:9
+   2: <core::result::Result<S,E1> as eros::generic_error::IntoTraced<core::result::Result<S,eros::generic_error::TracedError<E2>>>>::into_traced::{{closure}}
+             at /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eros-0.3.0/src/generic_error.rs:379:28
+   3: core::result::Result<T,E>::map_err
+             at /usr/local/rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs:914:27
+   4: <core::result::Result<S,E1> as eros::generic_error::IntoTraced<core::result::Result<S,eros::generic_error::TracedError<E2>>>>::into_traced
+             at /usr/local/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/eros-0.3.0/src/generic_error.rs:379:14
+   5: mod::traced_error::traced_error_result
+             at ./tests/mod.rs:1075:28
+   6: mod::traced_error::traced_our_error_enum_result1
+             at ./tests/mod.rs:1079:17
+   7: mod::traced_error::traced_our_error_enum_result2
+             at ./tests/mod.rs:1085:17
+   8: mod::traced_error::test
+             at ./tests/mod.rs:1091:21
+   9: mod::traced_error::test::{{closure}}
+             at ./tests/mod.rs:1090:14
+...
+```
+
+</details>
+
 > If one does not need the "context" or "backtrace" functionality provided by `eros`, either feature flag can be disabled.
 
 One should **not** use `eros` like so
