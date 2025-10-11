@@ -667,7 +667,7 @@ error_set::error_set! {
 }
 ```
 
-### Error Structs and Enums
+### Error Structs
 
 Error structs are also supported
 
@@ -711,37 +711,15 @@ impl core::fmt::Display for ErrorStruct {
 
 </details>
 
-Error enum are also supported
-
-```rust
-error_set::error_set! {
-    enum ErrorEnum {
-        Variant1,
-        Variant2,
-    }
-}
-```
-
-In fact, this is just a different syntax for
-
-```rust
-error_set::error_set! {
-    ErrorEnum := {
-        Variant1,
-        Variant2,
-    }
-}
-```
-Or even more verbose
-```rust
-error_set::error_set! {
-    enum ErrorEnum := {
-        Variant1,
-        Variant2,
-    }
-}
-```
-But without `:=` one cannot do set aggregation.
+> Note: An error set can also be represented with the `enum` prefix.
+> ```rust
+> error_set::error_set! {
+>     enum ErrorEnum := {
+>         Variant1,
+>         Variant2,
+>    }
+> }
+> ```
 
 
 > By default all structs and enums are `pub`
