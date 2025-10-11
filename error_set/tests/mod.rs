@@ -1090,7 +1090,7 @@ pub mod traced_error {
     fn test() {
         let error = traced_our_error_enum_result2().unwrap_err();
         assert!(matches!(error.inner(), AnotherError::IoError(_)));
-        println!("{:?}", error.to_string())
+        println!("{:?}", error)
     }
 }
 
