@@ -1051,47 +1051,46 @@ pub mod genarate_froms_for_concrete_box {
 
 #[cfg(test)]
 pub mod traced_error {
-    use eros::TracedError;
+    use eros::{Context, IntoTraced};
     use error_set::error_set;
 
     error_set! {
-        AuthError := {
-            SourceStruct1(TracedError<std::fmt::Error>) {},
-
-            #[display("User `{name}` with role `{}` does not exist", role.1)]
-            UserDoesNotExist1(TracedError<std::io::Error>) {
-                name: &'static str,
-                role: (u32,String),
-            },
+        OurError := {
+            IoError(std::io::Error),
         }
 
-        LoginError := {
-            IoError(std::io::Error),
-            //A
-        } || AuthError
+        AnotherError := {
+            AnotherErrorVariant,
+        } || OurError
+    }
 
+    fn raw_error_result() -> Result<(), std::io::Error> {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "this is a raw io error",
+        ))
+    }
 
+    fn traced_error_result() -> eros::Result<(), std::io::Error> {
+        raw_error_result().into_traced().context("Here is some context")
+    }
+
+    fn traced_our_error_enum_result1() -> eros::Result<(), OurError> {
+        let _ = traced_error_result().into_traced().context("More context")?;
+        let _ = raw_error_result().into_traced().context("Different context")?;
+        Ok(())
+    }
+
+    fn traced_our_error_enum_result2() -> eros::Result<(), AnotherError> {
+        let _ = traced_our_error_enum_result1().into_traced()?;
+        Ok(())
     }
 
     #[test]
     fn test() {
-        let fmt_error = std::fmt::Error::default();
-        let auth_error: AuthError = fmt_error.into();
-        matches!(auth_error, AuthError::SourceStruct1 { source: _ });
-        let login_error: LoginError = auth_error.into();
-        matches!(login_error, LoginError::SourceStruct1 { source: _ });
-        let fmt_error = std::fmt::Error::default();
-        let login_error: LoginError = fmt_error.into();
-        matches!(login_error, LoginError::SourceStruct1 { source: _ });
-
-        let fmt_error = TracedError::new(std::fmt::Error::default());
-        let auth_error: AuthError = fmt_error.into();
-        matches!(auth_error, AuthError::SourceStruct1 { source: _ });
-        let login_error: LoginError = auth_error.into();
-        matches!(login_error, LoginError::SourceStruct1 { source: _ });
-        let fmt_error = TracedError::new(std::fmt::Error::default());
-        let login_error: LoginError = fmt_error.into();
-        matches!(login_error, LoginError::SourceStruct1 { source: _ });
+        let error = traced_our_error_enum_result2().unwrap_err();
+        assert!(matches!(error.inner(), AnotherError::IoError(_)));
+        println!("{:?}", error.to_string())
     }
 }
 

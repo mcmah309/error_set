@@ -757,64 +757,81 @@ Sometimes it is helpful to have more context around one's errors than the inform
 
 #### `eros`
 
-[eros](https://github.com/mcmah309/eros) is another great way to handle context as errors propagate through the callstack and capture `Backtrace`. This crate is aware of the `TracedError` type (also aliased `TE`) from this crate. This type adds a `Backtrace` to the error.
+[eros](https://github.com/mcmah309/eros) is another great way to handle context as errors propagate through the callstack and capture `Backtrace` with `TracedError`.
 
 ```rust
-use eros::TracedError;
+use eros::{Context, IntoTraced, TracedError};
+use error_set::error_set;
 
-error_set::error_set! {
-    Error := {
-        Variant(TracedError<std::io::Error>) // Same as `Variant(TE<std::io::Error>)`
+error_set! {
+    OurError := {
+        IoError(std::io::Error),
     }
+
+    AnotherError := {
+        AnotherErrorVariant,
+    } || OurError
+}
+
+fn raw_error_result() -> Result<(), std::io::Error> {
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "this is a raw io error",
+    ))
+}
+
+// `eros::Result<(), std::io::Error>` === `Result<(), TracedError<std::io::Error>>` === `Result<(), TE<std::io::Error>>`
+fn traced_error_result() -> eros::Result<(), std::io::Error> {
+    raw_error_result()
+        // One can wrap the error type with a `TracedError` (aka `TE`) type here.
+        // A `Backtrace` may be captured here on `TracedError` creation if enabled.
+        .into_traced()
+        // Context can be added as the error propagates the callstack
+        .context("Here is some context")
+}
+
+fn traced_our_error_enum_result1() -> eros::Result<(), OurError> {
+    let _ = traced_error_result()
+                // `Result<(),TracedError<std::io::Error>>` -> `Result<(),TracedError<OurError>>`
+                .into_traced()
+                .context("More context")?;
+    let _ = raw_error_result()
+                // `Result<(),std::io::Error>` -> `Result<(),TracedError<OurError>>`
+                .into_traced()
+                .context("Different context")?;
+    Ok(())
+}
+
+fn traced_our_error_enum_result2() -> eros::Result<(), AnotherError> {
+    let _ = traced_our_error_enum_result1()
+                // `Result<(),TracedError<OurError>>` -> `Result<(),TracedError<AnotherError>>`
+                .into_traced()?;
+    Ok(())
+}
+
+fn main() {
+    let error: TracedError<AnotherError> = traced_our_error_enum_result2().unwrap_err();
+    assert!(matches!(error.inner(), AnotherError::IoError(_)));
 }
 ```
+> If one does not need the "context" or "backtrace" functionality provided by `eros`, either feature flag can be disabled.
 
-<details>
-
-  <summary>Generated Code</summary>
-
+One should **not** use `eros` like so
 ```rust
 use eros::TracedError;
+use error_set::error_set;
 
-#[derive(Debug)]
-pub enum Error {
-    Variant(TracedError<std::io::Error>),
-}
-#[allow(unused_qualifications)]
-impl core::error::Error for Error {
-    fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
-        match self {
-            Error::Variant(source) => source.source(), 
-            #[allow(unreachable_patterns)]
-            _ => None,
-        
-            }
+error_set! {
+    OurError := {
+        IoError(TracedError<std::io::Error>), // Nested
     }
-}
-impl core::fmt::Display for Error {
-    #[inline]
-    fn fmt(&self,f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        match& *self {
-            Error::Variant(source) => write!(f,"{}",source),
-        
-            }
-    }
-}
-impl From<TracedError<std::io::Error> >for Error {
-    fn from(error:TracedError<std::io::Error>) -> Self {
-        Error::Variant(error)
-    }
-}
-impl From<std::io::Error>for Error {
-    fn from(error:std::io::Error) -> Self {
-        Error::Variant(eros::TracedError::new(error)) // `Backtrace` will be captured here
-    }
+
+    AnotherError := {
+        AnotherErrorVariant,
+    } || OurError
 }
 ```
-
-</details>
-
-> If one does not need the "context" functionality provided by `eros`, the default features flags can be disabled, leaving only the `backtrace` feature flag enabled.
+Since one would lose tracing operations on `OurError` and `AnotherError`.
 
 ### Why Choose `error_set` Over `thiserror` or `anyhow`
 
