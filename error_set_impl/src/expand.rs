@@ -1089,20 +1089,20 @@ pub(crate) fn is_source_struct_type(error_variant: &ErrorVariant) -> bool {
 /// This does not mean [this] is a subset of [that].
 /// Why do they need to be exact?
 /// e.g.
-/// ```
+/// ```ignore
 /// X {
 ///   a: String,
 ///   b: u32,
 /// }
 /// ```
 /// The above can be converted to the below, by droping the `b`. Even though the below could be considered a "subset".
-/// ```
+/// ```ignore
 /// Y {
 ///   a: String
 /// }
-/// ```
+/// ```ignore
 /// If the below was also in the target enum, it would also be valid conversion target
-/// ```
+/// ```ignore
 /// Z {
 ///  b: u32
 /// }
@@ -1114,19 +1114,19 @@ pub(crate) fn is_source_struct_type(error_variant: &ErrorVariant) -> bool {
 /// or define your own `X = { IoError(std::io::Error) } || A || B`
 ///
 /// Another example:
-/// ```
+/// ```ignore
 ///  N1 {
 ///     field: i32
 ///  }
 /// ```
 /// ==
-/// ```
+/// ```ignore
 /// N1 {
 ///     field: i32
 ///  }
 /// ```
 /// !=
-/// ```
+/// ```ignore
 /// N2 {
 ///     field: i32
 ///  }
