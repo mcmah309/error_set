@@ -608,16 +608,16 @@ fn impl_froms(
                             }
                         });
                     }
-                    KnownWrapperTypes::TracedError(type_path) => {
-                        token_stream.append_all(quote::quote! {
-                            #(#cfg_attributes)*
-                            impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
-                                fn from(error: #type_path) -> Self {
-                                    #error_enum_name::#variant_name(eros::TracedError::new(error))
-                                }
-                            }
-                        });
-                    }
+                    // KnownWrapperTypes::TracedError(type_path) => {
+                    //     token_stream.append_all(quote::quote! {
+                    //         #(#cfg_attributes)*
+                    //         impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
+                    //             fn from(error: #type_path) -> Self {
+                    //                 #error_enum_name::#variant_name(eros::TracedError::new(error))
+                    //             }
+                    //         }
+                    //     });
+                    // }
                 };
             }
         } else if is_source_only_struct_type(error_variant) {
@@ -644,16 +644,16 @@ fn impl_froms(
                             }
                         });
                     }
-                    KnownWrapperTypes::TracedError(type_path) => {
-                        token_stream.append_all(quote::quote! {
-                            #(#cfg_attributes)*
-                            impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
-                                fn from(error: #type_path) -> Self {
-                                    #error_enum_name::#variant_name { source: eros::TracedError::new(error) }
-                                }
-                            }
-                        });
-                    }
+                    // KnownWrapperTypes::TracedError(type_path) => {
+                    //     token_stream.append_all(quote::quote! {
+                    //         #(#cfg_attributes)*
+                    //         impl #impl_generics From<#type_path> for #error_enum_name #ty_generics {
+                    //             fn from(error: #type_path) -> Self {
+                    //                 #error_enum_name::#variant_name { source: eros::TracedError::new(error) }
+                    //             }
+                    //         }
+                    //     });
+                    // }
                 };
             }
         }
@@ -1153,7 +1153,7 @@ fn maybe_extract_known_wrapper_types(ty: &TypePath) -> Option<KnownWrapperTypes<
         .expect("If segments exist there should be more than one.");
     let wrapper = match &*last_part.ident.to_string() {
         "Box" => KnownWrapperTypes::Box,
-        "eros::TE" | "eros::TracedError" | "TE" | "TracedError" => KnownWrapperTypes::TracedError,
+        // "eros::TE" | "eros::TracedError" | "TE" | "TracedError" => KnownWrapperTypes::TracedError,
         _ => return None,
     };
     match &last_part.arguments {
@@ -1176,5 +1176,5 @@ fn maybe_extract_known_wrapper_types(ty: &TypePath) -> Option<KnownWrapperTypes<
 
 enum KnownWrapperTypes<'a> {
     Box(&'a TypePath),
-    TracedError(&'a TypePath),
+    // TracedError(&'a TypePath),
 }
