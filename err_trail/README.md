@@ -49,3 +49,6 @@ This api is perfect for libraries. Downstream binaries ultimately decide the imp
 - If returning a `Result` to the calling function, context should usually be `warn`.
 - If consuming a `Result`, context should usually be `error`.
 
+## no_std
+
+This crate supports `#![no_std]`.
