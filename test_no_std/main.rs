@@ -2,7 +2,6 @@
 #![no_main]
 
 use core::fmt::Write;
-use err_trail::{ErrContext, ErrContextDisplay};
 use error_set::{error_set, CoerceResult};
 use exit_no_std::exit;
 
@@ -146,5 +145,4 @@ fn display() {
 fn log() {
     let x: Result<u32, &str> = Err("error value");
     let _: Result<u32, &str> = x.error("context around");
-    let _: Option<u32> = x.consume_info();
 }
