@@ -137,12 +137,3 @@ fn display() {
     write!(buf, "{}", x).unwrap();
     assert_eq!(buf.as_str(), "TestError: 500");
 }
-
-//************************************************************************//
-
-// Purposely not called since then we would have to set up the logger. Just making sure it compiles.
-#[allow(dead_code)]
-fn log() {
-    let x: Result<u32, &str> = Err("error value");
-    let _: Result<u32, &str> = x.error("context around");
-}
