@@ -1094,48 +1094,9 @@ pub mod traced_error {
     }
 }
 
-#[cfg(test)]
-pub mod should_not_compile_tests {
-
-    #[test]
-    fn depends_on_self() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/depends_on_itself.rs");
-    }
-
-    #[test]
-    fn error_sources_of_diffrent_names() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/error_sources_of_diffrent_names.rs");
-    }
-
-    #[test]
-    fn floating_attributes() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/floating_attributes.rs");
-    }
-
-    #[test]
-    fn generic_specification_needed() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/generic_specification_needed.rs");
-    }
-
-    #[test]
-    fn no_from_for_multiple_of_same_type() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/no_from_for_multiple_of_same_type.rs");
-    }
-
-    #[test]
-    fn two_enums_same_name() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/two_enums_same_name.rs");
-    }
-
-    #[test]
-    fn recursive_dependency() {
-        let t = trybuild::TestCases::new();
-        t.compile_fail("tests/trybuild/recursive_dependency.rs");
-    }
+#[test]
+#[ignore]
+fn trybuild() {
+    let t = trybuild::TestCases::new();
+    t.compile_fail("tests/trybuild/*.rs");
 }
