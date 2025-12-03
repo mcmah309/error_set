@@ -326,12 +326,13 @@ error_set::error_set! {
 impl JwtVerifier {
     pub async fn new(project_id: String) -> Result<Self, JwtVerifierCreationError> {
         let public_keys = Self::fetch_public_keys().await?; // Err is `reqwest::Error`
-        let decoding_keys = public_keys
+        let decoding_keys: HashMap<String, DecodingKey> = public_keys
             .into_iter()
             .map(|(key, value)| {
-                DecodingKey::from_rsa_pem(value.as_bytes()).map(|decoding_key| (key, decoding_key))
+                DecodingKey::from_rsa_pem(value.as_bytes())
+                    .map(|decoding_key| (key, decoding_key))
             })
-            .collect::<Result<HashMap<String, DecodingKey>,jsonwebtoken::errors::Error>>()?; // Err is `jsonwebtoken::errors::Error`
+            .collect::<Result<_,_>>()?; // Err is `jsonwebtoken::errors::Error`
         unimplemented!()
     }
 
