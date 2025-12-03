@@ -97,7 +97,8 @@ fn extract_balanced_braces(content: &str, brace_start_pos: usize, error_set_body
     }
 
     if depth == 0 {
-        error_set_body.push_str(&format!("\t// From `{}::{brace_start_pos}`\n", current_file.display()));
+        let line_number = content[..brace_start_pos].chars().filter(|&c| c == '\n').count() + 1;
+        error_set_body.push_str(&format!("\t// From `{}:{line_number}`\n", current_file.display()));
         error_set_body.push_str(&content[brace_start_pos + 1..end - 1].trim_start_matches('\n'));
         error_set_body.push_str("\n");
         end
