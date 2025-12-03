@@ -157,26 +157,14 @@ impl Parse for AstErrorEnumDeclaration {
             });
         // normal enum
         } else if input.peek(syn::token::Brace) {
-            let content;
-            braced!(content in input);
-            let error_variants = content.parse_terminated(
-                |input: ParseStream| input.parse::<AstErrorVariant>(),
-                token::Comma,
-            )?;
-            return Ok(AstErrorEnumDeclaration {
-                attributes,
-                vis,
-                error_name,
-                generics,
-                disabled,
-                parts: vec![AstInlineOrRefError::Inline(AstInlineError {
-                    error_variants,
-                })],
-            });
+            return Err(syn::Error::new(
+                last_position_save.span(),
+                "Expected set declartion (`:=`), got a `{`. If attempting to declare a normal enum, these are not currently supported, only error set enums.",
+            ));
         } else {
             return Err(syn::Error::new(
                 last_position_save.span(),
-                "Expected set declartion (`:=`) or regular enum body (`{...}`) to be next.",
+                "Expected set declartion (`:=`) to be next.",
             ));
         }
     }

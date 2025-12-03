@@ -471,7 +471,7 @@ pub mod error_struct_and_enums {
             field: T,
         }
 
-        enum AuthError {
+        enum AuthError := {
             #[display("1 User `{name}` with role}} `{{{role}` does not exist")]
             UserDoesNotExist1 {
                 name: String,
@@ -547,7 +547,7 @@ pub mod error_enum_variant_shorthand {
     use error_set::error_set;
 
     error_set! {
-        enum AuthError {
+        enum AuthError := {
             (io::Error) {
                 role: u32,
             },
