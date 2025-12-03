@@ -457,6 +457,13 @@ pub mod error_struct_and_enums {
     use error_set::error_set;
 
     error_set! {
+
+        #[display("operation not permitted (path is reserved for system use)")]
+        struct ReservedPath;
+
+        #[display("wumbo")]
+        struct ReservedPath2 {}
+
         // #[derive(Clone)]
         #[display("Hello {source}, {}", field)]
         struct Struct<T: Display + Debug> {
@@ -1072,12 +1079,18 @@ pub mod traced_error {
     }
 
     fn traced_error_result() -> eros::Result<(), std::io::Error> {
-        raw_error_result().into_traced().context("Here is some context")
+        raw_error_result()
+            .into_traced()
+            .context("Here is some context")
     }
 
     fn traced_our_error_enum_result1() -> eros::Result<(), OurError> {
-        let _ = traced_error_result().into_traced().context("More context")?;
-        let _ = raw_error_result().into_traced().context("Different context")?;
+        let _ = traced_error_result()
+            .into_traced()
+            .context("More context")?;
+        let _ = raw_error_result()
+            .into_traced()
+            .context("Different context")?;
         Ok(())
     }
 
