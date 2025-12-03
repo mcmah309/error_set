@@ -7,7 +7,7 @@ C := {Field1,}
 	// From `src/top_level.rs::48`
     B := {Field2,} || A
 
-	// From `src/top_level.rs::122`
+	// From `src/top_level.rs::123`
     A := {Field,}
 
 
