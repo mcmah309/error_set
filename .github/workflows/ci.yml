@@ -27,4 +27,6 @@ jobs:
     - name: Test error_set
       run: cd error_set && cargo test --verbose --tests
     - name: Test no_std
-      run: rustup target add x86_64-unknown-linux-gnu && cd test_no_std && cargo run
+      run: rustup target add x86_64-unknown-linux-gnu && cd examples/test_no_std && cargo run
+    - name: Test combine_parts feature flag
+      run: cd examples/error_set_part && cargo run

@@ -24,19 +24,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
-name = "err_trail"
-version = "0.9.0"
-
-[[package]]
 name = "error_set"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "error_set_impl",
 ]
 
 [[package]]
 name = "error_set_impl"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -172,7 +168,6 @@ dependencies = [
 name = "test_no_std"
 version = "0.1.0"
 dependencies = [
- "err_trail",
  "error_set",
  "exit-no-std",
  "heapless",

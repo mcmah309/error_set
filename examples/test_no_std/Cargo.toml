@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-error_set = { path = "../error_set" }
+error_set = { path = "../../error_set" }
 heapless = "0.8"
 exit-no-std = "0.2.1"
 

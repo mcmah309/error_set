@@ -1,0 +1,10 @@
+[package]
+name = "error_set_part"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+error_set = { path = "../../error_set" }
+
+[build-dependencies]
+error_set = { path = "../../error_set", features = ["combine_parts"] }
