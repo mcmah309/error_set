@@ -1,6 +1,11 @@
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "combine_parts")), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
+
+#[cfg(feature = "combine_parts")]
+mod combine_parts;
+#[cfg(feature = "combine_parts")]
+pub use combine_parts::combine_error_set_parts;
 
 pub use error_set_impl::*;
 

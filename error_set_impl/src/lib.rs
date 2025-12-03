@@ -5,6 +5,7 @@ mod validate;
 
 use ast::AstErrorSet;
 use expand::expand;
+use quote::TokenStreamExt;
 use resolve::resolve;
 use validate::validate;
 
@@ -12,9 +13,6 @@ use crate::ast::AstErrorKind;
 
 #[proc_macro]
 pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Dev Note: If the macro is not updating when macro changes, uncomment below, rust-analyzer may be stuck and you need to restart: https://github.com/rust-lang/rust-analyzer/issues/10027
-    // let token_stream: proc_macro2::TokenStream = syn::parse_str("const int: i32 = 1;").unwrap();
-    // return proc_macro::TokenStream::from(token_stream);
     let error_set = syn::parse_macro_input!(tokens as AstErrorSet);
     let mut error_enum_decls = Vec::new();
     let mut error_struct_decls = Vec::new();
@@ -38,4 +36,24 @@ pub fn error_set(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
         return err.into_compile_error().into();
     }
     expand(error_enums, error_struct_decls).into()
+}
+
+#[proc_macro]
+pub fn error_set_part(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let error_set = syn::parse_macro_input!(tokens as AstErrorSet);
+    let mut token_stream = proc_macro2::TokenStream::new();
+    for item in error_set.set_items.into_iter() {
+        let name = match item {
+            AstErrorKind::Enum(error_enum_decl) => {
+                error_enum_decl.error_name
+            }
+            AstErrorKind::Struct(struct_decl) => {
+                struct_decl.r#struct.ident
+            }
+        };
+        token_stream.append_all(quote::quote! {
+            use crate::error_set::#name;
+        });
+    }
+    token_stream.into()
 }

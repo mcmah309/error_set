@@ -12,6 +12,7 @@ rust-version = "1.86"
 
 [dependencies]
 error_set_impl = { version = "=0.9.1", path = "../error_set_impl" }
+ignore = { version = "0.4", optional = true }
 
 [dev-dependencies]
 trybuild = "=1.0.111"
@@ -21,7 +22,8 @@ reqwest = "0.12"
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 
 [features]
-default = []
+default = ["combine_parts"]
+combine_parts = ["dep:ignore"]
 
 [package.metadata.docs.rs]
 all-features = false
