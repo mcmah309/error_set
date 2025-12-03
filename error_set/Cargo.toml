@@ -3,7 +3,7 @@ name = "error_set"
 description = "Quick error declarations and automatic conversions between errors for precisely typed error handling. Inspired by Zig's error set type."
 categories = ["rust-patterns", "no-std"]
 keywords = ["error", "error-handling", "macro", "error-set"]
-version = "0.9.0"
+version = "0.9.1"
 edition = "2024"
 license = "Apache-2.0"
 documentation = "https://docs.rs/error_set"
@@ -11,7 +11,7 @@ repository = "https://github.com/mcmah309/error_set"
 rust-version = "1.86"
 
 [dependencies]
-error_set_impl = { version = "=0.9.0", path = "../error_set_impl" }
+error_set_impl = { version = "=0.9.1", path = "../error_set_impl" }
 
 [dev-dependencies]
 trybuild = "=1.0.111"
