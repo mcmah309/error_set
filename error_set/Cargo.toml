@@ -22,7 +22,7 @@ reqwest = "0.12"
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 
 [features]
-default = ["combine_parts"]
+default = []
 combine_parts = ["dep:ignore"]
 
 [package.metadata.docs.rs]
