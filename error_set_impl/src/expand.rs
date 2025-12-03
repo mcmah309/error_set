@@ -79,7 +79,7 @@ fn add_struct_error(error_struct: AstErrorStruct, token_stream: &mut TokenStream
     token_stream.append_all(quote! {
         #(#attrs)*
         #debug
-        #vis #struct_token #struct_name #impl_generics #where_generics #fields
+        #vis #struct_token #struct_name #impl_generics #where_generics #fields #semi_token
     });
 
     let mut has_source_field = false;
