@@ -494,6 +494,7 @@ pub mod error_struct_and_enums {
     #[test]
     fn test() {
         let x: AuthError = AuthError::UserDoesNotExist1 {
+            /// This is a doc comment
             name: "john".to_string(),
             role: 30,
         };

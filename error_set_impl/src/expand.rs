@@ -201,13 +201,14 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 let cfg_attributes = &r#struct.cfg_attributes;
                 let name = &r#struct.name;
                 let fields = &r#struct.fields;
+                let field_attributes = fields.iter().map(|e| &e.attributes);
                 let field_names = fields.iter().map(|e| &e.name);
                 let field_types = fields.iter().map(|e| &e.r#type);
                 error_variant_tokens.append_all(quote::quote! {
                     #(#cfg_attributes)*
                     #(#attributes)*
                     #name {
-                        #(#field_names : #field_types),*
+                        #(#(#field_attributes)* #field_names : #field_types),*
                     },
                 });
             }
@@ -216,6 +217,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                 let cfg_attributes = &source_struct.cfg_attributes;
                 let name = &source_struct.name;
                 let fields = &source_struct.fields;
+                let field_attributes = fields.iter().map(|e| &e.attributes);
                 let field_names = fields.iter().map(|e| &e.name);
                 let field_types = fields.iter().map(|e| &e.r#type);
                 let source_type = &source_struct.source_type;
@@ -224,7 +226,7 @@ fn add_enum(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStream
                     #(#attributes)*
                     #name {
                         source: #source_type,
-                        #(#field_names : #field_types),*
+                        #(#(#field_attributes)* #field_names : #field_types),*
                     },
                 });
             }
