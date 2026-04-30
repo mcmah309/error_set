@@ -371,6 +371,7 @@ fn replace_generics_in_fields(
     if old_to_new.contains_key(&field.r#type) {
         let new_type = old_to_new.get(&field.r#type).unwrap().clone();
         return AstInlineErrorVariantField {
+            attributes: field.attributes.clone(),
             name: field.name.clone(),
             r#type: new_type.clone(),
         };
@@ -384,6 +385,7 @@ fn replace_generics_in_fields(
             let new_type = syn::parse_str::<syn::Type>(&replaced)
                 .expect("Failed to parse replaced type back into type");
             return AstInlineErrorVariantField {
+                attributes: field.attributes.clone(),
                 name: field.name.clone(),
                 r#type: new_type.clone(),
             };
