@@ -307,7 +307,7 @@ fn main() {
 </details>
 
 
-The typical project approach is to have one `errors.rs` file with a single `error_set`. This keeps
+The typical project approach is to have one `errors.rs` file with a single `error_set` (See [here](#error-sets-spread-across-a-crate) for an alternative approach). This keeps
 all the errors in one place and allows your IDE to autocomplete `crate::errors::` with of all errors.
 But `error_set!` can also be used for quick errors "unions", no longer requiring users to 
 handwrite `From<..>` or use `.map_err(..)` for these simple cases.
@@ -724,6 +724,27 @@ impl core::fmt::Display for ErrorStruct {
 
 
 > By default all structs and enums are `pub`
+
+### Error Sets Spread Across a Crate
+
+Error sets can also be spread across a crate and combined together. This can be particularly useful when an `error_set` starts to get very large or declarations are desired to be kept closer to certain code. To enable this feature, enable the `combine_parts` feature flag in `Cargo.toml`
+```toml
+error_set = { version = "", features = ["combine_parts"] }
+```
+Then add the following to `build.rs`
+```rust,ignore
+fn main() {
+    error_set::combine_error_set_parts();
+}
+```
+Now code can use the `error_set_part!` macro like any regular `error_set!` macro. e.g.
+```rust,ignore
+error_set_part! {
+    Error1 = ...
+    Error2 = ...
+}
+```
+The line added to `build.rs` (`error_set::combine_error_set_parts();`) will automatically combine the separate `error_set_part!` macro invocations into a single `error_set!` macro invocation in a generated `error_set.rs` file. All errors will reside here and can be used throughout a codebase. See [here](https://github.com/mcmah309/error_set/tree/master/test_crates/error_set_part) for a full example crate.
 
 ### Handling Context
 
