@@ -364,7 +364,7 @@ dependencies = [
 
 [[package]]
 name = "error_set"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "error_set_impl",
  "ignore",
@@ -376,7 +376,7 @@ dependencies = [
 
 [[package]]
 name = "error_set_impl"
-version = "0.9.1"
+version = "0.9.2"
 dependencies = [
  "proc-macro2",
  "quote",
