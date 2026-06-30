@@ -649,18 +649,30 @@ fn extract_cfg(attributes: Vec<Attribute>) -> (Vec<Attribute>, Vec<Attribute>) {
     (attributes, cfgs)
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub(crate) struct AstInlineErrorVariantField {
+    pub(crate) attributes: Vec<Attribute>,
     pub(crate) name: Ident,
     pub(crate) r#type: syn::Type,
 }
 
 impl Parse for AstInlineErrorVariantField {
     fn parse(input: ParseStream) -> Result<Self> {
+        let attributes = input.call(Attribute::parse_outer)?;
         let name: Ident = input.parse()?;
         let _: syn::Token![:] = input.parse()?;
         let r#type: syn::Type = input.parse()?;
-        Ok(AstInlineErrorVariantField { name, r#type })
+        Ok(AstInlineErrorVariantField {
+            attributes,
+            name,
+            r#type,
+        })
+    }
+}
+
+impl PartialEq for AstInlineErrorVariantField {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.r#type == other.r#type
     }
 }
 
