@@ -962,11 +962,11 @@ pub mod from_for_generic_and_regular {
 
     error_set! {
         #[skip(From(E))]
-        X<E: core::error::Error + core::fmt::Debug + core::fmt::Display> := Y || Z<E>
+        X<E: core::error::Error + core::fmt::Debug + core::fmt::Display + 'static> := Y || Z<E>
         Y := {
             A,
         }
-        Z<E: core::error::Error + core::fmt::Debug + core::fmt::Display> := {
+        Z<E: core::error::Error + core::fmt::Debug + core::fmt::Display + 'static> := {
             B(E),
         }
     }
@@ -1054,6 +1054,39 @@ pub mod genarate_froms_for_concrete_box {
         let fmt_error = Box::new(std::fmt::Error::default());
         let login_error: LoginError = fmt_error.into();
         matches!(login_error, LoginError::SourceStruct1 { source: _ });
+    }
+}
+
+#[cfg(test)]
+pub mod source_only_returns_one_level_down {
+    use error_set::error_set;
+
+    error_set! {
+        IoErrorWrapperWrapper := {
+            (IoErrorWrapper)
+        }
+
+        struct IoErrorWrapper {
+            source: std::io::Error
+        }
+    }
+
+    #[test]
+    fn test() {
+        let mut errors: Vec<&dyn std::error::Error> = Vec::new();
+
+        let error = IoErrorWrapperWrapper::IoErrorWrapper(IoErrorWrapper {
+            source: std::io::Error::new(std::io::ErrorKind::Other, "this is a raw io error"),
+        });
+
+        let mut source = std::error::Error::source(&error);
+        while let Some(err) = source {
+            errors.push(err);
+            source = std::error::Error::source(err);
+        }
+        assert_eq!(errors.len(), 2);
+        assert!(errors[0].downcast_ref::<IoErrorWrapper>().is_some());
+        assert!(errors[1].downcast_ref::<std::io::Error>().is_some());
     }
 }
 

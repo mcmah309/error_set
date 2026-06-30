@@ -61,7 +61,7 @@ pub enum MediaError {
 impl core::error::Error for MediaError {
     fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
         match self {
-            MediaError::IoError(source) => source.source(), 
+            MediaError::IoError(source) => Some(source), 
             #[allow(unreachable_patterns)]
             _ => None,
         
@@ -135,7 +135,7 @@ pub enum DownloadError {
 impl core::error::Error for DownloadError {
     fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
         match self {
-            DownloadError::IoError(source) => source.source(), 
+            DownloadError::IoError(source) => Some(source), 
             #[allow(unreachable_patterns)]
             _ => None,
         
@@ -623,7 +623,7 @@ pub enum Error {
 impl core::error::Error for Error {
     fn source(&self) -> Option< &(dyn core::error::Error+'static)>{
         match self {
-            Error::Variant(source) => source.source(), 
+            Error::Variant(source) => Some(source), 
             #[allow(unreachable_patterns)]
             _ => None,
         

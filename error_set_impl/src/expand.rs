@@ -278,7 +278,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             let cfg_attributes = &variant.cfg_attributes();
             source_match_branches.append_all(quote::quote! {
                 #(#cfg_attributes)*
-                #enum_name::#name(source) => source.source(),
+                #enum_name::#name(source) => Some(source),
             });
         } else if is_source_struct_type(variant) {
             has_source_match_branches = true;
@@ -286,7 +286,7 @@ fn impl_error(error_enum_node: &ErrorEnumGraphNode, token_stream: &mut TokenStre
             let cfg_attributes = &variant.cfg_attributes();
             source_match_branches.append_all(quote::quote! {
                 #(#cfg_attributes)*
-                #enum_name::#name { source, .. } => source.source(),
+                #enum_name::#name { source, .. } => Some(source),
             });
         }
     }
