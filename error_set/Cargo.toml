@@ -17,7 +17,6 @@ ignore = { version = "0.4", optional = true }
 [dev-dependencies]
 trybuild = "=1.0.111"
 tracing-test = { version = "0.2", features = ["no-env-filter"] }
-eros = "0.3"
 reqwest = "0.12"
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 

@@ -786,7 +786,7 @@ error_set! {
 
 With `error_set` there is no need to maintain a web of nested wrapped enums (with `#[from]`), since there is no nesting, and all the `From` implementations are automatically generated if one error type is a subset of another.
 
-Like `anyhow`, `error_set` remains open to capturing the context around errors. To accomplish this, it uses the help of [err_trail](#err_trail) or [eros](#eros) crate. See the respective READMEs for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` or `eros` is likely a good choice for you. It's straightforward and skips the need to define error types altogether.
+Like `anyhow` or `eros`, `error_set` remains open to capturing the context around errors. To accomplish this, it uses the help of [err_trail](#err_trail) crate. See the respective READMEs for more info. However, if your project doesn't require handling specific error types and you just need to propagate errors up the call stack, then `anyhow` or `eros` is likely a good choice for you. It's straightforward and skips the need to define error types altogether.
 
 For libraries and general projects that require precise error handling and differentiation, error management can often become complex and unwieldy
 as projects grow. This may even result in "mega enums". `error_set` can help here where others can't.

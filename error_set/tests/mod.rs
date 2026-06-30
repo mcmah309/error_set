@@ -1090,57 +1090,6 @@ pub mod source_only_returns_one_level_down {
     }
 }
 
-#[cfg(test)]
-pub mod traced_error {
-    use eros::{Context, IntoTraced};
-    use error_set::error_set;
-
-    error_set! {
-        OurError := {
-            IoError(std::io::Error),
-        }
-
-        AnotherError := {
-            AnotherErrorVariant,
-        } || OurError
-    }
-
-    fn raw_error_result() -> Result<(), std::io::Error> {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "this is a raw io error",
-        ))
-    }
-
-    fn traced_error_result() -> eros::Result<(), std::io::Error> {
-        raw_error_result()
-            .into_traced()
-            .context("Here is some context")
-    }
-
-    fn traced_our_error_enum_result1() -> eros::Result<(), OurError> {
-        let _ = traced_error_result()
-            .into_traced()
-            .context("More context")?;
-        let _ = raw_error_result()
-            .into_traced()
-            .context("Different context")?;
-        Ok(())
-    }
-
-    fn traced_our_error_enum_result2() -> eros::Result<(), AnotherError> {
-        let _ = traced_our_error_enum_result1().into_traced()?;
-        Ok(())
-    }
-
-    #[test]
-    fn test() {
-        let error = traced_our_error_enum_result2().unwrap_err();
-        assert!(matches!(error.inner(), AnotherError::IoError(_)));
-        println!("{:?}", error)
-    }
-}
-
 #[test]
 #[ignore]
 fn trybuild() {
